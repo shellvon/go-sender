@@ -1,0 +1,42 @@
+package core
+
+import (
+	"context"
+)
+
+type (
+	strategyNameKey struct{}
+	strategyKey     struct{}
+	itemNameKey     struct{}
+)
+
+// WithCtxStrategyName specifies the name of the selection strategy to use.
+func WithCtxStrategyName(ctx context.Context, strategyName string) context.Context {
+	return context.WithValue(ctx, strategyNameKey{}, strategyName)
+}
+
+// WithCtxStrategy provides a specific instance of a selection strategy.
+func WithCtxStrategy(ctx context.Context, strategy SelectionStrategy) context.Context {
+	return context.WithValue(ctx, strategyKey{}, strategy)
+}
+
+// GetStrategyFromCtx retrieves the strategy instance from the context.
+func GetStrategyFromCtx(ctx context.Context) SelectionStrategy {
+	if strategy, ok := ctx.Value(strategyKey{}).(SelectionStrategy); ok {
+		return strategy
+	}
+	return nil
+}
+
+// WithCtxItemName specifies the name of a specific item (e.g., a bot or account) to use.
+func WithCtxItemName(ctx context.Context, itemName string) context.Context {
+	return context.WithValue(ctx, itemNameKey{}, itemName)
+}
+
+// GetItemNameFromCtx retrieves the specific item name from the context.
+func GetItemNameFromCtx(ctx context.Context) string {
+	if name, ok := ctx.Value(itemNameKey{}).(string); ok {
+		return name
+	}
+	return ""
+}
