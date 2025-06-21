@@ -121,7 +121,6 @@ func main() {
 			"code": "123456",
 			"time": "5分钟",
 		},
-		ProviderName: "tencent", // 指定使用腾讯云
 	}
 
 	err = s.Send(ctx, smsMsg)
@@ -148,7 +147,7 @@ func main() {
 
 	// 示例3: 发送Webhook消息
 	fmt.Println("\n=== 发送Webhook消息 ===")
-	webhookMsg := webhook.NewMessage("telegram", `{"chat_id":"@your_channel","text":"Hello from go-sender!"}`,
+	webhookMsg := webhook.NewMessage(`{"chat_id":"@your_channel","text":"Hello from go-sender!"}`,
 		webhook.WithHeaders(map[string]string{"Content-Type": "application/json"}))
 
 	err = s.Send(ctx, webhookMsg)

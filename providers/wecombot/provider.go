@@ -54,7 +54,7 @@ func (p *Provider) Send(ctx context.Context, message core.Message) error {
 		return err
 	}
 
-	selectedBot := p.selector.Select(ctx, "")
+	selectedBot := p.selector.Select(ctx)
 	if selectedBot == nil {
 		return errors.New("no available bot")
 	}
@@ -98,7 +98,7 @@ func (p *Provider) Name() string {
 // The media_id is valid for only three days and can only be used by the bot that uploaded it.
 // If you want to specify a bot, use context.WithValue(ctx, core.ItemNameKey, botName) or core.WithItemName(ctx, botName).
 func (p *Provider) UploadMedia(ctx context.Context, filepath string, bodyReader io.Reader) (mediaId string, bot *Bot, err error) {
-	selectedBot := p.selector.Select(ctx, "")
+	selectedBot := p.selector.Select(ctx)
 	if selectedBot == nil {
 		return "", nil, errors.New("no available bot for media upload")
 	}

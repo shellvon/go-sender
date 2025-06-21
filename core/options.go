@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"errors"
 	"log"
 	"sync"
@@ -217,19 +218,28 @@ func WithSendRetryPolicy(policy *RetryPolicy) SendOption {
 }
 
 // frameworkMetadataKey is the namespaced key for storing SendOptions in Metadata.
-const frameworkMetadataKey = "_framework_send_options"
+const frameworkMetadataKey = "__gosender_framework_send_options"
+
+// internalContextItemNameKey is the internal key for storing context item name in queue metadata.
+const internalContextItemNameKey = "__gosender_internal_ctx_item_name__"
 
 // defaultSerializer is the default SendOptionsSerializer instance
 var defaultSerializer SendOptionsSerializer = &DefaultSendOptionsSerializer{}
 
 // serializeSendOptions serializes relevant SendOptions fields to JSON for storage in Metadata.
 // It logs a warning if the key already exists to alert about potential user conflicts.
-func serializeSendOptions(opts *SendOptions, metadata map[string]interface{}) (map[string]interface{}, error) {
+// It also preserves context information (like specified item names) for queue recovery.
+func serializeSendOptions(ctx context.Context, opts *SendOptions, metadata map[string]interface{}) (map[string]interface{}, error) {
 	if metadata == nil {
 		metadata = make(map[string]interface{})
 	}
 	if _, exists := metadata[frameworkMetadataKey]; exists {
 		log.Print("metadata key conflict detected", "key", frameworkMetadataKey, "overwriting", "true")
+	}
+
+	// Preserve context information for queue recovery
+	if itemName := GetItemNameFromCtx(ctx); itemName != "" {
+		metadata[internalContextItemNameKey] = itemName
 	}
 
 	data, err := defaultSerializer.Serialize(opts)
@@ -240,29 +250,35 @@ func serializeSendOptions(opts *SendOptions, metadata map[string]interface{}) (m
 	return metadata, nil
 }
 
-// deserializeSendOptions deserializes SendOptions from Metadata.
-func deserializeSendOptions(metadata map[string]interface{}) (*SendOptions, error) {
+// deserializeSendOptions deserializes SendOptions from Metadata and restores context information.
+// Returns the restored context and SendOptions.
+func deserializeSendOptions(ctx context.Context, metadata map[string]interface{}) (context.Context, *SendOptions, error) {
 	opts := &SendOptions{
 		Metadata: metadata, // Preserve original Metadata
 	}
 	if metadata == nil {
-		return opts, nil
+		return ctx, opts, nil
+	}
+
+	// Restore context information from metadata
+	if itemName, ok := metadata[internalContextItemNameKey].(string); ok && itemName != "" {
+		ctx = WithCtxItemName(ctx, itemName)
 	}
 
 	data, ok := metadata[frameworkMetadataKey]
 	if !ok {
-		return opts, nil // Use defaults if key is missing
+		return ctx, opts, nil // Use defaults if key is missing
 	}
 
 	dataBytes, ok := data.([]byte)
 	if !ok {
 		log.Print("invalid type for metadata key", "key", frameworkMetadataKey, "expected", "[]byte")
-		return opts, nil
+		return ctx, opts, nil
 	}
 
 	deserializedOpts, err := defaultSerializer.Deserialize(dataBytes)
 	if err != nil {
-		return nil, NewSenderError(ErrCodeQueueDeserializationFailed, "failed to deserialize SendOptions", err)
+		return nil, nil, NewSenderError(ErrCodeQueueDeserializationFailed, "failed to deserialize SendOptions", err)
 	}
 
 	// Merge deserialized options with preserved metadata
@@ -272,7 +288,7 @@ func deserializeSendOptions(metadata map[string]interface{}) (*SendOptions, erro
 	opts.DisableRateLimiter = deserializedOpts.DisableRateLimiter
 	opts.RetryPolicy = deserializedOpts.RetryPolicy
 
-	return opts, nil
+	return ctx, opts, nil
 }
 
 // ValidateRetryPolicy validates the retry policy configuration

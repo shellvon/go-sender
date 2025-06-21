@@ -51,37 +51,37 @@ func TestSelector_Select(t *testing.T) {
 	tests := []struct {
 		name         string
 		strategy     core.SelectionStrategy
-		messageName  string
+		ctxItemName  string
 		expectedName string
 	}{
 		{
-			name:         "select by message name",
+			name:         "select by context item name",
 			strategy:     core.NewWeightedStrategy(),
-			messageName:  "item1",
+			ctxItemName:  "item1",
 			expectedName: "item1",
 		},
 		{
-			name:         "select by message name disabled",
+			name:         "select by context item name disabled",
 			strategy:     core.NewWeightedStrategy(),
-			messageName:  "item3",
+			ctxItemName:  "item3",
 			expectedName: "item3", // 即使disabled也会被选中，因为是指定名称
 		},
 		{
 			name:         "select by strategy weighted",
 			strategy:     core.NewWeightedStrategy(),
-			messageName:  "",
+			ctxItemName:  "",
 			expectedName: "item2", // 权重最高的可用项
 		},
 		{
 			name:         "select by strategy round robin",
 			strategy:     core.NewRoundRobinStrategy(),
-			messageName:  "",
+			ctxItemName:  "",
 			expectedName: "item1", // 第一个可用项
 		},
 		{
 			name:         "select by strategy random",
 			strategy:     core.NewRandomStrategy(),
-			messageName:  "",
+			ctxItemName:  "",
 			expectedName: "item1", // 随机选择，但应该是可用的
 		},
 	}
@@ -90,11 +90,14 @@ func TestSelector_Select(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			selector := NewSelector(items, tt.strategy)
 			ctx := context.Background()
+			if tt.ctxItemName != "" {
+				ctx = core.WithCtxItemName(ctx, tt.ctxItemName)
+			}
 
-			selected := selector.Select(ctx, tt.messageName)
+			selected := selector.Select(ctx)
 			assert.NotNil(t, selected)
 
-			if tt.messageName != "" {
+			if tt.ctxItemName != "" {
 				// 如果指定了名称，应该选择指定的项
 				assert.Equal(t, tt.expectedName, selected.GetName())
 			} else {
@@ -120,7 +123,7 @@ func TestSelector_SelectWithContext(t *testing.T) {
 	ctx := context.Background()
 	ctx = core.WithCtxItemName(ctx, "item1")
 
-	selected := selector.Select(ctx, "")
+	selected := selector.Select(ctx)
 	assert.NotNil(t, selected)
 	assert.Equal(t, "item1", selected.GetName())
 }
@@ -128,7 +131,7 @@ func TestSelector_SelectWithContext(t *testing.T) {
 func TestSelector_SelectEmptyItems(t *testing.T) {
 	selector := NewSelector([]*MockSelectable{}, core.NewWeightedStrategy())
 
-	selected := selector.Select(context.Background(), "")
+	selected := selector.Select(context.Background())
 	assert.Nil(t, selected)
 }
 
@@ -142,11 +145,12 @@ func TestSelector_SelectAllDisabled(t *testing.T) {
 	selector := NewSelector(items, core.NewWeightedStrategy())
 
 	// 当所有项都disabled时，应该返回零值
-	selected := selector.Select(context.Background(), "")
+	selected := selector.Select(context.Background())
 	assert.Nil(t, selected)
 
 	// 但指定名称时应该能选中
-	selected = selector.Select(context.Background(), "item1")
+	ctx := core.WithCtxItemName(context.Background(), "item1")
+	selected = selector.Select(ctx)
 	assert.NotNil(t, selected)
 	assert.Equal(t, "item1", selected.GetName())
 }

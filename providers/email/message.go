@@ -22,7 +22,6 @@ type Message struct {
 	IsHTML      bool     // Indicates if the body is HTML content
 	Body        string   // Email body content
 	Attachments []string // List of attachment file paths
-	AccountName string   // Specific account name to use
 }
 
 var (

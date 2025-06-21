@@ -53,7 +53,7 @@ func New(config Config) (*Provider, error) {
 	}, nil
 }
 
-// Send sends SMS message
+// Send sends an SMS message
 func (p *Provider) Send(ctx context.Context, message core.Message) error {
 	smsMsg, ok := message.(*Message)
 	if !ok {
@@ -64,16 +64,16 @@ func (p *Provider) Send(ctx context.Context, message core.Message) error {
 		return err
 	}
 
-	selectedProvider := p.selectProvider(ctx, smsMsg.ProviderName)
-	if selectedProvider == nil {
-		return errors.New("no available SMS provider")
+	provider := p.selectProvider(ctx)
+	if provider == nil {
+		return errors.New("no available provider")
 	}
-
-	return p.doSendSMS(ctx, selectedProvider, smsMsg)
+	return p.doSendSMS(ctx, provider, smsMsg)
 }
 
-func (p *Provider) selectProvider(ctx context.Context, providerName string) *SMSProvider {
-	return p.selector.Select(ctx, providerName)
+// selectProvider selects a provider based on context
+func (p *Provider) selectProvider(ctx context.Context) *SMSProvider {
+	return p.selector.Select(ctx)
 }
 
 func (p *Provider) doSendSMS(ctx context.Context, provider *SMSProvider, msg *Message) error {

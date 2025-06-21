@@ -45,24 +45,14 @@ func NewSelector[T core.Selectable](items []T, strategy core.SelectionStrategy) 
 }
 
 // Select selects an item based on the following priority:
-// 1. Item name from message (if message has a name field)
-// 2. Item name from context (if specified)
-// 3. Strategy from context (if specified)
-// 4. Default strategy
-func (s *Selector[T]) Select(ctx context.Context, messageName string) T {
+// 1. Item name from context (if specified)
+// 2. Strategy from context (if specified)
+// 3. Default strategy
+func (s *Selector[T]) Select(ctx context.Context) T {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	// 1. Use item name from message if specified
-	if messageName != "" {
-		for i := range s.items {
-			if s.items[i].GetName() == messageName {
-				return s.items[i]
-			}
-		}
-	}
-
-	// 2. Use item name from context if specified
+	// 1. Use item name from context if specified
 	if itemName := core.GetItemNameFromCtx(ctx); itemName != "" {
 		for i := range s.items {
 			if s.items[i].GetName() == itemName {
@@ -71,7 +61,7 @@ func (s *Selector[T]) Select(ctx context.Context, messageName string) T {
 		}
 	}
 
-	// 3. Use strategy from context if specified
+	// 2. Use strategy from context if specified
 	if strategy := core.GetStrategyFromCtx(ctx); strategy != nil {
 		selectables := make([]core.Selectable, len(s.items))
 		for i, v := range s.items {
@@ -87,7 +77,7 @@ func (s *Selector[T]) Select(ctx context.Context, messageName string) T {
 		}
 	}
 
-	// 4. Use default strategy
+	// 3. Use default strategy
 	selectables := make([]core.Selectable, len(s.items))
 	for i, v := range s.items {
 		selectables[i] = v

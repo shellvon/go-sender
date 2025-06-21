@@ -142,13 +142,14 @@ func (pd *ProviderDecorator) recordEnqueue(ctx context.Context, message Message,
 
 // The queue consumer worker uses the same logic as the synchronous chain
 func (pd *ProviderDecorator) processQueueItem(ctx context.Context, item *QueueItem) {
-	// Deserialize SendOptions
-	opts, err := deserializeSendOptions(item.Metadata)
+	// Deserialize SendOptions and restore context
+	restoredCtx, opts, err := deserializeSendOptions(ctx, item.Metadata)
 	if err != nil {
 		pd.logger.Log(LevelWarn, "message", "deserialize send options failed", "error", err.Error())
 		opts = &SendOptions{} // fallback
+		restoredCtx = ctx
 	}
-	err = pd.executeWithMiddleware(ctx, item.Message, opts)
+	err = pd.executeWithMiddleware(restoredCtx, item.Message, opts)
 	// Find and invoke callback (only effective for local/in-memory queue)
 	if cb, ok := callbackRegistry.LoadAndDelete(item.Message.MsgID()); ok {
 		if callback, ok := cb.(func(error)); ok {
@@ -159,7 +160,7 @@ func (pd *ProviderDecorator) processQueueItem(ctx context.Context, item *QueueIt
 
 // sendAsync sends the message asynchronously, using a queue if available, otherwise a goroutine.
 func (pd *ProviderDecorator) sendAsync(ctx context.Context, message Message, opts *SendOptions) error {
-	metadata, err := serializeSendOptions(opts, opts.Metadata)
+	metadata, err := serializeSendOptions(ctx, opts, opts.Metadata)
 	if err != nil {
 		return fmt.Errorf("failed to serialize SendOptions for queue: %w", err)
 	}
