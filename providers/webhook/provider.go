@@ -57,16 +57,16 @@ func (p *Provider) Send(ctx context.Context, message core.Message) error {
 		return err
 	}
 
-	endpoint := p.selectEndpoint(ctx, webhookMsg.EndpointName)
+	endpoint := p.selectEndpoint(ctx)
 	if endpoint == nil {
 		return errors.New("no available endpoint")
 	}
 	return p.doSendWebhook(ctx, endpoint, webhookMsg)
 }
 
-// selectEndpoint selects an endpoint based on context and message
-func (p *Provider) selectEndpoint(ctx context.Context, endpointName string) *Endpoint {
-	return p.selector.Select(ctx, endpointName)
+// selectEndpoint selects an endpoint based on context
+func (p *Provider) selectEndpoint(ctx context.Context) *Endpoint {
+	return p.selector.Select(ctx)
 }
 
 // doSendWebhook performs the actual HTTP request

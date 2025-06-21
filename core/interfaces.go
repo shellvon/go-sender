@@ -22,6 +22,8 @@ const (
 	ProviderTypeWecombot ProviderType = "wecombot"
 	// ProviderTypeWebhook represents a generic webhook notification provider.
 	ProviderTypeWebhook ProviderType = "webhook"
+	// ProviderTypeTelegram represents a Telegram bot notification provider.
+	ProviderTypeTelegram ProviderType = "telegram"
 )
 
 // HealthStatus represents the health status of a component

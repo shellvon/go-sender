@@ -12,7 +12,6 @@ type Message struct {
 	TemplateCode   string            `json:"template_code"`   // Template code (for template SMS)
 	TemplateParams map[string]string `json:"template_params"` // Template parameters
 	SignName       string            `json:"sign_name"`       // SMS signature name
-	ProviderName   string            `json:"provider_name"`   // Specific provider name to use
 }
 
 var (
@@ -78,13 +77,6 @@ func WithTemplateParams(params map[string]string) MessageOption {
 func WithSignName(signName string) MessageOption {
 	return func(m *Message) {
 		m.SignName = signName
-	}
-}
-
-// WithProviderName sets the specific provider name to use
-func WithProviderName(providerName string) MessageOption {
-	return func(m *Message) {
-		m.ProviderName = providerName
 	}
 }
 

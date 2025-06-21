@@ -7,11 +7,10 @@ import (
 // Message represents a webhook message
 type Message struct {
 	core.DefaultMessage
-	EndpointName string            `json:"endpoint_name"` // Specify which endpoint to use
-	Body         interface{}       `json:"body"`          // Request body
-	Headers      map[string]string `json:"headers"`       // Dynamic request headers
-	QueryParams  map[string]string `json:"query_params"`  // Dynamic query parameters
-	PathVars     map[string]string `json:"path_vars"`     // URL path variables for replacement
+	Body        interface{}       `json:"body"`         // Request body
+	Headers     map[string]string `json:"headers"`      // Dynamic request headers
+	QueryParams map[string]string `json:"query_params"` // Dynamic query parameters
+	PathVars    map[string]string `json:"path_vars"`    // URL path variables for replacement
 }
 
 var (
@@ -25,9 +24,6 @@ func (m *Message) ProviderType() core.ProviderType {
 
 // Validate checks if the Message is valid
 func (m *Message) Validate() error {
-	if m.EndpointName == "" {
-		return core.NewParamError("endpoint_name cannot be empty")
-	}
 	if m.Body == nil {
 		return core.NewParamError("body cannot be nil")
 	}
@@ -36,13 +32,6 @@ func (m *Message) Validate() error {
 
 // MessageOption defines a function type for configuring Message
 type MessageOption func(*Message)
-
-// WithEndpointName sets the endpoint name for Message
-func WithEndpointName(endpointName string) MessageOption {
-	return func(m *Message) {
-		m.EndpointName = endpointName
-	}
-}
 
 // WithHeaders sets the dynamic headers for Message
 func WithHeaders(headers map[string]string) MessageOption {
@@ -66,10 +55,9 @@ func WithPathVars(pathVars map[string]string) MessageOption {
 }
 
 // NewMessage creates a new Message with required fields and optional configurations
-func NewMessage(endpointName string, body interface{}, opts ...MessageOption) *Message {
+func NewMessage(body interface{}, opts ...MessageOption) *Message {
 	m := &Message{
-		EndpointName: endpointName,
-		Body:         body,
+		Body: body,
 	}
 
 	// Apply optional configurations

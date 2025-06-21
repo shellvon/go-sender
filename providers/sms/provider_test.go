@@ -223,7 +223,7 @@ func TestProvider_SelectProvider(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			selected := provider.selectProvider(ctx, tt.providerName)
+			selected := provider.selectProvider(ctx)
 			if tt.expectNil {
 				assert.Nil(t, selected)
 			} else {
@@ -358,20 +358,16 @@ func TestMessageOptions(t *testing.T) {
 	WithTemplateParams(params)(message)
 	assert.Equal(t, params, message.TemplateParams)
 
-	// Test WithProviderName
-	WithProviderName("tencent")(message)
-	assert.Equal(t, "tencent", message.ProviderName)
 }
 
 func TestNewMessage(t *testing.T) {
 	message := NewMessage("13800138000", WithContent("test content"),
 		WithTemplateCode("SMS_123456"),
 		WithTemplateParams(map[string]string{"code": "123456"}),
-		WithProviderName("tencent"))
+	)
 
 	assert.Equal(t, "13800138000", message.Mobile)
 	assert.Equal(t, "test content", message.Content)
 	assert.Equal(t, "SMS_123456", message.TemplateCode)
 	assert.Equal(t, map[string]string{"code": "123456"}, message.TemplateParams)
-	assert.Equal(t, "tencent", message.ProviderName)
 }

@@ -42,22 +42,31 @@ func New(config Config) (*Provider, error) {
 	}, nil
 }
 
-// Send sends email, automatically selects account
+// Send sends an email message
 func (p *Provider) Send(ctx context.Context, message core.Message) error {
 	emailMsg, ok := message.(*Message)
 	if !ok {
-		return core.NewParamError(fmt.Sprintf("invalid message type: expected email.Message, got %T", message))
+		return core.NewParamError(fmt.Sprintf("invalid message type: expected *email.Message, got %T", message))
 	}
-	selectedAccount := p.selectAccount(ctx, emailMsg.AccountName)
-	if selectedAccount == nil {
-		return errors.New("no available email account to send with")
-	}
-	if emailMsg.From == "" {
-		emailMsg.From = selectedAccount.From
-	}
+
 	if err := emailMsg.Validate(); err != nil {
 		return err
 	}
+
+	account := p.selector.Select(ctx)
+	if account == nil {
+		return errors.New("no available account")
+	}
+	return p.doSendEmail(ctx, account, emailMsg)
+}
+
+
+// doSendEmail performs the actual email sending
+func (p *Provider) doSendEmail(ctx context.Context, account *Account, emailMsg *Message) error {
+	if emailMsg.From == "" {
+		emailMsg.From = account.From
+	}
+
 	m := gomail.NewMessage()
 	m.SetHeader("From", emailMsg.From)
 	m.SetHeader("To", emailMsg.To...)
@@ -76,13 +85,8 @@ func (p *Provider) Send(ctx context.Context, message core.Message) error {
 	for _, att := range emailMsg.Attachments {
 		m.Attach(att)
 	}
-	d := gomail.NewDialer(selectedAccount.Host, selectedAccount.Port, selectedAccount.Username, selectedAccount.Password)
+	d := gomail.NewDialer(account.Host, account.Port, account.Username, account.Password)
 	return d.DialAndSend(m)
-}
-
-func (p *Provider) selectAccount(ctx context.Context, accountName string) *Account {
-	selected := p.selector.Select(ctx, accountName)
-	return selected
 }
 
 func (p *Provider) Name() string {
