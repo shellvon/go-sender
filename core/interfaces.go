@@ -24,6 +24,14 @@ const (
 	ProviderTypeWebhook ProviderType = "webhook"
 	// ProviderTypeTelegram represents a Telegram bot notification provider.
 	ProviderTypeTelegram ProviderType = "telegram"
+	// ProviderTypeDingtalk represents a DingTalk bot notification provider.
+	ProviderTypeDingtalk ProviderType = "dingtalk"
+	// ProviderTypeLark represents a Lark/Feishu bot notification provider.
+	ProviderTypeLark ProviderType = "lark"
+	// ProviderTypeSlack represents a Slack bot notification provider.
+	ProviderTypeSlack ProviderType = "slack"
+	// ProviderTypeServerChan represents a Server酱 notification provider.
+	ProviderTypeServerChan ProviderType = "serverchan"
 )
 
 // HealthStatus represents the health status of a component

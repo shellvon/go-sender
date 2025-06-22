@@ -1,0 +1,171 @@
+# Lark/Feishu Provider
+
+This provider supports sending messages to Lark/Feishu group robots via webhooks.
+
+## Features
+
+- **Multiple Bot Support**: Configure multiple bots with different strategies (round-robin, random, weighted)
+- **Message Types**: Support for text, post (rich text), share chat, share user, image, and interactive card messages
+- **Security**: Optional webhook signature verification
+- **Internationalization**: Support for Chinese and English content in post messages and interactive cards
+
+## Configuration
+
+```go
+import (
+    "github.com/shellvon/go-sender/core"
+    "github.com/shellvon/go-sender/providers/lark"
+)
+
+// Create Lark configuration
+config := &lark.Config{
+    Bots: []lark.Bot{
+        {
+            Name:    "lark-bot-1",
+            Webhook: "https://open.feishu.cn/open-apis/bot/v2/hook/your-webhook-url",
+            Secret:  "your-secret", // Optional
+            Weight:  1,
+        },
+    },
+    Strategy: core.StrategyRoundRobin, // or StrategyRandom, StrategyWeighted
+}
+
+// Create provider
+provider := lark.NewProvider(config)
+```
+
+## Message Types
+
+### 1. Text Message
+
+```go
+textMsg := lark.NewTextMessage("Hello from go-sender!")
+```
+
+### 2. Post Message (Rich Text)
+
+```go
+postMsg := lark.NewPostMessage().
+    SetChineseContent("测试标题", [][]lark.PostElement{
+        {
+            {Tag: "text", Text: "这是一条测试消息"},
+        },
+        {
+            {Tag: "a", Text: "点击这里", Href: "https://www.feishu.cn"},
+        },
+    }).
+    SetEnglishContent("Test Title", [][]lark.PostElement{
+        {
+            {Tag: "text", Text: "This is a test message"},
+        },
+        {
+            {Tag: "a", Text: "Click here", Href: "https://www.larksuite.com"},
+        },
+    })
+```
+
+### 3. Interactive Card Message
+
+```go
+cardMsg := lark.NewInteractiveMessage().
+    SetHeader(&lark.CardHeader{
+        Title: &lark.CardText{
+            Tag:     "plain_text",
+            Content: "Interactive Card",
+        },
+    }).
+    AddElement(lark.CardElement{
+        Tag: "div",
+        Text: &lark.CardText{
+            Tag:     "lark_md",
+            Content: "This is an interactive card message!",
+        },
+    }).
+    AddElement(lark.CardElement{
+        Tag: "action",
+        Action: &lark.CardAction{
+            Tag:  "button",
+            Text: &lark.CardText{Tag: "plain_text", Content: "Visit Website"},
+            URL:  "https://www.larksuite.com",
+        },
+    })
+```
+
+### 4. Share Chat Message
+
+```go
+shareChatMsg := lark.NewShareChatMessage("oc_1234567890abcdef")
+```
+
+### 5. Share User Message
+
+```go
+shareUserMsg := lark.NewShareUserMessage("ou_1234567890abcdef")
+```
+
+### 6. Image Message
+
+```go
+imageMsg := lark.NewImageMessage("img_1234567890abcdef")
+```
+
+## Usage with Sender
+
+```go
+import (
+    gosender "github.com/shellvon/go-sender"
+    "github.com/shellvon/go-sender/core"
+    "github.com/shellvon/go-sender/providers/lark"
+)
+
+// Create sender
+s := gosender.NewSender(nil)
+
+// Register Lark provider
+larkProvider := lark.NewProvider(config)
+s.RegisterProvider(core.ProviderTypeLark, larkProvider, nil)
+
+// Send message
+ctx := context.Background()
+textMsg := lark.NewTextMessage("Hello from go-sender!")
+err := s.Send(ctx, textMsg)
+```
+
+## API Reference
+
+### Config
+
+- `Disabled`: Whether the provider is disabled
+- `Bots`: Array of bot configurations
+- `Strategy`: Selection strategy (round_robin, random, weighted)
+
+### Bot
+
+- `Name`: Bot name for identification
+- `Webhook`: Lark webhook URL
+- `Secret`: Optional webhook secret for signature verification
+- `Weight`: Weight for weighted strategy
+- `Disabled`: Whether this bot is disabled
+
+### Message Types
+
+All message types implement the `core.Message` interface and include:
+
+- `Validate()`: Validates message content
+- `ProviderType()`: Returns `core.ProviderTypeLark`
+- `GetMsgType()`: Returns the specific message type
+
+## Notes
+
+- **Webhook URL**: Get your webhook URL from Lark/Feishu group robot settings
+- **Secret**: Optional but recommended for security
+- **Image Key**: For image messages, you need to upload the image to Lark first and get the image_key
+- **Chat ID**: For share chat messages, use the chat ID from Lark
+- **User ID**: For share user messages, use the user ID from Lark
+
+## API Documentation
+
+For detailed API documentation, visit:
+
+- [Lark Bot API](https://open.feishu.cn/document/ukTMukTMukTM/ucTM5YjL3ETO24yNxkjN)
+- [Feishu Bot API](https://open.feishu.cn/document/ukTMukTMukTM/ucTM5YjL3ETO24yNxkjN)
