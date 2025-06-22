@@ -1,63 +1,81 @@
 package serverchan
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-	"net/url"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/utils"
 )
 
-// Provider implements the Server酱 provider
+// Provider implements the ServerChan provider
 type Provider struct {
-	config *Config
-	client *http.Client
+	accounts []*core.Account
+	selector *utils.Selector[*core.Account]
 }
 
-func NewProvider(config *Config) *Provider {
-	return &Provider{
-		config: config,
-		client: &http.Client{Timeout: 30 * time.Second},
+var _ core.Provider = (*Provider)(nil)
+
+// New creates a new ServerChan provider instance
+func New(config Config) (*Provider, error) {
+	if !config.IsConfigured() {
+		return nil, errors.New("serverchan provider is not configured or is disabled")
 	}
+
+	// Convert to pointer slice
+	accounts := make([]*core.Account, len(config.Accounts))
+	for i := range config.Accounts {
+		accounts[i] = &config.Accounts[i]
+	}
+
+	// Use common initialization logic
+	enabledAccounts, selector, err := utils.InitProvider(&config, accounts)
+	if err != nil {
+		return nil, errors.New("no enabled serverchan accounts found")
+	}
+
+	return &Provider{
+		accounts: enabledAccounts,
+		selector: selector,
+	}, nil
 }
 
 func (p *Provider) Send(ctx context.Context, msg core.Message) error {
 	scMsg, ok := msg.(*Message)
 	if !ok {
-		return fmt.Errorf("unsupported message type for Server酱 provider: %T", msg)
+		return fmt.Errorf("unsupported message type for serverchan provider: %T", msg)
 	}
 
-	account, err := p.selectAccount(ctx)
+	selectedAccount := p.selector.Select(ctx)
+	if selectedAccount == nil {
+		return errors.New("no available account")
+	}
+
+	apiURL := p.buildAPIURL(selectedAccount.Key)
+
+	// Directly marshal the message object to JSON
+	jsonBody, err := json.Marshal(scMsg)
 	if err != nil {
-		return fmt.Errorf("failed to select account: %w", err)
+		return fmt.Errorf("failed to marshal message to JSON: %w", err)
 	}
 
-	apiURL := p.buildAPIURL(account.Key)
-	form := url.Values{}
-	form.Set("title", scMsg.Title)
-	form.Set("desp", scMsg.Content)
-
-	req, err := http.NewRequestWithContext(ctx, "POST", apiURL, bytes.NewBufferString(form.Encode()))
-	if err != nil {
-		return fmt.Errorf("failed to create request: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	resp, err := p.client.Do(req)
+	body, statusCode, err := utils.DoRequest(ctx, apiURL, utils.RequestOptions{
+		Method:      "POST",
+		Body:        jsonBody,
+		ContentType: "application/json",
+	})
 	if err != nil {
 		return fmt.Errorf("failed to send request: %w", err)
 	}
-	defer resp.Body.Close()
 
-	body, _ := ioutil.ReadAll(resp.Body)
+	// Check response status
+	if statusCode != 200 {
+		return fmt.Errorf("serverchan API returned non-OK status: %d", statusCode)
+	}
 
 	// Turbo version returns JSON
 	var result struct {
@@ -91,33 +109,6 @@ func (p *Provider) buildAPIURL(key string) string {
 	return fmt.Sprintf("https://sctapi.ftqq.com/%s.send", key)
 }
 
-func (p *Provider) selectAccount(ctx context.Context) (*Account, error) {
-	enabled := make([]*Account, 0)
-	for i := range p.config.Accounts {
-		if p.config.Accounts[i].IsEnabled() {
-			enabled = append(enabled, &p.config.Accounts[i])
-		}
-	}
-	if len(enabled) == 0 {
-		return nil, fmt.Errorf("no enabled account found")
-	}
-	strategy := utils.GetStrategy(p.config.GetStrategy())
-	selector := utils.NewSelector(enabled, strategy)
-	selected := selector.Select(ctx)
-	if selected == nil {
-		return nil, fmt.Errorf("no account selected")
-	}
-	return selected, nil
-}
-
-func (p *Provider) GetConfig() interface{} {
-	return p.config
-}
-
-func (p *Provider) IsConfigured() bool {
-	return p.config.IsConfigured()
-}
-
 func (p *Provider) Name() string {
-	return "serverchan"
+	return string(core.ProviderTypeServerChan)
 }

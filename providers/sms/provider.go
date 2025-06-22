@@ -94,8 +94,6 @@ func (p *Provider) doSendSMS(ctx context.Context, provider *SMSProvider, msg *Me
 		return p.sendJuheSMS(ctx, provider, msg)
 	case ProviderTypeLuosimao:
 		return p.sendLuosimaoSMS(ctx, provider, msg)
-	case ProviderTypeMiaodi:
-		return p.sendMiaodiSMS(ctx, provider, msg)
 	case ProviderTypeNetease:
 		return p.sendNeteaseSMS(ctx, provider, msg)
 	case ProviderTypeNormal:
@@ -418,38 +416,6 @@ func (p *Provider) sendLuosimaoSMS(ctx context.Context, provider *SMSProvider, m
 			"Content-Type":  "application/json",
 			"Authorization": authHeader,
 		},
-		Body:        bodyBytes,
-		ContentType: "application/json",
-	})
-
-	return err
-}
-
-// Miaodi SMS implementation
-func (p *Provider) sendMiaodiSMS(ctx context.Context, provider *SMSProvider, msg *Message) error {
-	timestamp := time.Now().Format("20060102150405")
-
-	// Build signature: MD5(sid + token + timestamp)
-	plainText := provider.AppID + provider.AppSecret + timestamp
-	sig := p.md5Hash(plainText)
-
-	requestBody := map[string]string{
-		"to":        msg.Mobile,
-		"timestamp": timestamp,
-		"sig":       sig,
-	}
-
-	if msg.TemplateCode != "" {
-		requestBody["templateid"] = msg.TemplateCode
-		requestBody["param"] = p.buildTemplateValue(msg.TemplateParams)
-	} else {
-		requestBody["smsContent"] = msg.Content
-	}
-
-	bodyBytes, _ := json.Marshal(requestBody)
-	_, _, err := utils.DoRequest(ctx, "https://api.miaodiyun.com/20150822/industrySMS/sendSMS", utils.RequestOptions{
-		Method:      "POST",
-		Headers:     map[string]string{"Content-Type": "application/json"},
 		Body:        bodyBytes,
 		ContentType: "application/json",
 	})

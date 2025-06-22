@@ -16,14 +16,13 @@ const (
 	ProviderTypeSmsbao   ProviderType = "smsbao"   // 短信宝
 	ProviderTypeJuhe     ProviderType = "juhe"     // 聚合服务
 	ProviderTypeLuosimao ProviderType = "luosimao" // 螺丝帽
-	ProviderTypeMiaodi   ProviderType = "miaodi"   // 秒滴云
 	ProviderTypeNetease  ProviderType = "netease"  // 网易云短信
 	ProviderTypeNormal   ProviderType = "normal"   // 其他普通短信
 )
 
 // Config holds configuration for the SMS provider
 type Config struct {
-	Disabled          bool              `json:"disabled"`           // Whether the SMS provider is enabled
+	core.BaseConfig
 	Providers         []SMSProvider     `json:"providers"`          // Multiple SMS providers configuration
 	Strategy          core.StrategyType `json:"strategy"`           // Selection strategy
 	DisableMiddleware bool              `json:"disable_middleware"` // Whether to disable middleware
@@ -47,17 +46,9 @@ type SMSProvider struct {
 	ExtraConfig    map[string]string `json:"extra_config"`    // Extra configuration for specific providers
 }
 
-// GetStrategy returns the selection strategy, defaulting to round_robin
-func (c *Config) GetStrategy() core.StrategyType {
-	if c.Strategy == "" {
-		return core.StrategyRoundRobin
-	}
-	return c.Strategy
-}
-
 // IsConfigured checks if the SMS configuration is valid
 func (c Config) IsConfigured() bool {
-	return !c.Disabled && len(c.Providers) > 0
+	return !c.IsDisabled() && len(c.Providers) > 0
 }
 
 // IsEnabled checks if the provider is enabled

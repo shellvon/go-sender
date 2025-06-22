@@ -1,49 +1,65 @@
 package lark
 
 import (
-	"bytes"
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/utils"
 )
 
-// Provider implements the Lark/Feishu Robot provider
+// Provider implements the Lark provider
 type Provider struct {
-	config *Config
-	client *http.Client
+	accounts []*core.Account
+	selector *utils.Selector[*core.Account]
 }
 
-// NewProvider creates a new Lark provider
-func NewProvider(config *Config) *Provider {
-	return &Provider{
-		config: config,
-		client: &http.Client{
-			Timeout: 30 * time.Second,
-		},
+var _ core.Provider = (*Provider)(nil)
+
+// New creates a new Lark provider instance
+func New(config Config) (*Provider, error) {
+	if !config.IsConfigured() {
+		return nil, errors.New("lark provider is not configured or is disabled")
 	}
+
+	// Convert to pointer slice
+	accounts := make([]*core.Account, len(config.Accounts))
+	for i := range config.Accounts {
+		accounts[i] = &config.Accounts[i]
+	}
+
+	// Use common initialization logic
+	enabledAccounts, selector, err := utils.InitProvider(&config, accounts)
+	if err != nil {
+		return nil, errors.New("no enabled lark accounts found")
+	}
+
+	return &Provider{
+		accounts: enabledAccounts,
+		selector: selector,
+	}, nil
 }
 
 // Send sends a message using the Lark provider
 func (p *Provider) Send(ctx context.Context, msg core.Message) error {
 	larkMsg, ok := msg.(Message)
 	if !ok {
-		return fmt.Errorf("unsupported message type for Lark provider: %T", msg)
+		return fmt.Errorf("unsupported message type for lark provider: %T", msg)
 	}
 
-	// Select a bot based on strategy
-	bot, err := p.selectBot(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to select bot: %w", err)
+	selectedAccount := p.selector.Select(ctx)
+	if selectedAccount == nil {
+		return errors.New("no available account")
 	}
+
+	// Build webhook URL
+	webhookURL := fmt.Sprintf("https://open.feishu.cn/open-apis/bot/v2/hook/%s", selectedAccount.Key)
 
 	// Prepare the request payload
 	payload := map[string]interface{}{
@@ -51,81 +67,42 @@ func (p *Provider) Send(ctx context.Context, msg core.Message) error {
 		"content":  larkMsg,
 	}
 
-	// Add timestamp and sign if secret is provided
-	if bot.Secret != "" {
-		timestamp := time.Now().Unix()
-		sign := p.generateSign(timestamp, bot.Secret)
-
-		payload["timestamp"] = timestamp
-		payload["sign"] = sign
-	}
-
-	// Marshal the payload
-	jsonData, err := json.Marshal(payload)
+	// Marshal message to JSON
+	jsonBody, err := json.Marshal(payload)
 	if err != nil {
-		return fmt.Errorf("failed to marshal payload: %w", err)
+		return fmt.Errorf("failed to marshal message to JSON: %w", err)
 	}
 
-	// Create the request
-	req, err := http.NewRequestWithContext(ctx, "POST", bot.Webhook, bytes.NewBuffer(jsonData))
-	if err != nil {
-		return fmt.Errorf("failed to create request: %w", err)
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-
-	// Send the request
-	resp, err := p.client.Do(req)
+	// Send request
+	body, statusCode, err := utils.DoRequest(ctx, webhookURL, utils.RequestOptions{
+		Method:      "POST",
+		Body:        jsonBody,
+		ContentType: "application/json",
+	})
 	if err != nil {
 		return fmt.Errorf("failed to send request: %w", err)
 	}
-	defer resp.Body.Close()
 
-	// Check response status
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("lark API returned non-OK status: %d", resp.StatusCode)
+	// Check response
+	if statusCode != 200 {
+		return fmt.Errorf("lark API returned non-OK status: %d", statusCode)
 	}
 
-	// Parse response to check for errors
-	var response struct {
-		Code int    `json:"code"`
-		Msg  string `json:"msg"`
+	// Parse response
+	var result struct {
+		Code    int    `json:"code"`
+		Message string `json:"msg"`
 	}
 
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return fmt.Errorf("failed to decode response: %w", err)
+	if err := json.Unmarshal(body, &result); err != nil {
+		return fmt.Errorf("failed to parse response: %w", err)
 	}
 
-	if response.Code != 0 {
-		return fmt.Errorf("lark API error: code=%d, msg=%s", response.Code, response.Msg)
+	if result.Code != 0 {
+		return fmt.Errorf("lark error: code=%d, msg=%s", result.Code, result.Message)
 	}
 
 	return nil
-}
-
-// selectBot selects a bot based on the configured strategy
-func (p *Provider) selectBot(ctx context.Context) (*Bot, error) {
-	enabledBots := make([]*Bot, 0)
-	for i := range p.config.Bots {
-		if p.config.Bots[i].IsEnabled() {
-			enabledBots = append(enabledBots, &p.config.Bots[i])
-		}
-	}
-
-	if len(enabledBots) == 0 {
-		return nil, fmt.Errorf("no enabled bots found")
-	}
-
-	// Use the selector to choose a bot
-	strategy := utils.GetStrategy(p.config.GetStrategy())
-	selector := utils.NewSelector(enabledBots, strategy)
-	selected := selector.Select(ctx)
-
-	if selected == nil {
-		return nil, fmt.Errorf("no bot selected")
-	}
-
-	return selected, nil
 }
 
 // generateSign generates the signature for Lark webhook
@@ -139,12 +116,7 @@ func (p *Provider) generateSign(timestamp int64, secret string) string {
 	return base64.StdEncoding.EncodeToString(h.Sum(nil))
 }
 
-// GetConfig returns the provider configuration
-func (p *Provider) GetConfig() interface{} {
-	return p.config
-}
-
-// IsConfigured checks if the provider is properly configured
-func (p *Provider) IsConfigured() bool {
-	return p.config.IsConfigured()
+// Name returns the name of the provider.
+func (p *Provider) Name() string {
+	return string(core.ProviderTypeLark)
 }

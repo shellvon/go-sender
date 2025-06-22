@@ -6,10 +6,9 @@ import (
 
 // Config holds configuration for the Webhook provider
 type Config struct {
-	Disabled          bool              `json:"disabled"`           // Whether the webhook provider is enabled (default: false)
-	Endpoints         []Endpoint        `json:"endpoints"`          // Multiple webhook endpoints configuration
-	Strategy          core.StrategyType `json:"strategy"`           // Selection strategy: round_robin, random, weighted
-	DisableMiddleware bool              `json:"disable_middleware"` // Whether to disable middleware (for embedded usage)
+	core.BaseConfig
+	Endpoints         []Endpoint `json:"endpoints"`          // Multiple webhook endpoints configuration
+	DisableMiddleware bool       `json:"disable_middleware"` // Whether to disable middleware (for embedded usage)
 }
 
 // Endpoint represents a single webhook endpoint configuration
@@ -23,17 +22,9 @@ type Endpoint struct {
 	Disabled    bool              `json:"disabled"`     // Whether this endpoint is disabled (default: false)
 }
 
-// GetStrategy returns the selection strategy, defaulting to round_robin.
-func (c *Config) GetStrategy() core.StrategyType {
-	if c.Strategy == "" {
-		return core.StrategyRoundRobin
-	}
-	return c.Strategy
-}
-
 // IsConfigured checks if the Webhook configuration is valid
 func (c Config) IsConfigured() bool {
-	return !c.Disabled && len(c.Endpoints) > 0
+	return !c.IsDisabled() && len(c.Endpoints) > 0
 }
 
 // IsEnabled checks if the endpoint is enabled

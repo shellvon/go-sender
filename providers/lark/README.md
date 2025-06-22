@@ -4,7 +4,7 @@ This provider supports sending messages to Lark/Feishu group robots via webhooks
 
 ## Features
 
-- **Multiple Bot Support**: Configure multiple bots with different strategies (round-robin, random, weighted)
+- **Multiple Account Support**: Configure multiple accounts with different strategies (round-robin, random, weighted)
 - **Message Types**: Support for text, post (rich text), share chat, share user, image, and interactive card messages
 - **Security**: Optional webhook signature verification
 - **Internationalization**: Support for Chinese and English content in post messages and interactive cards
@@ -18,20 +18,31 @@ import (
 )
 
 // Create Lark configuration
-config := &lark.Config{
-    Bots: []lark.Bot{
+config := lark.Config{
+    BaseConfig: core.BaseConfig{
+        Strategy: core.StrategyRoundRobin, // or StrategyRandom, StrategyWeighted
+    },
+    Accounts: []core.Account{
         {
-            Name:    "lark-bot-1",
-            Webhook: "https://open.feishu.cn/open-apis/bot/v2/hook/your-webhook-url",
-            Secret:  "your-secret", // Optional
-            Weight:  1,
+            Name:    "lark-account-1",
+            Key:     "your-webhook-url", // The webhook URL key part
+            Weight:  100,
+            Disabled: false,
+        },
+        {
+            Name:    "lark-account-2",
+            Key:     "your-backup-webhook-url",
+            Weight:  80,
+            Disabled: false,
         },
     },
-    Strategy: core.StrategyRoundRobin, // or StrategyRandom, StrategyWeighted
 }
 
 // Create provider
-provider := lark.NewProvider(config)
+provider, err := lark.New(config)
+if err != nil {
+    log.Fatalf("Failed to create Lark provider: %v", err)
+}
 ```
 
 ## Message Types
@@ -122,30 +133,37 @@ import (
 s := gosender.NewSender(nil)
 
 // Register Lark provider
-larkProvider := lark.NewProvider(config)
+larkProvider, err := lark.New(config)
+if err != nil {
+    log.Fatalf("Failed to create Lark provider: %v", err)
+}
 s.RegisterProvider(core.ProviderTypeLark, larkProvider, nil)
 
 // Send message
 ctx := context.Background()
 textMsg := lark.NewTextMessage("Hello from go-sender!")
-err := s.Send(ctx, textMsg)
+err = s.Send(ctx, textMsg)
+if err != nil {
+    log.Printf("Failed to send message: %v", err)
+}
 ```
 
 ## API Reference
 
 ### Config
 
-- `Disabled`: Whether the provider is disabled
-- `Bots`: Array of bot configurations
-- `Strategy`: Selection strategy (round_robin, random, weighted)
+- `BaseConfig`: Common configuration fields
+  - `Disabled`: Whether the provider is disabled
+  - `Strategy`: Selection strategy (round_robin, random, weighted)
+- `Accounts`: Array of account configurations
 
-### Bot
+### Account
 
-- `Name`: Bot name for identification
-- `Webhook`: Lark webhook URL
-- `Secret`: Optional webhook secret for signature verification
-- `Weight`: Weight for weighted strategy
-- `Disabled`: Whether this bot is disabled
+- `Name`: Account name for identification
+- `Key`: Lark webhook URL key (the part after `/hook/`)
+- `Weight`: Weight for weighted strategy (default: 1)
+- `Disabled`: Whether this account is disabled
+- `Webhook`: Optional webhook URL (if different from standard format)
 
 ### Message Types
 
@@ -158,7 +176,7 @@ All message types implement the `core.Message` interface and include:
 ## Notes
 
 - **Webhook URL**: Get your webhook URL from Lark/Feishu group robot settings
-- **Secret**: Optional but recommended for security
+- **Key Format**: The provider automatically constructs the full webhook URL using the key
 - **Image Key**: For image messages, you need to upload the image to Lark first and get the image_key
 - **Chat ID**: For share chat messages, use the chat ID from Lark
 - **User ID**: For share user messages, use the user ID from Lark
