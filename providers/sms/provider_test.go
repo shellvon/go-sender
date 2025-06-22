@@ -43,7 +43,10 @@ func TestNew(t *testing.T) {
 		{
 			name: "disabled config",
 			config: Config{
-				Disabled: true,
+				BaseConfig: core.BaseConfig{
+					Disabled: true,
+					Strategy: core.StrategyWeighted,
+				},
 				Providers: []SMSProvider{
 					{
 						Name:      "test",
@@ -54,7 +57,6 @@ func TestNew(t *testing.T) {
 						Disabled:  false,
 					},
 				},
-				Strategy: core.StrategyWeighted,
 			},
 			wantErr: true,
 		},
@@ -223,6 +225,9 @@ func TestProvider_SelectProvider(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
+			if tt.providerName != "" {
+				ctx = core.WithCtxItemName(ctx, tt.providerName)
+			}
 			selected := provider.selectProvider(ctx)
 			if tt.expectNil {
 				assert.Nil(t, selected)

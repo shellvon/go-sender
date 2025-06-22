@@ -12,10 +12,10 @@ import (
 	"github.com/shellvon/go-sender/utils"
 )
 
-// Provider represents a Telegram bot provider
+// Provider implements the Telegram provider
 type Provider struct {
-	bots     []*Bot
-	selector *utils.Selector[*Bot]
+	accounts []*core.Account
+	selector *utils.Selector[*core.Account]
 }
 
 var (
@@ -25,46 +25,45 @@ var (
 // New creates a new Telegram provider instance
 func New(config Config) (*Provider, error) {
 	if !config.IsConfigured() {
-		return nil, errors.New("invalid telegram configuration: no bots configured or provider disabled")
+		return nil, errors.New("telegram provider is not configured or is disabled")
 	}
 
 	// Convert to pointer slice
-	bots := make([]*Bot, len(config.Bots))
-	for i := range config.Bots {
-		bots[i] = &config.Bots[i]
+	accounts := make([]*core.Account, len(config.Accounts))
+	for i := range config.Accounts {
+		accounts[i] = &config.Accounts[i]
 	}
 
 	// Use common initialization logic
-	enabledBots, selector, err := utils.InitProvider(&config, bots)
+	enabledAccounts, selector, err := utils.InitProvider(&config, accounts)
 	if err != nil {
-		return nil, errors.New("no enabled bots")
+		return nil, errors.New("no enabled telegram accounts found")
 	}
 
 	return &Provider{
-		bots:     enabledBots,
+		accounts: enabledAccounts,
 		selector: selector,
 	}, nil
 }
 
 // Send sends a Telegram message
-func (p *Provider) Send(ctx context.Context, message core.Message) error {
-	tmsg, ok := message.(Message)
+func (p *Provider) Send(ctx context.Context, msg core.Message) error {
+	tgMsg, ok := msg.(Message)
 	if !ok {
-		return core.NewParamError(fmt.Sprintf("invalid message type: expected telegram.Message interface, got %T", message))
+		return fmt.Errorf("unsupported message type for telegram provider: %T", msg)
 	}
-	if err := tmsg.Validate(); err != nil {
-		return err
+
+	selectedAccount := p.selector.Select(ctx)
+	if selectedAccount == nil {
+		return errors.New("no available account")
 	}
-	bot := p.selector.Select(ctx)
-	if bot == nil {
-		return errors.New("no available bot")
-	}
-	return p.doSend(ctx, bot, tmsg)
+
+	return p.doSend(ctx, selectedAccount, tgMsg)
 }
 
-// doSend performs the actual Telegram API request
-func (p *Provider) doSend(ctx context.Context, bot *Bot, msg Message) error {
-	apiURL := fmt.Sprintf("https://api.telegram.org/bot%s/send%s", bot.Token, capitalize(string(msg.GetMsgType())))
+// doSend sends a message using the specified account
+func (p *Provider) doSend(ctx context.Context, account *core.Account, msg Message) error {
+	apiURL := fmt.Sprintf("https://api.telegram.org/bot%s/send%s", account.Key, capitalize(string(msg.GetMsgType())))
 
 	// Convert message to form data
 	data := url.Values{}
@@ -198,5 +197,5 @@ func capitalize(s string) string {
 	if len(s) == 0 {
 		return s
 	}
-	return strings.ToUpper(string(s[0])) + s[1:]
+	return strings.ToUpper(s[:1]) + s[1:]
 }

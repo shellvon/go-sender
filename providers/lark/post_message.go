@@ -89,11 +89,11 @@ func (m *PostMessage) Validate() error {
 	}
 
 	if m.Content.Post.ZhCN != nil && len(m.Content.Post.ZhCN.Content) == 0 {
-		return errors.New("Chinese content cannot be empty")
+		return errors.New("chinese content cannot be empty")
 	}
 
 	if m.Content.Post.EnUS != nil && len(m.Content.Post.EnUS.Content) == 0 {
-		return errors.New("English content cannot be empty")
+		return errors.New("english content cannot be empty")
 	}
 
 	return nil

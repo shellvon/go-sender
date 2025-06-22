@@ -28,9 +28,7 @@ const (
 	ProviderTypeDingtalk ProviderType = "dingtalk"
 	// ProviderTypeLark represents a Lark/Feishu bot notification provider.
 	ProviderTypeLark ProviderType = "lark"
-	// ProviderTypeSlack represents a Slack bot notification provider.
-	ProviderTypeSlack ProviderType = "slack"
-	// ProviderTypeServerChan represents a Server酱 notification provider.
+	// ProviderTypeServerChan represents a ServerChan notification provider.
 	ProviderTypeServerChan ProviderType = "serverchan"
 )
 

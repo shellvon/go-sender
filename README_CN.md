@@ -38,26 +38,25 @@ Go-Sender 基于**装饰器模式**和**插件架构**设计，让你可以轻�
 - **📧 邮件**: SMTP 多账号支持
 - **📱 短信**: 多平台短信支持
 
-  - **腾讯云短信**: [官方文档](https://cloud.tencent.com/document/product/382)
-  - **阿里云短信**: [官方文档](https://help.aliyun.com/document_detail/101300.html)
-  - **华为云短信**: [官方文档](https://support.huaweicloud.com/sms/index.html)
-  - **网易云短信**: [官方文档](https://dev.yunxin.163.com/docs/product/短信服务)
-  - **云片网**: [官方文档](https://www.yunpian.com/doc/zh_CN/api/single_send.html)
-  - **云之讯**: [官方文档](https://www.ucpaas.com/doc/)
-  - **蓝创 253**: [官方文档](http://www.253.com/)
-  - **短信宝**: [官方文档](https://www.smsbao.com/openapi/)
-  - **聚合服务**: [官方文档](https://www.juhe.cn/docs/api/sms)
-  - **螺丝帽**: [官方文档](https://luosimao.com/docs/api/)
-  - **秒滴云**: [官方文档](https://www.miaodiyun.com/doc.html)
+  - **腾讯云短信**: [官方文档](https://cloud.tencent.com/document/product/382) | [官方网站](https://cloud.tencent.com/product/sms)
+  - **阿里云短信**: [官方文档](https://help.aliyun.com/document_detail/101300.html) | [官方网站](https://www.aliyun.com/product/sms)
+  - **华为云短信**: [官方文档](https://support.huaweicloud.com/sms/index.html) | [官方网站](https://www.huaweicloud.com/product/sms.html)
+  - **网易云短信**: [官方文档](https://dev.yunxin.163.com/docs/product/短信服务) | [官方网站](https://www.163yun.com/product/sms)
+  - **云片网**: [官方文档](https://www.yunpian.com/doc/zh_CN/api/single_send.html) | [官方网站](https://www.yunpian.com/)
+  - **云之讯**: [官方文档](https://www.ucpaas.com/doc/) | [官方网站](https://www.ucpaas.com/)
+  - **蓝创 253**: [官方文档](http://www.253.com/) | [官方网站](http://www.253.com/)
+  - **短信宝**: [官方文档](https://www.smsbao.com/openapi/) | [官方网站](https://www.smsbao.com/)
+  - **聚合服务**: [官方文档](https://www.juhe.cn/docs/api/sms) | [官方网站](https://www.juhe.cn/)
+  - **螺丝帽**: [官方文档](https://luosimao.com/docs/api/) | [官方网站](https://luosimao.com/)
 
   > **注意**: 短信提供者实现基于 [smsBomb](https://github.com/shellvon/smsBomb) 项目代码，通过 AI 翻译到 Go 语言。并非所有平台都经过单独测试。
 
-- **🤖 企业微信机器人**: 企业微信机器人消息
-- **🔔 钉钉机器人**: 钉钉群机器人消息
-- **📢 飞书/国际版**: Lark/Feishu 机器人消息
-- **💬 Slack**: Slack 机器人消息
-- **📨 Server 酱**: Server 酱推送服务
-- **📱 Telegram**: Telegram Bot 消息
+- **🤖 企业微信机器人**: 企业微信机器人消息 | [官方文档](https://developer.work.weixin.qq.com/document/path/91770)
+- **🔔 钉钉机器人**: 钉钉群机器人消息 | [官方文档](https://open.dingtalk.com/document/robots/custom-robot-access)
+- **📢 飞书/国际版**: Lark/Feishu 机器人消息 | [官方文档](https://open.feishu.cn/document/ukTMukTMukTM/ucTM5YjL3ETO24yNxkjN)
+- **💬 Slack**: Slack 机器人消息 | [官方文档](https://api.slack.com/messaging/webhooks)
+- **📨 ServerChan**: ServerChan 推送服务 | [官方网站](https://sct.ftqq.com/)
+- **📱 Telegram**: Telegram Bot 消息 | [官方文档](https://core.telegram.org/bots/api)
 - **🔗 Webhook**: 通用 HTTP webhook 调用
 
 ### 🛡️ 高级可靠性功能
@@ -108,6 +107,9 @@ func main() {
 
     // 配置邮件提供者
     emailConfig := email.Config{
+        BaseConfig: core.BaseConfig{
+            Strategy: core.StrategyRoundRobin,
+        },
         Accounts: []email.Account{
             {
                 Name:     "primary",
@@ -119,7 +121,6 @@ func main() {
                 Weight:   1,
             },
         },
-        Strategy: core.StrategyRoundRobin,
     }
 
     emailProvider, err := email.New(emailConfig)
@@ -169,19 +170,23 @@ err := sender.Send(ctx, message, core.WithSendRetryPolicy(retryPolicy))
 ```go
 // 企业微信机器人多实例
 wecomConfig := wecombot.Config{
-    Bots: []wecombot.Bot{
+    BaseConfig: core.BaseConfig{
+        Strategy: core.StrategyWeighted,
+    },
+    Accounts: []core.Account{
         {
             Name:     "bot1",
-            WebhookURL: "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=key1",
-            Weight:   2,
+            Key:      "YOUR_KEY_1",
+            Weight:   100,
+            Disabled: false,
         },
         {
             Name:     "bot2",
-            WebhookURL: "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=key2",
-            Weight:   1,
+            Key:      "YOUR_KEY_2",
+            Weight:   80,
+            Disabled: false,
         },
     },
-    Strategy: core.StrategyWeighted,
 }
 ```
 

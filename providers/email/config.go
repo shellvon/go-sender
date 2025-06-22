@@ -16,14 +16,13 @@ type Account struct {
 
 // Config holds the configuration for the email provider.
 type Config struct {
-	Disabled bool              `json:"disabled"` // Disables the email provider.
-	Accounts []Account         `json:"accounts"` // A list of email accounts to use.
-	Strategy core.StrategyType `json:"strategy"` // Selection strategy: round_robin, random, weighted.
+	core.BaseConfig
+	Accounts []Account `json:"accounts"` // A list of email accounts to use.
 }
 
 // IsConfigured checks if the email provider has a valid configuration.
 func (c *Config) IsConfigured() bool {
-	return !c.Disabled && len(c.Accounts) > 0
+	return !c.IsDisabled() && len(c.Accounts) > 0
 }
 
 // GetStrategy returns the selection strategy, defaulting to round_robin.

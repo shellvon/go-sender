@@ -38,26 +38,25 @@ Business Logic → Sender → ProviderDecorator → Provider
 - **📧 Email**: SMTP with multi-account support
 - **📱 SMS**: Multi-platform SMS support
 
-  - **Tencent Cloud SMS**: [Official Documentation](https://cloud.tencent.com/document/product/382)
-  - **Alibaba Cloud SMS**: [Official Documentation](https://help.aliyun.com/document_detail/101300.html)
-  - **Huawei Cloud SMS**: [Official Documentation](https://support.huaweicloud.com/sms/index.html)
-  - **NetEase Cloud SMS**: [Official Documentation](https://dev.yunxin.163.com/docs/product/短信服务)
-  - **Yunpian SMS**: [Official Documentation](https://www.yunpian.com/doc/zh_CN/api/single_send.html)
-  - **UCP SMS**: [Official Documentation](https://www.ucpaas.com/doc/)
-  - **CL253 SMS**: [Official Documentation](http://www.253.com/)
-  - **SMSBao**: [Official Documentation](https://www.smsbao.com/openapi/)
-  - **Juhe SMS**: [Official Documentation](https://www.juhe.cn/docs/api/sms)
-  - **Luosimao SMS**: [Official Documentation](https://luosimao.com/docs/api/)
-  - **Miaodi SMS**: [Official Documentation](https://www.miaodiyun.com/doc.html)
+  - **Tencent Cloud SMS**: [Official Documentation](https://cloud.tencent.com/document/product/382) | [Official Site](https://cloud.tencent.com/product/sms)
+  - **Alibaba Cloud SMS**: [Official Documentation](https://help.aliyun.com/document_detail/101300.html) | [Official Site](https://www.aliyun.com/product/sms)
+  - **Huawei Cloud SMS**: [Official Documentation](https://support.huaweicloud.com/sms/index.html) | [Official Site](https://www.huaweicloud.com/product/sms.html)
+  - **NetEase Cloud SMS**: [Official Documentation](https://dev.yunxin.163.com/docs/product/短信服务) | [Official Site](https://www.163yun.com/product/sms)
+  - **Yunpian SMS**: [Official Documentation](https://www.yunpian.com/doc/zh_CN/api/single_send.html) | [Official Site](https://www.yunpian.com/)
+  - **UCP SMS**: [Official Documentation](https://www.ucpaas.com/doc/) | [Official Site](https://www.ucpaas.com/)
+  - **CL253 SMS**: [Official Documentation](http://www.253.com/) | [Official Site](http://www.253.com/)
+  - **SMSBao**: [Official Documentation](https://www.smsbao.com/openapi/) | [Official Site](https://www.smsbao.com/)
+  - **Juhe SMS**: [Official Documentation](https://www.juhe.cn/docs/api/sms) | [Official Site](https://www.juhe.cn/)
+  - **Luosimao SMS**: [Official Documentation](https://luosimao.com/docs/api/) | [Official Site](https://luosimao.com/)
 
   > **Note**: SMS provider implementations are based on code from the [smsBomb](https://github.com/shellvon/smsBomb) project, translated to Go using AI. Not all platforms have been individually tested.
 
-- **🤖 WeCom Bot**: Enterprise WeChat bot messages
-- **🔔 DingTalk Bot**: DingTalk group bot messages
-- **📢 Lark/Feishu**: Lark (International) and Feishu (China) bot messages
-- **💬 Slack**: Slack bot messages
-- **📨 Server 酱**: Server 酱 push service
-- **📱 Telegram**: Telegram Bot messages
+- **🤖 WeCom Bot**: Enterprise WeChat bot messages | [Official Documentation](https://developer.work.weixin.qq.com/document/path/91770)
+- **🔔 DingTalk Bot**: DingTalk group bot messages | [Official Documentation](https://open.dingtalk.com/document/robots/custom-robot-access)
+- **📢 Lark/Feishu**: Lark (International) and Feishu (China) bot messages | [Official Documentation](https://open.feishu.cn/document/ukTMukTMukTM/ucTM5YjL3ETO24yNxkjN)
+- **💬 Slack**: Slack bot messages | [Official Documentation](https://api.slack.com/messaging/webhooks)
+- **📨 ServerChan**: ServerChan push service | [Official Site](https://sct.ftqq.com/)
+- **📱 Telegram**: Telegram Bot messages | [Official Documentation](https://core.telegram.org/bots/api)
 - **🔗 Webhook**: Generic HTTP webhook calls
 
 ### 🛡️ Advanced Reliability Features
@@ -108,6 +107,9 @@ func main() {
 
     // Configure email provider
     emailConfig := email.Config{
+        BaseConfig: core.BaseConfig{
+            Strategy: core.StrategyRoundRobin,
+        },
         Accounts: []email.Account{
             {
                 Name:     "primary",
@@ -119,7 +121,6 @@ func main() {
                 Weight:   1,
             },
         },
-        Strategy: core.StrategyRoundRobin,
     }
 
     emailProvider, err := email.New(emailConfig)
@@ -169,19 +170,23 @@ err := sender.Send(ctx, message, core.WithSendRetryPolicy(retryPolicy))
 ```go
 // WeCom Bot with multiple instances
 wecomConfig := wecombot.Config{
-    Bots: []wecombot.Bot{
+    BaseConfig: core.BaseConfig{
+        Strategy: core.StrategyWeighted,
+    },
+    Accounts: []core.Account{
         {
             Name:     "bot1",
-            WebhookURL: "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=key1",
-            Weight:   2,
+            Key:      "YOUR_KEY_1",
+            Weight:   100,
+            Disabled: false,
         },
         {
             Name:     "bot2",
-            WebhookURL: "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=key2",
-            Weight:   1,
+            Key:      "YOUR_KEY_2",
+            Weight:   80,
+            Disabled: false,
         },
     },
-    Strategy: core.StrategyWeighted,
 }
 ```
 
