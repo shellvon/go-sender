@@ -90,6 +90,17 @@ func (s *Sender) GetProvider(providerType core.ProviderType) (*core.ProviderDeco
 	return provider, exists
 }
 
+// SendVia sends a message via a specific channel (provider/bot) identified by channel.
+// The channel should be a string (provider name, bot name).
+// This method goes through all middleware (rate limiting, retry, circuit breaker, etc.).
+// It's equivalent to: 
+//  ctx = core.WithCtxItemName(ctx, channel); 
+//  return s.Send(ctx, message, opts...)
+func (s *Sender) SendVia(ctx context.Context, channel string, message core.Message, opts ...core.SendOption) error {
+	ctx = core.WithCtxItemName(ctx, channel)
+	return s.Send(ctx, message, opts...)
+}
+
 // SetRateLimiter sets the rate limiter for the sender
 func (s *Sender) SetRateLimiter(rateLimiter core.RateLimiter) {
 	s.mu.Lock()
