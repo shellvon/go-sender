@@ -43,3 +43,13 @@ func (m *MemoryMetricsCollector) RecordSendResult(data core.MetricsData) {
 	}
 	provider.totalRequests++
 }
+
+// GetStats returns the metrics for a given provider (for testing)
+func (m *MemoryMetricsCollector) GetStats(provider string) (total, success, failed int64) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if pm, ok := m.metrics[provider]; ok {
+		return pm.totalRequests, pm.successRequests, pm.failedRequests
+	}
+	return 0, 0, 0
+}

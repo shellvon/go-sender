@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"log"
 	"strings"
 )
@@ -74,9 +75,9 @@ func (s *StdLogger) Log(level Level, keyvals ...any) error {
 
 	for i := 0; i < len(keyvals); i += 2 {
 		if i+1 < len(keyvals) {
-			msg.WriteString(keyvals[i].(string))
+			msg.WriteString(fmt.Sprint(keyvals[i]))
 			msg.WriteString("=")
-			msg.WriteString(keyvals[i+1].(string))
+			msg.WriteString(fmt.Sprint(keyvals[i+1]))
 			msg.WriteString(" ")
 		}
 	}
