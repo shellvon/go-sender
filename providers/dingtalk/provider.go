@@ -64,17 +64,10 @@ func (p *Provider) doSendDingtalk(ctx context.Context, account *core.Account, me
 	// Build webhook URL
 	webhookURL := fmt.Sprintf("https://oapi.dingtalk.com/robot/send?access_token=%s", account.Key)
 
-	// Marshal message to JSON
-	jsonBody, err := json.Marshal(message)
-	if err != nil {
-		return fmt.Errorf("failed to marshal message to JSON: %w", err)
-	}
-
 	// Send request
 	body, statusCode, err := utils.DoRequest(ctx, webhookURL, utils.RequestOptions{
-		Method:      "POST",
-		Body:        jsonBody,
-		ContentType: "application/json",
+		Method: "POST",
+		JSON:   message,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to send request: %w", err)

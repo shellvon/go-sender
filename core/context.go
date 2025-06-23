@@ -7,6 +7,7 @@ import (
 type (
 	strategyKey struct{}
 	itemNameKey struct{}
+	metadataKey struct{}
 )
 
 // WithCtxStrategy provides a specific instance of a selection strategy.
@@ -33,4 +34,16 @@ func GetItemNameFromCtx(ctx context.Context) string {
 		return name
 	}
 	return ""
+}
+
+func WithCtxSendMetadata(ctx context.Context, metadata map[string]interface{}) context.Context {
+	return context.WithValue(ctx, metadataKey{}, metadata)
+}
+
+// GetSendMetadataFromCtx 从context读取metadata
+func GetSendMetadataFromCtx(ctx context.Context) map[string]interface{} {
+	if m, ok := ctx.Value(metadataKey{}).(map[string]interface{}); ok {
+		return m
+	}
+	return nil
 }

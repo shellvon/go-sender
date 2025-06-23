@@ -14,7 +14,7 @@ Go-Sender is designed around the **Decorator Pattern** and **Plugin Architecture
 - **🔌 Pluggable**: Easy to add new providers or middleware through interfaces
 - **🛡️ Reliability**: Built-in retry, circuit breaker, and rate limiting
 - **📊 Observable**: Comprehensive metrics and health checks
-- **⚡ Flexible**: Support for multiple instances, strategies, and configurations
+- **🧩 Flexible**: Support for multiple instances, strategies, and configurations
 
 ### Architecture Overview
 
@@ -35,29 +35,29 @@ Business Logic → Sender → ProviderDecorator → Provider
 
 #### Currently Supported Providers
 
-- **📧 Email**: SMTP with multi-account support
-- **📱 SMS**: Multi-platform SMS support
+- **📧 Email**: SMTP with multi-account support ([provider docs](./providers/email/README.md))
+- **📱 SMS**: Multi-platform SMS support ([provider docs](./providers/sms/README.md))
 
-  - **Tencent Cloud SMS**: [Official Documentation](https://cloud.tencent.com/document/product/382) | [Official Site](https://cloud.tencent.com/product/sms)
-  - **Alibaba Cloud SMS**: [Official Documentation](https://help.aliyun.com/document_detail/101300.html) | [Official Site](https://www.aliyun.com/product/sms)
-  - **Huawei Cloud SMS**: [Official Documentation](https://support.huaweicloud.com/sms/index.html) | [Official Site](https://www.huaweicloud.com/product/sms.html)
-  - **NetEase Cloud SMS**: [Official Documentation](https://dev.yunxin.163.com/docs/product/短信服务) | [Official Site](https://www.163yun.com/product/sms)
-  - **Yunpian SMS**: [Official Documentation](https://www.yunpian.com/doc/zh_CN/api/single_send.html) | [Official Site](https://www.yunpian.com/)
-  - **UCP SMS**: [Official Documentation](https://www.ucpaas.com/doc/) | [Official Site](https://www.ucpaas.com/)
-  - **CL253 SMS**: [Official Documentation](http://www.253.com/) | [Official Site](http://www.253.com/)
-  - **SMSBao**: [Official Documentation](https://www.smsbao.com/openapi/) | [Official Site](https://www.smsbao.com/)
-  - **Juhe SMS**: [Official Documentation](https://www.juhe.cn/docs/api/sms) | [Official Site](https://www.juhe.cn/)
-  - **Luosimao SMS**: [Official Documentation](https://luosimao.com/docs/api/) | [Official Site](https://luosimao.com/)
+  - **Aliyun SMS (阿里云, Mainland)**: [Official Documentation](https://help.aliyun.com/document_detail/419273.html) ([provider docs](./providers/sms/README.md))
+  - **Aliyun Intl SMS (阿里云国际)**: [Official Documentation](https://help.aliyun.com/document_detail/108146.html) ([provider docs](./providers/sms/README.md))
+  - **Huawei Cloud SMS (华为云)**: [Official Documentation](https://support.huaweicloud.com/sms/index.html) ([provider docs](./providers/sms/README.md))
+  - **Luosimao (螺丝帽)**: [Official Documentation](https://luosimao.com/docs/api/) ([provider docs](./providers/sms/README.md))
+  - **CL253 (创蓝 253)**: [Official Documentation](http://www.253.com/) ([provider docs](./providers/sms/README.md))
+  - **Juhe (聚合数据)**: [Official Documentation](https://www.juhe.cn/docs/api/id/54) ([provider docs](./providers/sms/README.md))
+  - **SMSBao (短信宝)**: [Official Documentation](https://www.smsbao.com/openapi/213.html) ([provider docs](./providers/sms/README.md))
+  - **UCP (云之讯)**: [Official Documentation](https://doc.ucpaas.com/doku.php?id=%E7%9F%AD%E4%BF%A1:sms:index) ([provider docs](./providers/sms/README.md))
+  - **Tencent Cloud SMS (腾讯云)** (WIP) ([provider docs](./providers/sms/README.md))
+  - **Yunpian (云片)** (WIP) ([provider docs](./providers/sms/README.md))
+  - **Submail (赛邮)** (WIP) ([provider docs](./providers/sms/README.md))
+  - **Volcano Engine (火山引擎)** (WIP) ([provider docs](./providers/sms/README.md))
 
-  > **Note**: SMS provider implementations are based on code from the [smsBomb](https://github.com/shellvon/smsBomb) project, translated to Go using AI. Not all platforms have been individually tested.
-
-- **🤖 WeCom Bot**: Enterprise WeChat bot messages | [Official Documentation](https://developer.work.weixin.qq.com/document/path/91770)
-- **🔔 DingTalk Bot**: DingTalk group bot messages | [Official Documentation](https://open.dingtalk.com/document/robots/custom-robot-access)
-- **📢 Lark/Feishu**: Lark (International) and Feishu (China) bot messages | [Official Documentation](https://open.feishu.cn/document/ukTMukTMukTM/ucTM5YjL3ETO24yNxkjN)
+- **🤖 WeCom Bot**: Enterprise WeChat bot messages ([provider docs](./providers/wecombot/README.md)) | [Official Documentation](https://developer.work.weixin.qq.com/document/path/91770)
+- **🔔 DingTalk Bot**: DingTalk group bot messages ([provider docs](./providers/dingtalk/README.md)) | [Official Documentation](https://open.dingtalk.com/document/robots/custom-robot-access)
+- **📢 Lark/Feishu**: Lark (International) and Feishu (China) bot messages ([provider docs](./providers/lark/README.md)) | [Official Documentation](https://open.feishu.cn/document/ukTMukTMukTM/ucTM5YjL3ETO24yNxkjN)
 - **💬 Slack**: Slack bot messages | [Official Documentation](https://api.slack.com/messaging/webhooks)
-- **📨 ServerChan**: ServerChan push service | [Official Site](https://sct.ftqq.com/)
-- **📱 Telegram**: Telegram Bot messages | [Official Documentation](https://core.telegram.org/bots/api)
-- **🔗 Webhook**: Generic HTTP webhook calls
+- **📨 ServerChan**: ServerChan push service ([provider docs](./providers/serverchan/README.md)) | [Official Site](https://sct.ftqq.com/)
+- **📱 Telegram**: Telegram Bot messages ([provider docs](./providers/telegram/README.md)) | [Official Documentation](https://core.telegram.org/bots/api)
+- **🔗 Webhook**: Generic HTTP webhook calls ([provider docs](./providers/webhook/README.md))
 
 ### 🛡️ Advanced Reliability Features
 
