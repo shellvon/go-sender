@@ -61,6 +61,10 @@ func NewProviderDecorator(provider Provider, middleware *SenderMiddleware, logge
 
 // Send applies middleware in a layered fashion.
 func (pd *ProviderDecorator) Send(ctx context.Context, message Message, opts ...SendOption) error {
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+
 	sendOpts := &SendOptions{}
 	for _, opt := range opts {
 		opt(sendOpts)
@@ -69,17 +73,23 @@ func (pd *ProviderDecorator) Send(ctx context.Context, message Message, opts ...
 	if sendOpts.Async {
 		// Enqueue chain: only enqueue and record metrics
 		err := pd.sendAsync(ctx, message, sendOpts)
-		pd.recordEnqueue(ctx, message, err)
+		pd.recordMetric(OperationEnqueue, message, err == nil, 0, 0)
 		return err
 	}
 
 	// Synchronous chain: rate limiting -> circuit breaker -> retry -> send -> metrics
-	return pd.executeWithMiddleware(ctx, message, sendOpts)
+	startTime := time.Now()
+	err := pd.executeWithMiddleware(ctx, message, sendOpts)
+	pd.recordMetric(OperationSent, message, err == nil, time.Since(startTime), 0)
+	return err
 }
 
 // Unified logic for consumer and synchronous chains
 func (pd *ProviderDecorator) executeWithMiddleware(ctx context.Context, message Message, opts *SendOptions) error {
-	startTime := time.Now()
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+
 	ctx, span := pd.tracer.Start(ctx, "provider.send",
 		trace.WithAttributes(attribute.String("provider", pd.Provider.Name())),
 	)
@@ -90,58 +100,35 @@ func (pd *ProviderDecorator) executeWithMiddleware(ctx context.Context, message 
 	// Rate limiting
 	if pd.middleware != nil && pd.middleware.RateLimiter != nil && !opts.DisableRateLimiter {
 		if !pd.middleware.RateLimiter.Allow() {
-			err := NewSenderError(ErrCodeRateLimitExceeded, "rate limit exceeded", nil)
-			pd.afterSend(ctx, message, err, startTime)
-			return err
+			return NewSenderError(ErrCodeRateLimitExceeded, "rate limit exceeded", nil)
 		}
 	}
 	// Circuit breaker
 	if pd.middleware != nil && pd.middleware.CircuitBreaker != nil && !opts.DisableCircuitBreaker {
 		return pd.middleware.CircuitBreaker.Execute(ctx, func() error {
-			return pd.doSendWithRetry(ctx, message, opts, startTime)
+			return pd.doSendWithRetry(ctx, message, opts)
 		})
 	}
-	return pd.doSendWithRetry(ctx, message, opts, startTime)
+	return pd.doSendWithRetry(ctx, message, opts)
 }
 
-func (pd *ProviderDecorator) doSendWithRetry(ctx context.Context, message Message, opts *SendOptions, startTime time.Time) error {
+func (pd *ProviderDecorator) doSendWithRetry(ctx context.Context, message Message, opts *SendOptions) error {
 	var err error
 	if pd.middleware != nil && pd.middleware.Retry != nil {
 		err = pd.sendWithRetry(ctx, message, opts)
 	} else {
 		err = pd.executeSend(ctx, message, opts)
 	}
-	pd.afterSend(ctx, message, err, startTime)
 	return err
-}
-
-// Observability: record metrics and logs after sending
-func (pd *ProviderDecorator) afterSend(ctx context.Context, message Message, err error, start time.Time) {
-	if pd.middleware != nil && pd.middleware.Metrics != nil {
-		pd.middleware.Metrics.RecordSendResult(MetricsData{
-			Provider: string(pd.Provider.Name()),
-			Success:  err == nil,
-			Duration: time.Since(start),
-		})
-	}
-	pd.logger.Log(LevelInfo, "message", "provider send end", "message_id", message.MsgID(), "success", fmt.Sprintf("%v", err == nil), "duration", time.Since(start))
-}
-
-// Observability: record metrics and logs when enqueueing
-func (pd *ProviderDecorator) recordEnqueue(ctx context.Context, message Message, err error) {
-	if pd.middleware != nil && pd.middleware.Metrics != nil {
-		pd.middleware.Metrics.RecordSendResult(MetricsData{
-			Provider:  string(pd.Provider.Name()),
-			Success:   err == nil,
-			Duration:  0,
-			Operation: "enqueue",
-		})
-	}
-	pd.logger.Log(LevelInfo, "message", "provider enqueue", "message_id", message.MsgID(), "success", fmt.Sprintf("%v", err == nil), "error", fmt.Sprintf("%v", err))
 }
 
 // The queue consumer worker uses the same logic as the synchronous chain
 func (pd *ProviderDecorator) processQueueItem(ctx context.Context, item *QueueItem) {
+	queueLatency := time.Duration(0)
+	if !item.CreatedAt.IsZero() {
+		queueLatency = time.Since(item.CreatedAt)
+	}
+	pd.recordMetric(OperationDequeue, item.Message, true, 0, queueLatency)
 	// Deserialize SendOptions and restore context
 	restoredCtx, opts, err := deserializeSendOptions(ctx, item.Metadata)
 	if err != nil {
@@ -217,10 +204,10 @@ func (pd *ProviderDecorator) sendWithRetry(ctx context.Context, message Message,
 		lastErr = err
 
 		// Check if we should retry based on the retry filter
-		if retryPolicy.Filter != nil && !retryPolicy.Filter(attempt, err) {
-			pd.logger.Log(LevelWarn, "message", "retry filtered", "attempt", attempt, "error", err.Error())
+		if retryPolicy.Filter == nil || !retryPolicy.Filter(attempt, err) {
 			break
 		}
+		pd.logger.Log(LevelWarn, "message", "retry filtered", "attempt", attempt, "error", err.Error())
 
 		// If this is the last attempt, don't wait
 		if attempt == retryPolicy.MaxAttempts {
@@ -321,4 +308,27 @@ func (pd *ProviderDecorator) Close() error {
 
 	pd.logger.Log(LevelInfo, "message", "ProviderDecorator closed successfully")
 	return nil
+}
+
+func (pd *ProviderDecorator) recordMetric(
+	operation string,
+	message Message,
+	success bool,
+	duration time.Duration,
+	queueLatency time.Duration,
+) {
+	queueSize := 0
+	if pd.middleware != nil && pd.middleware.Queue != nil {
+		queueSize = pd.middleware.Queue.Size()
+	}
+	if pd.middleware != nil && pd.middleware.Metrics != nil {
+		pd.middleware.Metrics.RecordSendResult(MetricsData{
+			Provider:     string(pd.Provider.Name()),
+			Success:      success,
+			Duration:     duration,
+			Operation:    operation,
+			QueueLatency: queueLatency,
+			QueueSize:    queueSize,
+		})
+	}
 }

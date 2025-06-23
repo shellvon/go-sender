@@ -336,3 +336,9 @@ type serializableRetryPolicy struct {
 type ConfigProvider interface {
 	GetStrategy() StrategyType
 }
+
+const (
+	OperationEnqueue = "enqueue"
+	OperationDequeue = "dequeue"
+	OperationSent    = "sent"
+)
