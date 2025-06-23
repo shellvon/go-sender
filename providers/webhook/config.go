@@ -7,8 +7,7 @@ import (
 // Config holds configuration for the Webhook provider
 type Config struct {
 	core.BaseConfig
-	Endpoints         []Endpoint `json:"endpoints"`          // Multiple webhook endpoints configuration
-	DisableMiddleware bool       `json:"disable_middleware"` // Whether to disable middleware (for embedded usage)
+	Endpoints []Endpoint `json:"endpoints"` // Multiple webhook endpoints configuration
 }
 
 // Endpoint represents a single webhook endpoint configuration
@@ -20,6 +19,31 @@ type Endpoint struct {
 	QueryParams map[string]string `json:"query_params"` // Fixed query parameters
 	Weight      int               `json:"weight"`       // Weight for weighted strategy
 	Disabled    bool              `json:"disabled"`     // Whether this endpoint is disabled (default: false)
+
+	// Response handling configuration
+	ResponseConfig *ResponseConfig `json:"response_config,omitempty"` // Response handling configuration
+}
+
+// ResponseConfig defines how to handle webhook responses
+type ResponseConfig struct {
+	// Success criteria
+	SuccessStatusCodes []int `json:"success_status_codes,omitempty"` // Custom success status codes (default: 2xx)
+
+	// Response validation
+	ValidateResponse bool `json:"validate_response,omitempty"` // Whether to validate response body
+
+	// Response parsing
+	ResponseType string `json:"response_type,omitempty"` // "json", "text", "xml", "none"
+
+	// JSON response validation (when ResponseType is "json")
+	SuccessField string `json:"success_field,omitempty"` // Field name indicating success (e.g., "success", "ok")
+	SuccessValue string `json:"success_value,omitempty"` // Expected value for success (e.g., "true", "ok")
+	ErrorField   string `json:"error_field,omitempty"`   // Field name containing error message
+	MessageField string `json:"message_field,omitempty"` // Field name containing response message
+
+	// Text response validation (when ResponseType is "text")
+	SuccessPattern string `json:"success_pattern,omitempty"` // Regex pattern for success response
+	ErrorPattern   string `json:"error_pattern,omitempty"`   // Regex pattern for error response
 }
 
 // IsConfigured checks if the Webhook configuration is valid

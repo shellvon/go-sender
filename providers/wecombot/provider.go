@@ -65,17 +65,10 @@ func (p *Provider) doSendWecom(ctx context.Context, account *core.Account, messa
 	// Build webhook URL
 	webhookURL := fmt.Sprintf("https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=%s", account.Key)
 
-	// Marshal message to JSON
-	jsonBody, err := json.Marshal(message)
-	if err != nil {
-		return fmt.Errorf("failed to marshal message to JSON: %w", err)
-	}
-
 	// Send request
 	body, statusCode, err := utils.DoRequest(ctx, webhookURL, utils.RequestOptions{
-		Method:      "POST",
-		Body:        jsonBody,
-		ContentType: "application/json",
+		Method: "POST",
+		JSON:   message,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to send request: %w", err)
@@ -114,7 +107,7 @@ func (p *Provider) UploadMedia(ctx context.Context, filePath string, bodyReader 
 	// Build upload URL
 	uploadURL := fmt.Sprintf("https://qyapi.weixin.qq.com/cgi-bin/webhook/upload_media?key=%s&type=file", selectedAccount.Key)
 
-	// Create multipart form
+	// Create multipart form with custom reader
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
@@ -134,11 +127,12 @@ func (p *Provider) UploadMedia(ctx context.Context, filePath string, bodyReader 
 		return "", nil, fmt.Errorf("failed to close writer: %w", err)
 	}
 
-	// Send request
 	respBody, statusCode, err := utils.DoRequest(ctx, uploadURL, utils.RequestOptions{
-		Method:      "POST",
-		Body:        body.Bytes(),
-		ContentType: writer.FormDataContentType(),
+		Method:    "POST",
+		RawReader: body,
+		Headers: map[string]string{
+			"Content-Type": writer.FormDataContentType(),
+		},
 	})
 	if err != nil {
 		return "", nil, fmt.Errorf("failed to upload media: %w", err)

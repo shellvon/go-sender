@@ -7,11 +7,12 @@ import (
 // Message represents an SMS message
 type Message struct {
 	core.DefaultMessage
-	Mobile         string            `json:"mobile"`          // Mobile phone number
-	Content        string            `json:"content"`         // SMS content (for non-template SMS)
-	TemplateCode   string            `json:"template_code"`   // Template code (for template SMS)
-	TemplateParams map[string]string `json:"template_params"` // Template parameters
-	SignName       string            `json:"sign_name"`       // SMS signature name
+	Mobiles             []string          `json:"mobiles"`               // Mobile phone numbers
+	Content             string            `json:"content"`               // SMS content (for non-template SMS)
+	TemplateCode        string            `json:"template_code"`         // Template code (for template SMS)
+	TemplateParams      map[string]string `json:"template_params"`       // Template parameters (key-value)
+	TemplateParamsArray []string          `json:"template_params_array"` // Template parameters (ordered array, for Huawei etc.)
+	SignName            string            `json:"sign_name"`             // SMS signature name
 }
 
 var (
@@ -25,8 +26,8 @@ func (m *Message) ProviderType() core.ProviderType {
 
 // Validate checks if the Message is valid
 func (m *Message) Validate() error {
-	if m.Mobile == "" {
-		return core.NewParamError("mobile cannot be empty")
+	if len(m.Mobiles) == 0 {
+		return core.NewParamError("mobiles cannot be empty")
 	}
 
 	// Either content or template_code must be provided
@@ -45,10 +46,17 @@ func (m *Message) Validate() error {
 // MessageOption defines a function type for configuring Message
 type MessageOption func(*Message)
 
-// WithMobile sets the mobile phone number
+// WithMobiles sets the mobile phone numbers
+func WithMobiles(mobiles []string) MessageOption {
+	return func(m *Message) {
+		m.Mobiles = mobiles
+	}
+}
+
+// WithMobile sets a single mobile phone number
 func WithMobile(mobile string) MessageOption {
 	return func(m *Message) {
-		m.Mobile = mobile
+		m.Mobiles = []string{mobile}
 	}
 }
 
@@ -73,6 +81,13 @@ func WithTemplateParams(params map[string]string) MessageOption {
 	}
 }
 
+// WithTemplateParamsArray sets the template parameters array
+func WithTemplateParamsArray(paramsArray []string) MessageOption {
+	return func(m *Message) {
+		m.TemplateParamsArray = paramsArray
+	}
+}
+
 // WithSignName sets the SMS signature name
 func WithSignName(signName string) MessageOption {
 	return func(m *Message) {
@@ -83,7 +98,7 @@ func WithSignName(signName string) MessageOption {
 // NewMessage creates a new Message with required fields and optional configurations
 func NewMessage(mobile string, opts ...MessageOption) *Message {
 	m := &Message{
-		Mobile: mobile,
+		Mobiles: []string{mobile},
 	}
 
 	// Apply optional configurations

@@ -16,7 +16,7 @@ Go-Sender 基于**装饰器模式**和**插件架构**设计，让你可以轻�
 - **🔌 可插拔**: 通过接口轻松添加新的提供者或中间件
 - **🛡️ 可靠性**: 内置重试、熔断器和限流机制
 - **📊 可观测**: 全面的指标和健康检查
-- **⚡ 灵活性**: 支持多实例、策略和配置
+- **🧩 灵活性**: 支持多实例、策略和配置
 
 ### 架构概览
 
@@ -35,29 +35,29 @@ Go-Sender 基于**装饰器模式**和**插件架构**设计，让你可以轻�
 
 ### 🚀 多渠道支持
 
-- **📧 邮件**: SMTP 多账号支持
-- **📱 短信**: 多平台短信支持
+- **📧 邮件**: SMTP 多账号支持（[通道文档](./providers/email/README.md)）
+- **📱 短信**: 多平台短信支持（[通道文档](./providers/sms/README.md)）
 
-  - **腾讯云短信**: [官方文档](https://cloud.tencent.com/document/product/382) | [官方网站](https://cloud.tencent.com/product/sms)
-  - **阿里云短信**: [官方文档](https://help.aliyun.com/document_detail/101300.html) | [官方网站](https://www.aliyun.com/product/sms)
-  - **华为云短信**: [官方文档](https://support.huaweicloud.com/sms/index.html) | [官方网站](https://www.huaweicloud.com/product/sms.html)
-  - **网易云短信**: [官方文档](https://dev.yunxin.163.com/docs/product/短信服务) | [官方网站](https://www.163yun.com/product/sms)
-  - **云片网**: [官方文档](https://www.yunpian.com/doc/zh_CN/api/single_send.html) | [官方网站](https://www.yunpian.com/)
-  - **云之讯**: [官方文档](https://www.ucpaas.com/doc/) | [官方网站](https://www.ucpaas.com/)
-  - **蓝创 253**: [官方文档](http://www.253.com/) | [官方网站](http://www.253.com/)
-  - **短信宝**: [官方文档](https://www.smsbao.com/openapi/) | [官方网站](https://www.smsbao.com/)
-  - **聚合服务**: [官方文档](https://www.juhe.cn/docs/api/sms) | [官方网站](https://www.juhe.cn/)
-  - **螺丝帽**: [官方文档](https://luosimao.com/docs/api/) | [官方网站](https://luosimao.com/)
+  - **Aliyun SMS (阿里云, Mainland)**: [官方文档](https://help.aliyun.com/document_detail/419273.html)（[通道文档](./providers/sms/README.md)）
+  - **Aliyun Intl SMS (阿里云国际)**: [官方文档](https://help.aliyun.com/document_detail/108146.html)（[通道文档](./providers/sms/README.md)）
+  - **Huawei Cloud SMS (华为云)**: [官方文档](https://support.huaweicloud.com/sms/index.html)（[通道文档](./providers/sms/README.md)）
+  - **Luosimao (螺丝帽)**: [官方文档](https://luosimao.com/docs/api/)（[通道文档](./providers/sms/README.md)）
+  - **CL253 (创蓝 253)**: [官方文档](http://www.253.com/)（[通道文档](./providers/sms/README.md)）
+  - **Juhe (聚合数据)**: [官方文档](https://www.juhe.cn/docs/api/id/54)（[通道文档](./providers/sms/README.md)）
+  - **SMSBao (短信宝)**: [官方文档](https://www.smsbao.com/openapi/213.html)（[通道文档](./providers/sms/README.md)）
+  - **UCP (云之讯)**: [官方文档](https://doc.ucpaas.com/doku.php?id=%E7%9F%AD%E4%BF%A1:sms:index)（[通道文档](./providers/sms/README.md)）
+  - **Tencent Cloud SMS (腾讯云)** (WIP)（[通道文档](./providers/sms/README.md)）
+  - **Yunpian (云片)** (WIP)（[通道文档](./providers/sms/README.md)）
+  - **Submail (赛邮)** (WIP)（[通道文档](./providers/sms/README.md)）
+  - **Volcano Engine (火山引擎)** (WIP)（[通道文档](./providers/sms/README.md)）
 
-  > **注意**: 短信提供者实现基于 [smsBomb](https://github.com/shellvon/smsBomb) 项目代码，通过 AI 翻译到 Go 语言。并非所有平台都经过单独测试。
-
-- **🤖 企业微信机器人**: 企业微信机器人消息 | [官方文档](https://developer.work.weixin.qq.com/document/path/91770)
-- **🔔 钉钉机器人**: 钉钉群机器人消息 | [官方文档](https://open.dingtalk.com/document/robots/custom-robot-access)
-- **📢 飞书/国际版**: Lark/Feishu 机器人消息 | [官方文档](https://open.feishu.cn/document/ukTMukTMukTM/ucTM5YjL3ETO24yNxkjN)
+- **🤖 企业微信机器人**: 企业微信机器人消息（[通道文档](./providers/wecombot/README.md)） | [官方文档](https://developer.work.weixin.qq.com/document/path/91770)
+- **🔔 钉钉机器人**: 钉钉群机器人消息（[通道文档](./providers/dingtalk/README.md)） | [官方文档](https://open.dingtalk.com/document/robots/custom-robot-access)
+- **📢 飞书/国际版**: Lark/Feishu 机器人消息（[通道文档](./providers/lark/README.md)） | [官方文档](https://open.feishu.cn/document/ukTMukTMukTM/ucTM5YjL3ETO24yNxkjN)
 - **💬 Slack**: Slack 机器人消息 | [官方文档](https://api.slack.com/messaging/webhooks)
-- **📨 ServerChan**: ServerChan 推送服务 | [官方网站](https://sct.ftqq.com/)
-- **📱 Telegram**: Telegram Bot 消息 | [官方文档](https://core.telegram.org/bots/api)
-- **🔗 Webhook**: 通用 HTTP webhook 调用
+- **📨 ServerChan**: ServerChan 推送服务（[通道文档](./providers/serverchan/README.md)） | [官方网站](https://sct.ftqq.com/)
+- **📱 Telegram**: Telegram Bot 消息（[通道文档](./providers/telegram/README.md)） | [官方文档](https://core.telegram.org/bots/api)
+- **🔗 Webhook**: 通用 HTTP webhook 调用（[通道文档](./providers/webhook/README.md)）
 
 ### 🛡️ 高级可靠性功能
 

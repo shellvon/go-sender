@@ -2,9 +2,11 @@ package webhook
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
+	"regexp"
 
 	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/utils"
@@ -63,9 +65,18 @@ func (p *Provider) Send(ctx context.Context, message core.Message) error {
 
 // doSendWebhook performs the actual webhook request
 func (p *Provider) doSendWebhook(ctx context.Context, endpoint *Endpoint, message *Message) error {
-	// Build the request URL with query parameters
+	// Build the request URL with path variables and query parameters
 	requestURL := endpoint.URL
-	if len(endpoint.QueryParams) > 0 {
+
+	// Use message's URL building functionality if path params or query params are provided
+	if len(message.PathParams) > 0 || len(message.QueryParams) > 0 {
+		builtURL, err := message.buildURL(endpoint.URL)
+		if err != nil {
+			return fmt.Errorf("failed to build URL: %w", err)
+		}
+		requestURL = builtURL
+	} else if len(endpoint.QueryParams) > 0 {
+		// Fallback to endpoint query params if no message query params
 		parsedURL, err := url.Parse(endpoint.URL)
 		if err != nil {
 			return fmt.Errorf("invalid endpoint URL: %w", err)
@@ -79,8 +90,11 @@ func (p *Provider) doSendWebhook(ctx context.Context, endpoint *Endpoint, messag
 		requestURL = parsedURL.String()
 	}
 
-	// Determine HTTP method
+	// Determine HTTP method (message method overrides endpoint method)
 	method := endpoint.Method
+	if message.Method != "" {
+		method = message.Method
+	}
 	if method == "" {
 		method = "POST"
 	}
@@ -105,24 +119,141 @@ func (p *Provider) doSendWebhook(ctx context.Context, endpoint *Endpoint, messag
 		headers["Content-Type"] = "application/json"
 	}
 
-	// Send the request
-	_, statusCode, err := utils.DoRequest(ctx, requestURL, utils.RequestOptions{
-		Method:      method,
-		Body:        message.Body,
-		Headers:     headers,
-		ContentType: headers["Content-Type"],
+	// Send request
+	responseBody, statusCode, err := utils.DoRequest(ctx, requestURL, utils.RequestOptions{
+		Method:  method,
+		Headers: headers,
+		Raw:     message.Body,
 	})
 
 	if err != nil {
 		return fmt.Errorf("failed to send webhook request: %w", err)
 	}
 
-	// Check if the status code indicates success (2xx range)
-	if statusCode < 200 || statusCode >= 300 {
+	// Handle response based on configuration
+	return p.handleResponse(endpoint, statusCode, responseBody)
+}
+
+// handleResponse processes the webhook response based on endpoint configuration
+func (p *Provider) handleResponse(endpoint *Endpoint, statusCode int, responseBody []byte) error {
+	// Check status code first
+	if !p.isSuccessStatusCode(endpoint, statusCode) {
 		return fmt.Errorf("webhook request failed with status code: %d", statusCode)
 	}
 
+	// If no response validation is configured, consider it successful
+	if endpoint.ResponseConfig == nil || !endpoint.ResponseConfig.ValidateResponse {
+		return nil
+	}
+
+	// Validate response body based on configuration
+	return p.validateResponseBody(endpoint.ResponseConfig, responseBody)
+}
+
+// isSuccessStatusCode checks if the status code indicates success
+func (p *Provider) isSuccessStatusCode(endpoint *Endpoint, statusCode int) bool {
+	// Use custom success status codes if configured
+	if endpoint.ResponseConfig != nil && len(endpoint.ResponseConfig.SuccessStatusCodes) > 0 {
+		for _, code := range endpoint.ResponseConfig.SuccessStatusCodes {
+			if statusCode == code {
+				return true
+			}
+		}
+		return false
+	}
+
+	// Default: 2xx range indicates success
+	return statusCode >= 200 && statusCode < 300
+}
+
+// validateResponseBody validates the response body based on configuration
+func (p *Provider) validateResponseBody(config *ResponseConfig, responseBody []byte) error {
+	switch config.ResponseType {
+	case "json":
+		return p.validateJSONResponse(config, responseBody)
+	case "text":
+		return p.validateTextResponse(config, responseBody)
+	case "xml":
+		return p.validateXMLResponse(config, responseBody)
+	case "none":
+		// No validation needed
+		return nil
+	default:
+		// Default to no validation
+		return nil
+	}
+}
+
+// validateJSONResponse validates JSON response
+func (p *Provider) validateJSONResponse(config *ResponseConfig, responseBody []byte) error {
+	var response map[string]interface{}
+	if err := json.Unmarshal(responseBody, &response); err != nil {
+		return fmt.Errorf("failed to parse JSON response: %w", err)
+	}
+
+	// Check success field if configured
+	if config.SuccessField != "" {
+		if successValue, exists := response[config.SuccessField]; exists {
+			successStr := fmt.Sprintf("%v", successValue)
+			if successStr != config.SuccessValue {
+				// Extract error message if available
+				errorMsg := p.extractErrorMessage(config, response)
+				return fmt.Errorf("webhook returned failure: %s", errorMsg)
+			}
+		}
+	}
+
 	return nil
+}
+
+// validateTextResponse validates text response using regex patterns
+func (p *Provider) validateTextResponse(config *ResponseConfig, responseBody []byte) error {
+	responseText := string(responseBody)
+
+	// Check error pattern first
+	if config.ErrorPattern != "" {
+		matched, err := regexp.MatchString(config.ErrorPattern, responseText)
+		if err != nil {
+			return fmt.Errorf("invalid error pattern: %w", err)
+		}
+		if matched {
+			return fmt.Errorf("webhook returned error response: %s", responseText)
+		}
+	}
+
+	// Check success pattern if configured
+	if config.SuccessPattern != "" {
+		matched, err := regexp.MatchString(config.SuccessPattern, responseText)
+		if err != nil {
+			return fmt.Errorf("invalid success pattern: %w", err)
+		}
+		if !matched {
+			return fmt.Errorf("webhook response does not match success pattern: %s", responseText)
+		}
+	}
+
+	return nil
+}
+
+// validateXMLResponse validates XML response (placeholder for future implementation)
+func (p *Provider) validateXMLResponse(config *ResponseConfig, responseBody []byte) error {
+	// TODO: Implement XML response validation
+	return fmt.Errorf("XML response validation not yet implemented")
+}
+
+// extractErrorMessage extracts error message from JSON response
+func (p *Provider) extractErrorMessage(config *ResponseConfig, response map[string]interface{}) string {
+	if config.ErrorField != "" {
+		if errorValue, exists := response[config.ErrorField]; exists {
+			return fmt.Sprintf("%v", errorValue)
+		}
+	}
+	if config.MessageField != "" {
+		if messageValue, exists := response[config.MessageField]; exists {
+			return fmt.Sprintf("%v", messageValue)
+		}
+	}
+	return "unknown error"
 }
 
 // Name returns the name of the provider

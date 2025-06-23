@@ -5,11 +5,12 @@ This provider supports sending messages via HTTP webhooks to any endpoint that a
 ## Features
 
 - **Universal HTTP Support**: Send messages to any HTTP endpoint
-- **Multiple Methods**: Support for GET, POST, PUT, PATCH, DELETE methods
+- **Multiple Methods**: Support for GET, POST, PUT, PATCH, DELETE methods (configured in endpoint)
 - **Custom Headers**: Add custom headers for authentication and content type
-- **Flexible Body Format**: Support for JSON, form data, and raw text
-- **Timeout Control**: Configurable request timeout
-- **Retry Support**: Built-in retry mechanism with exponential backoff
+- **Flexible Body Format**: Support for any raw body content
+- **Response Validation**: Configurable response validation for different webhook formats
+- **Multiple Response Types**: Support for JSON, text, and XML response validation
+- **Custom Status Codes**: Configure custom success status codes
 - **Multiple Endpoints**: Support multiple webhook endpoints with load balancing
 
 ## Configuration
@@ -25,16 +26,18 @@ config := webhook.Config{
     BaseConfig: core.BaseConfig{
         Strategy: core.StrategyRoundRobin,
     },
-    Accounts: []core.Account{
+    Endpoints: []webhook.Endpoint{
         {
             Name:     "primary-webhook",
-            Key:      "https://api.example.com/webhook",
+            URL:      "https://api.example.com/webhook",
+            Method:   "POST",
             Weight:   100,
             Disabled: false,
         },
         {
             Name:     "backup-webhook",
-            Key:      "https://backup.example.com/webhook",
+            URL:      "https://backup.example.com/webhook",
+            Method:   "POST",
             Weight:   50,
             Disabled: false,
         },
@@ -48,105 +51,198 @@ if err != nil {
 }
 ```
 
+## Response Validation
+
+The webhook provider supports configurable response validation to handle different webhook response formats.
+
+### 1. Simple Status Code Validation (Default)
+
+```go
+// Default behavior - only checks HTTP status codes (2xx = success)
+config := webhook.Config{
+    Endpoints: []webhook.Endpoint{
+        {
+            Name:   "simple-webhook",
+            URL:    "https://api.example.com/webhook",
+            Method: "POST",
+        },
+    },
+}
+```
+
+### 2. JSON Response Validation
+
+```go
+// Validate JSON responses with success/error fields
+config := webhook.Config{
+    Endpoints: []webhook.Endpoint{
+        {
+            Name:   "json-webhook",
+            URL:    "https://api.example.com/webhook",
+            Method: "POST",
+            ResponseConfig: &webhook.ResponseConfig{
+                ValidateResponse: true,
+                ResponseType:     "json",
+                SuccessField:     "success",    // Field name indicating success
+                SuccessValue:     "true",       // Expected value for success
+                ErrorField:       "error",      // Field name containing error message
+                MessageField:     "message",    // Field name containing response message
+            },
+        },
+    },
+}
+```
+
+**Example JSON responses:**
+
+```json
+// Success response
+{
+    "success": "true",
+    "message": "Message sent successfully",
+    "id": "12345"
+}
+
+// Error response
+{
+    "success": "false",
+    "error": "Invalid API key",
+    "code": 401
+}
+```
+
+### 3. Custom Status Codes
+
+```go
+// Accept only specific status codes as success
+config := webhook.Config{
+    Endpoints: []webhook.Endpoint{
+        {
+            Name:   "custom-status-webhook",
+            URL:    "https://api.example.com/webhook",
+            Method: "POST",
+            ResponseConfig: &webhook.ResponseConfig{
+                SuccessStatusCodes: []int{200, 201, 202}, // Only these codes = success
+            },
+        },
+    },
+}
+```
+
+### 4. Text Response Validation
+
+```go
+// Validate text responses using regex patterns
+config := webhook.Config{
+    Endpoints: []webhook.Endpoint{
+        {
+            Name:   "text-webhook",
+            URL:    "https://api.example.com/webhook",
+            Method: "POST",
+            ResponseConfig: &webhook.ResponseConfig{
+                ValidateResponse: true,
+                ResponseType:     "text",
+                SuccessPattern:   "^OK$",           // Regex for success response
+                ErrorPattern:     "^ERROR:",        // Regex for error response
+            },
+        },
+    },
+}
+```
+
+**Example text responses:**
+
+```
+// Success response
+OK
+
+// Error response
+ERROR: Invalid request
+```
+
+### 5. No Response Validation
+
+```go
+// Skip response body validation (only check status code)
+config := webhook.Config{
+    Endpoints: []webhook.Endpoint{
+        {
+            Name:   "no-validation-webhook",
+            URL:    "https://api.example.com/webhook",
+            Method: "POST",
+            ResponseConfig: &webhook.ResponseConfig{
+                ValidateResponse: false, // or omit ResponseConfig entirely
+            },
+        },
+    },
+}
+```
+
 ## Message Types
 
 ### 1. JSON Message
 
 ```go
 // Send JSON data
-msg := webhook.NewMessage(
-    webhook.WithMethod("POST"),
-    webhook.WithHeaders(map[string]string{
-        "Content-Type": "application/json",
-        "Authorization": "Bearer your-token",
-    }),
-    webhook.WithJSONBody(map[string]interface{}{
-        "event": "user.created",
-        "data": map[string]interface{}{
-            "user_id": "12345",
-            "email": "user@example.com",
-            "timestamp": time.Now().Unix(),
-        },
-    }),
-)
+jsonData := map[string]interface{}{
+    "event": "user.created",
+    "data": map[string]interface{}{
+        "user_id": "12345",
+        "email": "user@example.com",
+        "timestamp": time.Now().Unix(),
+    },
+}
+body, _ := json.Marshal(jsonData)
+
+msg := webhook.NewMessage(body, webhook.WithHeaders(map[string]string{
+    "Content-Type": "application/json",
+    "Authorization": "Bearer your-token",
+}))
 ```
 
 ### 2. Form Data Message
 
 ```go
 // Send form data
-msg := webhook.NewMessage(
-    webhook.WithMethod("POST"),
-    webhook.WithHeaders(map[string]string{
-        "Content-Type": "application/x-www-form-urlencoded",
-    }),
-    webhook.WithFormData(map[string]string{
-        "action": "notify",
-        "message": "Hello from webhook",
-        "priority": "high",
-    }),
-)
+formData := "action=notify&message=Hello from webhook&priority=high"
+body := []byte(formData)
+
+msg := webhook.NewMessage(body, webhook.WithHeaders(map[string]string{
+    "Content-Type": "application/x-www-form-urlencoded",
+}))
 ```
 
 ### 3. Raw Text Message
 
 ```go
 // Send raw text
-msg := webhook.NewMessage(
-    webhook.WithMethod("POST"),
-    webhook.WithHeaders(map[string]string{
-        "Content-Type": "text/plain",
-    }),
-    webhook.WithRawBody("Simple text message"),
-)
+body := []byte("Simple text message")
+
+msg := webhook.NewMessage(body, webhook.WithHeaders(map[string]string{
+    "Content-Type": "text/plain",
+}))
 ```
 
 ### 4. GET Request with Query Parameters
 
 ```go
-// Send GET request with query parameters
-msg := webhook.NewMessage(
-    webhook.WithMethod("GET"),
-    webhook.WithQueryParams(map[string]string{
-        "action": "ping",
-        "timestamp": fmt.Sprintf("%d", time.Now().Unix()),
-    }),
-)
-```
+// For GET requests, use endpoint QueryParams configuration
+config := webhook.Config{
+    Endpoints: []webhook.Endpoint{
+        {
+            Name:   "get-webhook",
+            URL:    "https://api.example.com/webhook",
+            Method: "GET",
+            QueryParams: map[string]string{
+                "action": "ping",
+                "timestamp": fmt.Sprintf("%d", time.Now().Unix()),
+            },
+        },
+    },
+}
 
-## Advanced Configuration
-
-### Custom Timeout and Retry
-
-```go
-msg := webhook.NewMessage(
-    webhook.WithMethod("POST"),
-    webhook.WithTimeout(30*time.Second),
-    webhook.WithRetryAttempts(3),
-    webhook.WithRetryDelay(2*time.Second),
-    webhook.WithJSONBody(map[string]interface{}{
-        "message": "Important notification",
-    }),
-)
-```
-
-### Complex Headers and Authentication
-
-```go
-msg := webhook.NewMessage(
-    webhook.WithMethod("POST"),
-    webhook.WithHeaders(map[string]string{
-        "Content-Type": "application/json",
-        "Authorization": "Bearer your-api-token",
-        "X-Custom-Header": "custom-value",
-        "User-Agent": "Go-Sender/1.0",
-    }),
-    webhook.WithJSONBody(map[string]interface{}{
-        "event": "system.alert",
-        "level": "critical",
-        "message": "System is down",
-    }),
-)
+// Empty body for GET requests
+msg := webhook.NewMessage([]byte{})
 ```
 
 ## Usage with Sender
@@ -170,13 +266,16 @@ s.RegisterProvider(core.ProviderTypeWebhook, webhookProvider, nil)
 
 // Send webhook message
 ctx := context.Background()
-msg := webhook.NewMessage(
-    webhook.WithMethod("POST"),
-    webhook.WithJSONBody(map[string]interface{}{
-        "message": "Hello from Go-Sender",
-        "timestamp": time.Now().Unix(),
-    }),
-)
+jsonData := map[string]interface{}{
+    "message": "Hello from Go-Sender",
+    "timestamp": time.Now().Unix(),
+}
+body, _ := json.Marshal(jsonData)
+
+msg := webhook.NewMessage(body, webhook.WithHeaders(map[string]string{
+    "Content-Type": "application/json",
+}))
+
 err = s.Send(ctx, msg)
 if err != nil {
     log.Printf("Failed to send webhook: %v", err)
@@ -185,31 +284,9 @@ if err != nil {
 
 ## Message Options
 
-### HTTP Method Options
-
-- `WithMethod(method string)`: Set HTTP method (GET, POST, PUT, PATCH, DELETE)
-- `WithTimeout(timeout time.Duration)`: Set request timeout
-- `WithRetryAttempts(attempts int)`: Set retry attempts
-- `WithRetryDelay(delay time.Duration)`: Set retry delay
-
-### Header and Authentication Options
+### Header Options
 
 - `WithHeaders(headers map[string]string)`: Set custom headers
-- `WithBasicAuth(username, password string)`: Set basic authentication
-- `WithBearerToken(token string)`: Set bearer token authentication
-
-### Body Options
-
-- `WithJSONBody(data interface{})`: Set JSON body
-- `WithFormData(data map[string]string)`: Set form data body
-- `WithRawBody(body string)`: Set raw text body
-- `WithQueryParams(params map[string]string)`: Set query parameters (for GET requests)
-
-### Advanced Options
-
-- `WithCustomClient(client *http.Client)`: Use custom HTTP client
-- `WithFollowRedirects(follow bool)`: Control redirect following
-- `WithSkipSSLVerification(skip bool)`: Skip SSL certificate verification
 
 ## Configuration Reference
 
@@ -218,25 +295,35 @@ if err != nil {
 - `BaseConfig`: Common configuration fields
   - `Disabled`: Whether the provider is disabled
   - `Strategy`: Selection strategy (round_robin, random, weighted)
-- `Accounts`: Array of webhook endpoint configurations
+- `Endpoints`: Array of webhook endpoint configurations
 
-### Account (core.Account)
+### Endpoint
 
-- `Name`: Account name for identification
-- `Key`: Webhook URL (endpoint)
+- `Name`: Endpoint name for identification
+- `URL`: Webhook URL (endpoint)
+- `Method`: HTTP method (default: POST)
+- `Headers`: Fixed request headers
+- `QueryParams`: Fixed query parameters
 - `Weight`: Weight for weighted strategy (default: 1)
-- `Disabled`: Whether this account is disabled
-- `Webhook`: Optional webhook URL (alternative to Key)
+- `Disabled`: Whether this endpoint is disabled
+- `ResponseConfig`: Response validation configuration
+
+### ResponseConfig
+
+- `SuccessStatusCodes`: Custom success status codes (default: 2xx range)
+- `ValidateResponse`: Whether to validate response body (default: false)
+- `ResponseType`: Response type for validation ("json", "text", "xml", "none")
+- `SuccessField`: JSON field name indicating success
+- `SuccessValue`: Expected value for success field
+- `ErrorField`: JSON field name containing error message
+- `MessageField`: JSON field name containing response message
+- `SuccessPattern`: Regex pattern for success text response
+- `ErrorPattern`: Regex pattern for error text response
 
 ### Message
 
-- `Method`: HTTP method (default: POST)
-- `URL`: Target URL (from account)
+- `Body`: Request body (raw bytes)
 - `Headers`: HTTP headers
-- `Body`: Request body
-- `Timeout`: Request timeout
-- `RetryAttempts`: Number of retry attempts
-- `RetryDelay`: Delay between retries
 
 ## Error Handling
 
@@ -244,58 +331,68 @@ The provider handles:
 
 - Network timeouts and connection errors
 - HTTP error status codes (4xx, 5xx)
-- Automatic retries with exponential backoff
+- Custom response validation failures
 - Provider selection based on strategy
 - Fallback to alternative endpoints on failure
 
-## Rate Limits and Security
-
-- **Rate Limiting**: Respect target endpoint rate limits
-- **Authentication**: Support for various authentication methods
-- **SSL/TLS**: Full SSL/TLS support with certificate verification
-- **Headers**: Custom headers for API keys, tokens, etc.
-
 ## Best Practices
 
-### 1. Use Appropriate HTTP Methods
+### 1. Configure Response Validation
 
 ```go
-// For notifications
-msg := webhook.NewMessage(
-    webhook.WithMethod("POST"),
-    webhook.WithJSONBody(data),
-)
-
-// For status checks
-msg := webhook.NewMessage(
-    webhook.WithMethod("GET"),
-    webhook.WithQueryParams(params),
-)
+// For APIs that return structured responses
+config := webhook.Config{
+    Endpoints: []webhook.Endpoint{
+        {
+            Name:   "api-webhook",
+            URL:    "https://api.example.com/webhook",
+            Method: "POST",
+            ResponseConfig: &webhook.ResponseConfig{
+                ValidateResponse: true,
+                ResponseType:     "json",
+                SuccessField:     "status",
+                SuccessValue:     "ok",
+                ErrorField:       "error",
+            },
+        },
+    },
+}
 ```
 
-### 2. Handle Authentication Properly
+### 2. Use Appropriate HTTP Methods
+
+```go
+// Configure method in endpoint
+config := webhook.Config{
+    Endpoints: []webhook.Endpoint{
+        {
+            Name:   "notifications",
+            URL:    "https://api.example.com/webhook",
+            Method: "POST", // For notifications
+        },
+        {
+            Name:   "status-check",
+            URL:    "https://api.example.com/status",
+            Method: "GET", // For status checks
+        },
+    },
+}
+```
+
+### 3. Handle Authentication Properly
 
 ```go
 // Use headers for API keys
-msg := webhook.NewMessage(
-    webhook.WithHeaders(map[string]string{
-        "X-API-Key": "your-api-key",
-    }),
-)
+msg := webhook.NewMessage(body, webhook.WithHeaders(map[string]string{
+    "X-API-Key": "your-api-key",
+    "Content-Type": "application/json",
+}))
 
 // Or use bearer tokens
-msg := webhook.NewMessage(
-    webhook.WithBearerToken("your-bearer-token"),
-)
-```
-
-### 3. Set Appropriate Timeouts
-
-```go
-msg := webhook.NewMessage(
-    webhook.WithTimeout(10*time.Second), // Short timeout for critical notifications
-    webhook.WithRetryAttempts(3),
-)
+msg := webhook.NewMessage(body, webhook.WithHeaders(map[string]string{
+    "Authorization": "Bearer your-bearer-token",
+    "Content-Type": "application/json",
+}))
 ```
 
 ### 4. Use Multiple Endpoints for Reliability
@@ -305,15 +402,15 @@ config := webhook.Config{
     BaseConfig: core.BaseConfig{
         Strategy: core.StrategyRoundRobin,
     },
-    Accounts: []core.Account{
+    Endpoints: []webhook.Endpoint{
         {
             Name: "primary",
-            Key:  "https://primary.example.com/webhook",
+            URL:  "https://primary.example.com/webhook",
             Weight: 100,
         },
         {
             Name: "backup",
-            Key:  "https://backup.example.com/webhook",
+            URL:  "https://backup.example.com/webhook",
             Weight: 50,
         },
     },
@@ -325,56 +422,101 @@ config := webhook.Config{
 ### 1. Slack Webhook Integration
 
 ```go
-msg := webhook.NewMessage(
-    webhook.WithMethod("POST"),
-    webhook.WithHeaders(map[string]string{
-        "Content-Type": "application/json",
-    }),
-    webhook.WithJSONBody(map[string]interface{}{
-        "text": "Hello from Go-Sender!",
-        "channel": "#general",
-        "username": "Go-Sender Bot",
-    }),
-)
+config := webhook.Config{
+    Endpoints: []webhook.Endpoint{
+        {
+            Name:   "slack-webhook",
+            URL:    "https://hooks.slack.com/services/YOUR/WEBHOOK/URL",
+            Method: "POST",
+            ResponseConfig: &webhook.ResponseConfig{
+                ValidateResponse: true,
+                ResponseType:     "text",
+                SuccessPattern:   "^ok$",
+            },
+        },
+    },
+}
+
+slackData := map[string]interface{}{
+    "text": "Hello from Go-Sender!",
+    "channel": "#general",
+    "username": "Go-Sender Bot",
+}
+body, _ := json.Marshal(slackData)
+
+msg := webhook.NewMessage(body, webhook.WithHeaders(map[string]string{
+    "Content-Type": "application/json",
+}))
 ```
 
 ### 2. Discord Webhook Integration
 
 ```go
-msg := webhook.NewMessage(
-    webhook.WithMethod("POST"),
-    webhook.WithHeaders(map[string]string{
-        "Content-Type": "application/json",
-    }),
-    webhook.WithJSONBody(map[string]interface{}{
-        "content": "Hello from Go-Sender!",
-        "embeds": []map[string]interface{}{
-            {
-                "title": "Notification",
-                "description": "This is a test message",
-                "color": 0x00ff00,
+config := webhook.Config{
+    Endpoints: []webhook.Endpoint{
+        {
+            Name:   "discord-webhook",
+            URL:    "https://discord.com/api/webhooks/YOUR/WEBHOOK/URL",
+            Method: "POST",
+            ResponseConfig: &webhook.ResponseConfig{
+                ValidateResponse: true,
+                ResponseType:     "json",
+                SuccessField:     "id", // Discord returns message ID on success
             },
         },
-    }),
-)
+    },
+}
+
+discordData := map[string]interface{}{
+    "content": "Hello from Go-Sender!",
+    "embeds": []map[string]interface{}{
+        {
+            "title": "Notification",
+            "description": "This is a test message",
+            "color": 0x00ff00,
+        },
+    },
+}
+body, _ := json.Marshal(discordData)
+
+msg := webhook.NewMessage(body, webhook.WithHeaders(map[string]string{
+    "Content-Type": "application/json",
+}))
 ```
 
 ### 3. Custom API Integration
 
 ```go
-msg := webhook.NewMessage(
-    webhook.WithMethod("POST"),
-    webhook.WithHeaders(map[string]string{
-        "Content-Type": "application/json",
-        "Authorization": "Bearer your-token",
-        "X-Event-Type": "user.created",
-    }),
-    webhook.WithJSONBody(map[string]interface{}{
-        "user_id": "12345",
-        "email": "user@example.com",
-        "created_at": time.Now().Format(time.RFC3339),
-    }),
-)
+config := webhook.Config{
+    Endpoints: []webhook.Endpoint{
+        {
+            Name:   "custom-api",
+            URL:    "https://api.example.com/webhook",
+            Method: "POST",
+            ResponseConfig: &webhook.ResponseConfig{
+                ValidateResponse: true,
+                ResponseType:     "json",
+                SuccessField:     "success",
+                SuccessValue:     "true",
+                ErrorField:       "error",
+                MessageField:     "message",
+            },
+        },
+    },
+}
+
+apiData := map[string]interface{}{
+    "user_id": "12345",
+    "email": "user@example.com",
+    "created_at": time.Now().Format(time.RFC3339),
+}
+body, _ := json.Marshal(apiData)
+
+msg := webhook.NewMessage(body, webhook.WithHeaders(map[string]string{
+    "Content-Type": "application/json",
+    "Authorization": "Bearer your-token",
+    "X-Event-Type": "user.created",
+}))
 ```
 
 ## API Reference
@@ -382,21 +524,8 @@ msg := webhook.NewMessage(
 ### Constructor Functions
 
 - `New(config Config) (*Provider, error)`: Create new webhook provider
-- `NewMessage(options ...MessageOption) Message`: Create new webhook message
+- `NewMessage(body []byte, opts ...MessageOption) *Message`: Create new webhook message
 
 ### Message Options
 
-- `WithMethod(method string)`: Set HTTP method
-- `WithHeaders(headers map[string]string)`: Set headers
-- `WithJSONBody(data interface{})`: Set JSON body
-- `WithFormData(data map[string]string)`: Set form data
-- `WithRawBody(body string)`: Set raw body
-- `WithQueryParams(params map[string]string)`: Set query parameters
-- `WithTimeout(timeout time.Duration)`: Set timeout
-- `WithRetryAttempts(attempts int)`: Set retry attempts
-- `WithRetryDelay(delay time.Duration)`: Set retry delay
-- `WithBasicAuth(username, password string)`: Set basic auth
-- `WithBearerToken(token string)`: Set bearer token
-- `WithCustomClient(client *http.Client)`: Set custom client
-- `WithFollowRedirects(follow bool)`: Control redirects
-- `WithSkipSSLVerification(skip bool)`: Skip SSL verification
+- `WithHeaders(headers map[string]string)`: Set custom headers

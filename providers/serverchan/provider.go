@@ -57,16 +57,9 @@ func (p *Provider) Send(ctx context.Context, msg core.Message) error {
 
 	apiURL := p.buildAPIURL(selectedAccount.Key)
 
-	// Directly marshal the message object to JSON
-	jsonBody, err := json.Marshal(scMsg)
-	if err != nil {
-		return fmt.Errorf("failed to marshal message to JSON: %w", err)
-	}
-
 	body, statusCode, err := utils.DoRequest(ctx, apiURL, utils.RequestOptions{
-		Method:      "POST",
-		Body:        jsonBody,
-		ContentType: "application/json",
+		Method: "POST",
+		JSON:   scMsg,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to send request: %w", err)

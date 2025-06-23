@@ -2,11 +2,9 @@ package telegram
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"net/url"
-	"strconv"
-	"strings"
 
 	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/utils"
@@ -61,141 +59,79 @@ func (p *Provider) Send(ctx context.Context, msg core.Message) error {
 	return p.doSend(ctx, selectedAccount, tgMsg)
 }
 
+// buildApiURL returns the full Telegram API URL for the given message type
+func (p *Provider) buildApiURL(account *core.Account, msg Message) (string, error) {
+	var endpoint string
+	switch msg.(type) {
+	case *TextMessage:
+		endpoint = "sendMessage"
+	case *PhotoMessage:
+		endpoint = "sendPhoto"
+	case *DocumentMessage:
+		endpoint = "sendDocument"
+	case *LocationMessage:
+		endpoint = "sendLocation"
+	case *ContactMessage:
+		endpoint = "sendContact"
+	case *PollMessage:
+		endpoint = "sendPoll"
+	case *AudioMessage:
+		endpoint = "sendAudio"
+	case *VideoMessage:
+		endpoint = "sendVideo"
+	case *AnimationMessage:
+		endpoint = "sendAnimation"
+	case *VoiceMessage:
+		endpoint = "sendVoice"
+	case *VideoNoteMessage:
+		endpoint = "sendVideoNote"
+	case *DiceMessage:
+		endpoint = "sendDice"
+	default:
+		return "", fmt.Errorf("unsupported message type: %T", msg)
+	}
+	return fmt.Sprintf("https://api.telegram.org/bot%s/%s", account.Key, endpoint), nil
+}
+
 // doSend sends a message using the specified account
 func (p *Provider) doSend(ctx context.Context, account *core.Account, msg Message) error {
-	apiURL := fmt.Sprintf("https://api.telegram.org/bot%s/send%s", account.Key, capitalize(string(msg.GetMsgType())))
-
-	// Convert message to form data
-	data := url.Values{}
-	switch m := msg.(type) {
-	case *TextMessage:
-		data.Set("chat_id", m.ChatID)
-		data.Set("text", m.Text)
-		if m.ParseMode != "" {
-			data.Set("parse_mode", m.ParseMode)
-		}
-		if m.DisableWebPreview {
-			data.Set("disable_web_page_preview", "true")
-		}
-		if m.Silent {
-			data.Set("disable_notification", "true")
-		}
-		if m.ProtectContent {
-			data.Set("protect_content", "true")
-		}
-		if m.ReplyToMsg > 0 {
-			data.Set("reply_to_message_id", strconv.Itoa(m.ReplyToMsg))
-		}
-	case *PhotoMessage:
-		data.Set("chat_id", m.ChatID)
-		data.Set("photo", m.Photo)
-		if m.Caption != "" {
-			data.Set("caption", m.Caption)
-			if m.ParseMode != "" {
-				data.Set("parse_mode", m.ParseMode)
-			}
-		}
-		if m.Silent {
-			data.Set("disable_notification", "true")
-		}
-		if m.ProtectContent {
-			data.Set("protect_content", "true")
-		}
-		if m.ReplyToMsg > 0 {
-			data.Set("reply_to_message_id", strconv.Itoa(m.ReplyToMsg))
-		}
-	case *DocumentMessage:
-		data.Set("chat_id", m.ChatID)
-		data.Set("document", m.Document)
-		if m.Caption != "" {
-			data.Set("caption", m.Caption)
-			if m.ParseMode != "" {
-				data.Set("parse_mode", m.ParseMode)
-			}
-		}
-		if m.Silent {
-			data.Set("disable_notification", "true")
-		}
-		if m.ProtectContent {
-			data.Set("protect_content", "true")
-		}
-		if m.ReplyToMsg > 0 {
-			data.Set("reply_to_message_id", strconv.Itoa(m.ReplyToMsg))
-		}
-	case *LocationMessage:
-		data.Set("chat_id", m.ChatID)
-		data.Set("latitude", strconv.FormatFloat(m.Latitude, 'f', -1, 64))
-		data.Set("longitude", strconv.FormatFloat(m.Longitude, 'f', -1, 64))
-		if m.Silent {
-			data.Set("disable_notification", "true")
-		}
-		if m.ProtectContent {
-			data.Set("protect_content", "true")
-		}
-		if m.ReplyToMsg > 0 {
-			data.Set("reply_to_message_id", strconv.Itoa(m.ReplyToMsg))
-		}
-	case *ContactMessage:
-		data.Set("chat_id", m.ChatID)
-		data.Set("phone_number", m.PhoneNumber)
-		data.Set("first_name", m.FirstName)
-		if m.LastName != "" {
-			data.Set("last_name", m.LastName)
-		}
-		if m.VCard != "" {
-			data.Set("vcard", m.VCard)
-		}
-		if m.Silent {
-			data.Set("disable_notification", "true")
-		}
-		if m.ProtectContent {
-			data.Set("protect_content", "true")
-		}
-		if m.ReplyToMsg > 0 {
-			data.Set("reply_to_message_id", strconv.Itoa(m.ReplyToMsg))
-		}
-	case *PollMessage:
-		data.Set("chat_id", m.ChatID)
-		data.Set("question", m.Question)
-		data.Set("options", strings.Join(m.Options, "\n"))
-		if m.IsAnonymous {
-			data.Set("is_anonymous", "true")
-		}
-		if m.Type != "" {
-			data.Set("type", m.Type)
-		}
-		if m.AllowsMultipleAnswers {
-			data.Set("allows_multiple_answers", "true")
-		}
-		if m.Silent {
-			data.Set("disable_notification", "true")
-		}
-		if m.ProtectContent {
-			data.Set("protect_content", "true")
-		}
-		if m.ReplyToMsg > 0 {
-			data.Set("reply_to_message_id", strconv.Itoa(m.ReplyToMsg))
-		}
-	default:
-		return fmt.Errorf("unsupported message type: %T", msg)
+	apiURL, err := p.buildApiURL(account, msg)
+	if err != nil {
+		return err
 	}
 
-	_, _, err := utils.DoRequest(ctx, apiURL, utils.RequestOptions{
-		Method:      "POST",
-		Body:        []byte(data.Encode()),
-		ContentType: "application/x-www-form-urlencoded",
+	bodyBytes, _, err := utils.DoRequest(ctx, apiURL, utils.RequestOptions{
+		Method: "POST",
+		JSON:   msg,
 	})
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Parse Telegram API response
+	var response struct {
+		OK          bool        `json:"ok"`
+		ErrorCode   int         `json:"error_code,omitempty"`
+		Description string      `json:"description,omitempty"`
+		Result      interface{} `json:"result,omitempty"`
+	}
+
+	if err := json.Unmarshal(bodyBytes, &response); err != nil {
+		return fmt.Errorf("failed to parse Telegram API response: %w", err)
+	}
+
+	// Check if the request was successful
+	if !response.OK {
+		if response.ErrorCode != 0 {
+			return fmt.Errorf("telegram API error %d: %s", response.ErrorCode, response.Description)
+		}
+		return fmt.Errorf("telegram API request failed: %s", response.Description)
+	}
+
+	return nil
 }
 
 // Name returns the provider name
 func (p *Provider) Name() string {
 	return string(core.ProviderTypeTelegram)
-}
-
-func capitalize(s string) string {
-	if len(s) == 0 {
-		return s
-	}
-	return strings.ToUpper(s[:1]) + s[1:]
 }

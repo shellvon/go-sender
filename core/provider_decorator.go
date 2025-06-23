@@ -251,7 +251,10 @@ func (pd *ProviderDecorator) executeSend(ctx context.Context, message Message, o
 		timeout = DefaultSendTimeout
 	}
 
-	// Create a context with timeout
+	if opts.Metadata != nil {
+		ctx = WithCtxSendMetadata(ctx, opts.Metadata)
+	}
+
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 

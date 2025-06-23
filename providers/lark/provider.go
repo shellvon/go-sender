@@ -75,9 +75,8 @@ func (p *Provider) Send(ctx context.Context, msg core.Message) error {
 
 	// Send request
 	body, statusCode, err := utils.DoRequest(ctx, webhookURL, utils.RequestOptions{
-		Method:      "POST",
-		Body:        jsonBody,
-		ContentType: "application/json",
+		Method: "POST",
+		JSON:   jsonBody,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to send request: %w", err)

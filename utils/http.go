@@ -3,163 +3,227 @@ package utils
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 	// For a default timeout
 )
 
 // RequestOptions holds the parameters for your HTTP request.
+// Similar to Python requests, supports data, json, form fields for easy data handling.
 type RequestOptions struct {
-	Method      string // e.g., http.MethodGet, http.MethodPost
-	Headers     map[string]string
-	Body        []byte    // Raw byte slice for simple bodies (e.g., JSON, text)
-	BodyReader  io.Reader // For custom readers, like file streams or multipart writers
-	ContentType string    // Explicit Content-Type for the request body
+	Method  string            // e.g., http.MethodGet, http.MethodPost
+	Headers map[string]string // Custom headers
+	Timeout time.Duration     // Request timeout
 
-	// New fields for file uploads (optional, for convenience)
-	FilePath      string // Path to a file to upload directly
-	FileName      string // Optional: Override the filename sent in multipart
-	FileFieldName string // Optional: Field name for the file in multipart form (default "file")
-	Timeout       time.Duration
+	// Query string parameters
+	// Supports:
+	//   - string: single value (e.g., "api_key": "your-key")
+	//   - []string: array values (e.g., "tags": []string{"tag1", "tag2"})
+	Query map[string]interface{} // Query string parameters (only string or []string allowed)
+
+	// Data handling (similar to Python requests)
+	Data      map[string]string // Form data (application/x-www-form-urlencoded)
+	JSON      interface{}       // JSON data (application/json)
+	Form      map[string]string // Multipart form data
+	Raw       []byte            // Raw body data
+	RawReader io.Reader         // Custom reader for body
+
+	// File upload support
+	Files map[string]string // Field name -> file path for multipart uploads
 }
 
 // DoRequest performs an HTTP request and returns the response body.
-// It handles common HTTP client concerns like context, headers, and body reading.
+// It automatically handles data formatting based on the provided fields.
 //
-// Parameters:
-//
-//	options: A RequestOptions struct containing all request details.
+// Data handling priority:
+// 1. Raw/RawReader (highest priority)
+// 2. JSON
+// 3. Form (multipart)
+// 4. Data (urlencoded)
+// 5. Files
 //
 // Returns:
-//
-//	[]byte: The raw response body. If the request was not successful (non-200 status code)
-//	        or an error occurred, this might still contain the server's error message.
-//	int: The HTTP status code of the response.
-//	error: An error if the HTTP request failed, if the body couldn't be read,
-//	       or if the server returned a non-200 status code. The error will include
-//	       details from the response body if available.
-func DoRequest(ctx context.Context, url string, options RequestOptions) ([]byte, int, error) {
+//   - []byte: Response body
+//   - int: HTTP status code
+//   - error: Request error
+func DoRequest(ctx context.Context, requestURL string, options RequestOptions) ([]byte, int, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
+
+	// Handle timeout
 	if options.Timeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, options.Timeout)
 		defer cancel()
 	}
 
-	var reqBody io.Reader
-	var finalContentType string
+	// Determine request body and content type
+	reqBody, contentType, err := buildRequestBody(options)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to build request body: %w", err)
+	}
 
-	if options.BodyReader != nil {
-		reqBody = options.BodyReader
-		finalContentType = options.ContentType
-	} else if options.FilePath != "" {
-		fileInfo, err := os.Stat(options.FilePath)
+	// Handle query string parameters
+	finalURL := requestURL
+	if len(options.Query) > 0 {
+		parsedURL, err := url.Parse(requestURL)
 		if err != nil {
-			return nil, 0, fmt.Errorf("failed to stat file %s: %w", options.FilePath, err)
+			return nil, 0, fmt.Errorf("failed to parse URL: %w", err)
 		}
-		if fileInfo.IsDir() {
-			return nil, 0, fmt.Errorf("path %s is a directory, not a file", options.FilePath)
-		}
-		file, err := os.Open(options.FilePath)
-		if err != nil {
-			return nil, 0, fmt.Errorf("failed to open file %s: %w", options.FilePath, err)
-		}
-		defer file.Close()
 
-		if options.ContentType == "application/octet-stream" {
-			reqBody = file
-			finalContentType = "application/octet-stream"
+		// Get existing query parameters
+		query := parsedURL.Query()
+
+		// Add new query parameters
+		for key, value := range options.Query {
+			switch v := value.(type) {
+			case string:
+				query.Set(key, v)
+			case []string:
+				for _, val := range v {
+					query.Add(key, val)
+				}
+			default:
+				return nil, 0, fmt.Errorf("unsupported query parameter type for key '%s': %T (only string and []string are supported)", key, value)
+			}
+		}
+
+		// Update URL with query parameters
+		parsedURL.RawQuery = query.Encode()
+		finalURL = parsedURL.String()
+	}
+
+	// Set default method if not provided
+	if options.Method == "" {
+		if reqBody != nil {
+			options.Method = http.MethodPost
 		} else {
-			body := &bytes.Buffer{}
-			writer := multipart.NewWriter(body)
-
-			fileFieldName := options.FileFieldName
-			if fileFieldName == "" {
-				fileFieldName = "file"
-			}
-
-			// Determine the filename to use in the multipart form part
-			fileNameToUse := options.FileName
-			if fileNameToUse == "" {
-				fileNameToUse = filepath.Base(options.FilePath)
-			}
-
-			// Create the form file part once with the determined filename
-			part, err := writer.CreateFormFile(fileFieldName, fileNameToUse)
-			if err != nil {
-				return nil, 0, fmt.Errorf("failed to create form file part: %w", err)
-			}
-
-			_, err = io.Copy(part, file)
-			if err != nil {
-				return nil, 0, fmt.Errorf("failed to copy file content to form part: %w", err)
-			}
-
-			err = writer.Close()
-			if err != nil {
-				return nil, 0, fmt.Errorf("failed to close multipart writer: %w", err)
-			}
-
-			reqBody = body
-			finalContentType = writer.FormDataContentType()
-		}
-	} else if options.Body != nil {
-		reqBody = bytes.NewReader(options.Body)
-		finalContentType = options.ContentType
-		if finalContentType == "" {
-			finalContentType = "application/json"
+			options.Method = http.MethodGet
 		}
 	}
 
-	if reqBody != nil && options.Method == "" {
-		options.Method = http.MethodPost
-	}
-
-	req, err := http.NewRequestWithContext(ctx, options.Method, url, reqBody)
+	// Create request
+	req, err := http.NewRequestWithContext(ctx, options.Method, finalURL, reqBody)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to create HTTP request: %w", err)
 	}
 
+	// Set headers
 	for key, value := range options.Headers {
 		req.Header.Set(key, value)
 	}
 
-	if finalContentType != "" {
-		req.Header.Set("Content-Type", finalContentType)
+	// Set content type if determined
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
 	}
 
-	// Perform the request using the default client
-	// For production, you might want a custom http.Client with specific settings
-	// like timeouts, TLS configuration, etc.
+	// Perform request
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, 0, fmt.Errorf("HTTP request failed: %w", err)
 	}
-
-	// Always defer closing the response body to ensure resources are released.
 	defer resp.Body.Close()
 
-	// Always read the response body completely, regardless of the status code.
-	// This helps with connection reuse and provides error details.
-	// From offical docs:
-	//  > The default HTTP client's Transport may not reuse HTTP/1.x "keep-alive" TCP connections if the Body is not read to completion and closed.
+	// Read response
 	bodyBytes, readErr := io.ReadAll(resp.Body)
 	if readErr != nil {
 		return nil, resp.StatusCode, fmt.Errorf("failed to read response body: %w", readErr)
 	}
 
-	// Check if the status code indicates an error
+	// Check status code
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return bodyBytes, resp.StatusCode, fmt.Errorf("HTTP request failed with status code %d. Response body: %s", resp.StatusCode, string(bodyBytes))
 	}
 
-	// If everything is successful, return the body bytes and status code
 	return bodyBytes, resp.StatusCode, nil
+}
+
+// buildRequestBody builds the request body and determines content type
+func buildRequestBody(options RequestOptions) (io.Reader, string, error) {
+	// Priority 1: Raw data
+	if options.Raw != nil {
+		return bytes.NewReader(options.Raw), "", nil
+	}
+
+	if options.RawReader != nil {
+		return options.RawReader, "", nil
+	}
+
+	// Priority 2: JSON data
+	if options.JSON != nil {
+		jsonData, err := json.Marshal(options.JSON)
+		if err != nil {
+			return nil, "", fmt.Errorf("failed to marshal JSON: %w", err)
+		}
+		return bytes.NewReader(jsonData), "application/json", nil
+	}
+
+	// Priority 3: Multipart form data
+	if len(options.Form) > 0 || len(options.Files) > 0 {
+		body := &bytes.Buffer{}
+		writer := multipart.NewWriter(body)
+
+		// Add form fields
+		for key, value := range options.Form {
+			if err := writer.WriteField(key, value); err != nil {
+				return nil, "", fmt.Errorf("failed to write form field %s: %w", key, err)
+			}
+		}
+
+		// Add files
+		for fieldName, filePath := range options.Files {
+			if err := addFileToMultipart(writer, fieldName, filePath); err != nil {
+				return nil, "", err
+			}
+		}
+
+		if err := writer.Close(); err != nil {
+			return nil, "", fmt.Errorf("failed to close multipart writer: %w", err)
+		}
+
+		return body, writer.FormDataContentType(), nil
+	}
+
+	// Priority 4: URL-encoded form data
+	if len(options.Data) > 0 {
+		values := url.Values{}
+		for key, value := range options.Data {
+			values.Set(key, value)
+		}
+		encoded := values.Encode()
+		return strings.NewReader(encoded), "application/x-www-form-urlencoded", nil
+	}
+
+	// No body
+	return nil, "", nil
+}
+
+// addFileToMultipart adds a file to multipart form
+func addFileToMultipart(writer *multipart.Writer, fieldName, filePath string) error {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return fmt.Errorf("failed to open file %s: %w", filePath, err)
+	}
+	defer file.Close()
+
+	part, err := writer.CreateFormFile(fieldName, filepath.Base(filePath))
+	if err != nil {
+		return fmt.Errorf("failed to create form file part: %w", err)
+	}
+
+	if _, err := io.Copy(part, file); err != nil {
+		return fmt.Errorf("failed to copy file content: %w", err)
+	}
+
+	return nil
 }

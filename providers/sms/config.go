@@ -8,16 +8,14 @@ import (
 type ProviderType string
 
 const (
-	ProviderTypeTencent  ProviderType = "tencent"  // 腾讯云短信
-	ProviderTypeAliyun   ProviderType = "aliyun"   // 阿里云短信
-	ProviderTypeYunpian  ProviderType = "yunpian"  // 云片网
-	ProviderTypeUcp      ProviderType = "ucp"      // 云之讯
-	ProviderTypeCl253    ProviderType = "cl253"    // 蓝创253
-	ProviderTypeSmsbao   ProviderType = "smsbao"   // 短信宝
-	ProviderTypeJuhe     ProviderType = "juhe"     // 聚合服务
-	ProviderTypeLuosimao ProviderType = "luosimao" // 螺丝帽
-	ProviderTypeNetease  ProviderType = "netease"  // 网易云短信
-	ProviderTypeNormal   ProviderType = "normal"   // 其他普通短信
+	ProviderTypeAliyun      ProviderType = "aliyun"       // 阿里云短信
+	ProviderTypeAliyunGlobe ProviderType = "aliyun_globe" // 阿里云国际短信
+	ProviderTypeCl253       ProviderType = "cl253"        // 蓝创253
+	ProviderTypeSmsbao      ProviderType = "smsbao"       // 短信宝
+	ProviderTypeJuhe        ProviderType = "juhe"         // 聚合服务
+	ProviderTypeLuosimao    ProviderType = "luosimao"     // 螺丝帽
+	ProviderTypeHuawei      ProviderType = "huawei"       // 华为云短信
+	ProviderTypeUcp         ProviderType = "ucp"          // 云之讯
 )
 
 // Config holds configuration for the SMS provider
@@ -39,32 +37,26 @@ type SMSProvider struct {
 	AppID     string `json:"app_id"`     // App ID/Account
 	AppSecret string `json:"app_secret"` // App Secret/Password/Token
 	SignName  string `json:"sign_name"`  // SMS signature name
-
-	// Provider-specific fields
-	TemplateCode   string            `json:"template_code"`   // Template code for template SMS
-	TemplateParams map[string]string `json:"template_params"` // Template parameters
-	ExtraConfig    map[string]string `json:"extra_config"`    // Extra configuration for specific providers
+	Channel   string `json:"channel"`    // 通道号（如csms100000001）
+	Callback  string `json:"callback"`   // 回调地址（华为等部分厂商需要）
+	Endpoint  string `json:"endpoint"`   // 自定义API Endpoint（如华为国际/国内不同节点）
 }
 
-// IsConfigured checks if the SMS configuration is valid
 func (c Config) IsConfigured() bool {
-	return !c.IsDisabled() && len(c.Providers) > 0
+	return len(c.Providers) > 0
 }
 
-// IsEnabled checks if the provider is enabled
-func (p *SMSProvider) IsEnabled() bool {
-	return !p.Disabled
-}
-
-// GetName returns the provider name for strategy selection
 func (p *SMSProvider) GetName() string {
 	return p.Name
 }
 
-// GetWeight returns the provider weight for strategy selection
 func (p *SMSProvider) GetWeight() int {
 	if p.Weight <= 0 {
 		return 1
 	}
 	return p.Weight
+}
+
+func (p *SMSProvider) IsEnabled() bool {
+	return !p.Disabled
 }
