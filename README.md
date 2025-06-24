@@ -254,3 +254,24 @@ sender.RegisterProvider("my-provider", &MyProvider{}, nil)
 | `random`       | Random selection           | Simple distribution    |
 | `weighted`     | Weight-based selection     | Priority-based routing |
 | `health_based` | Health-based selection     | Custom health checks   |
+
+## 🚀 Supported Notification Channels (Push/IM/Alert)
+
+go-sender supports a wide range of popular push and notification channels out of the box:
+
+- **Pushover** (via webhook)
+- **SimplePush** (via webhook)
+- **Bark** (via webhook)
+- **PushDeer** (via webhook)
+- **WeCom/WeChat Work (企业微信)** (group bot, app message)
+- **DingTalk (钉钉)** (group bot, app message)
+- **Lark/Feishu (飞书)** (group bot, app message)
+- **Telegram** (bot)
+- **Slack** (webhook/bot)
+- **ServerChan**
+- **Webhook** (generic HTTP)
+- **Email (SMTP)**
+- **SMS** (Aliyun, Huawei, Yunpian, Submail, Volcengine, etc.)
+- ...and any service that supports HTTP push/webhook!
+
+> See each provider's README for configuration details and more supported services.

@@ -254,3 +254,24 @@ sender.RegisterProvider("my-provider", &MyProvider{}, nil)
 | `random`       | 随机选择     | 简单分发         |
 | `weighted`     | 基于权重选择 | 基于优先级的路由 |
 | `health_based` | 基于健康状态 | 自定义健康检查   |
+
+## 🚀 已支持的推送/通知渠道
+
+go-sender 已经原生支持以下主流推送和通知渠道：
+
+- **Pushover**（通过 webhook 配置）
+- **SimplePush**（通过 webhook 配置）
+- **Bark**（通过 webhook 配置）
+- **PushDeer**（通过 webhook 配置）
+- **企业微信（WeCom/WeChat Work）**（群机器人、应用消息）
+- **钉钉（DingTalk）**（群机器人、应用消息）
+- **飞书（Lark/Feishu）**（群机器人、应用消息）
+- **Telegram**（机器人）
+- **Slack**（webhook/机器人）
+- **ServerChan（方糖推送）**
+- **Webhook**（通用 HTTP 推送）
+- **邮件（SMTP）**
+- **短信**（阿里云、华为云、云片、赛邮、火山引擎等）
+- ...以及任何支持 HTTP 推送/webhook 的服务！
+
+> 更多配置细节和支持的服务请参考各 provider 的 README。
