@@ -11,18 +11,21 @@ import (
 // Retains the From field, supports multiple recipients, CC, BCC, subject, body, HTML flag, and attachments
 // ProviderType method is used for Sender routing
 // Validate method is used for parameter validation
-
 type Message struct {
 	core.DefaultMessage
-	From        string   // Sender's email address
-	To          []string // List of recipient email addresses
-	Cc          []string // List of CC email addresses
-	Bcc         []string // List of BCC email addresses
+	From        string   // Sender's email address (supports "Name <address>" format)
+	To          []string // List of recipient email addresses (supports "Name <address>" format)
+	Cc          []string // List of CC email addresses (supports "Name <address>" format)
+	Bcc         []string // List of BCC email addresses (supports "Name <address>" format)
+	ReplyTo     string   // Reply-to email address (supports "Name <address>" format)
 	Subject     string   // Email subject
 	IsHTML      bool     // Indicates if the body is HTML content
 	Body        string   // Email body content
 	Attachments []string // List of attachment file paths
 }
+
+// MessageOption is a function that configures a Message
+type MessageOption func(*Message)
 
 var (
 	_ core.Message = (*Message)(nil)
@@ -53,12 +56,10 @@ func (m *Message) Validate() error {
 			return core.NewParamError("invalid BCC email: " + err.Error())
 		}
 	}
-	if m.Subject == "" {
-		return core.NewParamError("email subject cannot be empty")
-	}
 	if m.Body == "" {
 		return core.NewParamError("email body cannot be empty")
 	}
+	// Subject is optional, no validation needed
 	return nil
 }
 
@@ -74,60 +75,67 @@ func validateEmail(email string) error {
 	return nil
 }
 
-// NewMessage creates a new email message
-func NewMessage(subject, body string) *Message {
-	return &Message{
-		Subject: subject,
-		Body:    body,
+// NewMessage creates a new email message with required to and body, plus optional configurations
+func NewMessage(to []string, body string, opts ...MessageOption) *Message {
+	msg := &Message{
+		To:   to,
+		Body: body,
+	}
+	for _, opt := range opts {
+		opt(msg)
+	}
+	return msg
+}
+
+// MessageOption functions
+
+// WithFrom sets the sender email address
+func WithFrom(from string) MessageOption {
+	return func(m *Message) {
+		m.From = from
 	}
 }
 
-// WithFrom sets the sender email address
-func (m *Message) WithFrom(from string) *Message {
-	m.From = from
-	return m
-}
-
-// WithTo sets the recipient email addresses
-func (m *Message) WithTo(to ...string) *Message {
-	m.To = to
-	return m
+// WithSubject sets the email subject
+func WithSubject(subject string) MessageOption {
+	return func(m *Message) {
+		m.Subject = subject
+	}
 }
 
 // WithCc sets the CC email addresses
-func (m *Message) WithCc(cc ...string) *Message {
-	m.Cc = cc
-	return m
+func WithCc(cc ...string) MessageOption {
+	return func(m *Message) {
+		m.Cc = cc
+	}
 }
 
 // WithBcc sets the BCC email addresses
-func (m *Message) WithBcc(bcc ...string) *Message {
-	m.Bcc = bcc
-	return m
+func WithBcc(bcc ...string) MessageOption {
+	return func(m *Message) {
+		m.Bcc = bcc
+	}
 }
 
-// WithSubject sets the email subject
-func (m *Message) WithSubject(subject string) *Message {
-	m.Subject = subject
-	return m
+// WithReplyTo sets the Reply-To email address
+func WithReplyTo(replyTo string) MessageOption {
+	return func(m *Message) {
+		m.ReplyTo = replyTo
+	}
 }
 
-// WithBody sets the email body
-func (m *Message) WithBody(body string) *Message {
-	m.Body = body
-	return m
-}
-
-// WithHTML sets the email as HTML content
-func (m *Message) WithHTML() *Message {
-	m.IsHTML = true
-	return m
+// WithHTML marks the email as HTML content
+func WithHTML() MessageOption {
+	return func(m *Message) {
+		m.IsHTML = true
+	}
 }
 
 // WithAttachments sets the attachment file paths
-func (m *Message) WithAttachments(attachments ...string) *Message {
-	m.Attachments = attachments
-	return m
+func WithAttachments(attachments ...string) MessageOption {
+	return func(m *Message) {
+		m.Attachments = attachments
+	}
 }
 
 // MsgID returns the unique id of the message.
