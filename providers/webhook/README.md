@@ -529,3 +529,77 @@ msg := webhook.NewMessage(body, webhook.WithHeaders(map[string]string{
 ### Message Options
 
 - `WithHeaders(headers map[string]string)`: Set custom headers
+
+## Supported Push Services
+
+The webhook provider can be used to send notifications to many popular push services, including but not limited to:
+
+- **Pushover** ([API](https://pushover.net/api))
+- **SimplePush** ([API](https://simplepush.io/api))
+- **Bark** ([API](https://github.com/Finb/Bark))
+- **PushDeer** ([API](https://github.com/easychen/pushdeer))
+- ...and any service that accepts HTTP POST/GET requests
+
+### Example Configurations
+
+#### Pushover
+
+```json
+{
+  "endpoints": [
+    {
+      "name": "pushover",
+      "url": "https://api.pushover.net/1/messages.json",
+      "method": "POST",
+      "headers": { "Content-Type": "application/x-www-form-urlencoded" },
+      "body": "token=YOUR_APP_TOKEN&user=USER_KEY&message=Hello+from+go-sender"
+    }
+  ]
+}
+```
+
+#### SimplePush
+
+```json
+{
+  "endpoints": [
+    {
+      "name": "simplepush",
+      "url": "https://simplepu.sh",
+      "method": "POST",
+      "headers": { "Content-Type": "application/json" },
+      "body": "{\"key\":\"YOUR_KEY\",\"msg\":\"Hello from go-sender!\"}"
+    }
+  ]
+}
+```
+
+#### Bark
+
+```json
+{
+  "endpoints": [
+    {
+      "name": "bark",
+      "url": "https://api.day.app/YOUR_DEVICE_KEY/Hello%20from%20go-sender",
+      "method": "GET"
+    }
+  ]
+}
+```
+
+#### PushDeer
+
+```json
+{
+  "endpoints": [
+    {
+      "name": "pushdeer",
+      "url": "https://api2.pushdeer.com/message/push?pushkey=YOUR_KEY&text=Hello+from+go-sender",
+      "method": "GET"
+    }
+  ]
+}
+```
+
+> You can use the webhook provider to integrate with any service that supports HTTP requests. Just configure the URL, method, headers, and body as needed.
