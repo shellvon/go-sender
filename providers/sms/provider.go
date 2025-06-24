@@ -79,10 +79,14 @@ func (p *Provider) doSendSMS(ctx context.Context, provider *SMSProvider, msg *Me
 		return sendHuaweiSMS(ctx, provider, msg)
 	case ProviderTypeAliyun:
 		return sendAliyunSMS(ctx, provider, msg)
-	case ProviderTypeAliyunGlobe:
-		return sendAliyunIntlSMS(ctx, provider, msg)
 	case ProviderTypeUcp:
 		return sendUcpSMS(ctx, provider, msg)
+	case ProviderTypeYunpian:
+		return sendYunpianSMS(ctx, provider, msg)
+	case ProviderTypeSubmail:
+		return sendSubmailSMS(ctx, provider, msg)
+	case ProviderTypeVolc:
+		return sendVolcSMS(ctx, provider, msg)
 	default:
 		return fmt.Errorf("unsupported or unimplemented SMS provider type: %s", provider.Type)
 	}

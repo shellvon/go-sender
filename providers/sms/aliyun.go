@@ -16,24 +16,46 @@ import (
 	"github.com/shellvon/go-sender/utils"
 )
 
-// sendAliyunSMS 发送阿里云中国内地短信（支持单个/批量）
+// sendAliyunSMS 发送阿里云短信（支持国内和国际）
 // 文档: https://next.api.aliyun.com/api/Dysmsapi/2017-05-25/SendSms
+// 国际短信文档: https://help.aliyun.com/document_detail/108084.html
 func sendAliyunSMS(ctx context.Context, provider *SMSProvider, msg *Message) error {
+	isIntl := false
+	for _, m := range msg.Mobiles {
+		if utils.IsInternationalMobile(m) {
+			isIntl = true
+			break
+		}
+	}
+
+	if isIntl && len(msg.Mobiles) > 1 {
+		return fmt.Errorf("aliyun international SMS only supports single send, got %d mobiles", len(msg.Mobiles))
+	}
+
 	params := map[string]string{
-		"RegionId":         "cn-hangzhou",
 		"AccessKeyId":      provider.AppID,
 		"Format":           "JSON",
 		"SignatureMethod":  "HMAC-SHA1",
 		"SignatureVersion": "1.0",
 		"SignatureNonce":   fmt.Sprintf("%d", time.Now().UnixNano()),
 		"Timestamp":        time.Now().UTC().Format("2006-01-02T15:04:05Z"),
-		"Action":           "SendSms",
-		"Version":          "2017-05-25",
-		"PhoneNumbers":     strings.Join(msg.Mobiles, ","),
 		"SignName":         msg.SignName,
 		"TemplateCode":     msg.TemplateCode,
 		"TemplateParam":    toJSONString(msg.TemplateParams),
 	}
+
+	if isIntl {
+		params["RegionId"] = "ap-southeast-1"
+		params["Action"] = "SendSmsIntl"
+		params["Version"] = "2018-05-01"
+		params["To"] = msg.Mobiles[0]
+	} else {
+		params["RegionId"] = "cn-hangzhou"
+		params["Action"] = "SendSms"
+		params["Version"] = "2017-05-25"
+		params["PhoneNumbers"] = strings.Join(msg.Mobiles, ",")
+	}
+
 	// 透传 OutId
 	if metadata := core.GetSendMetadataFromCtx(ctx); metadata != nil {
 		if outId, ok := metadata["OutId"].(string); ok && outId != "" {
@@ -45,7 +67,6 @@ func sendAliyunSMS(ctx context.Context, provider *SMSProvider, msg *Message) err
 	signature := aliyunSignForPost(params, provider.AppSecret)
 	params["Signature"] = signature
 
-	// 构造POST表单
 	form := url.Values{}
 	for k, v := range params {
 		form.Set(k, v)
