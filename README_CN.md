@@ -15,7 +15,6 @@ Go-Sender 基于**装饰器模式**和**插件架构**设计，让你可以轻�
 - **🔄 解耦**: 业务代码只关心发送消息，不关心如何传递
 - **🔌 可插拔**: 通过接口轻松添加新的提供者或中间件
 - **🛡️ 可靠性**: 内置重试、熔断器和限流机制
-- **📊 可观测**: 全面的指标和健康检查
 - **🧩 灵活性**: 支持多实例、策略和配置
 
 ### 架构概览
@@ -28,17 +27,18 @@ Go-Sender 基于**装饰器模式**和**插件架构**设计，让你可以轻�
           - 熔断器
           - 重试策略
           - 队列
-          - 指标收集
 ```
 
 ## ✨ 功能特性
 
 ### 🚀 多渠道支持
 
-- **📧 邮件**: SMTP 多账号支持（[通道文档](./providers/email/README.md)）
+#### 当前支持的提供者
+
+- **📧 邮件**: 使用 [wneessen/go-mail](https://github.com/wneessen/go-mail) 的 SMTP 多账号支持（[通道文档](./providers/email/README.md)）
 - **📱 短信**: 多平台短信支持（[通道文档](./providers/sms/README.md)）
 
-  - **Aliyun SMS (阿里云, Mainland)**: [官方文档](https://help.aliyun.com/document_detail/419273.html)（[通道文档](./providers/sms/README.md)）
+  - **Aliyun SMS (阿里云, 中国大陆)**: [官方文档](https://help.aliyun.com/document_detail/419273.html)（[通道文档](./providers/sms/README.md)）
   - **Aliyun Intl SMS (阿里云国际)**: [官方文档](https://help.aliyun.com/document_detail/108146.html)（[通道文档](./providers/sms/README.md)）
   - **Huawei Cloud SMS (华为云)**: [官方文档](https://support.huaweicloud.com/sms/index.html)（[通道文档](./providers/sms/README.md)）
   - **Luosimao (螺丝帽)**: [官方文档](https://luosimao.com/docs/api/)（[通道文档](./providers/sms/README.md)）
@@ -46,10 +46,10 @@ Go-Sender 基于**装饰器模式**和**插件架构**设计，让你可以轻�
   - **Juhe (聚合数据)**: [官方文档](https://www.juhe.cn/docs/api/id/54)（[通道文档](./providers/sms/README.md)）
   - **SMSBao (短信宝)**: [官方文档](https://www.smsbao.com/openapi/213.html)（[通道文档](./providers/sms/README.md)）
   - **UCP (云之讯)**: [官方文档](https://doc.ucpaas.com/doku.php?id=%E7%9F%AD%E4%BF%A1:sms:index)（[通道文档](./providers/sms/README.md)）
-  - **Tencent Cloud SMS (腾讯云)** (WIP)（[通道文档](./providers/sms/README.md)）
-  - **Yunpian (云片)** (WIP)（[通道文档](./providers/sms/README.md)）
-  - **Submail (赛邮)** (WIP)（[通道文档](./providers/sms/README.md)）
-  - **Volcano Engine (火山引擎)** (WIP)（[通道文档](./providers/sms/README.md)）
+  - **Tencent Cloud SMS (腾讯云)** (开发中)（[通道文档](./providers/sms/README.md)）
+  - **Yunpian (云片)** (开发中)（[通道文档](./providers/sms/README.md)）
+  - **Submail (赛邮)** (开发中)（[通道文档](./providers/sms/README.md)）
+  - **Volcano Engine (火山引擎)** (开发中)（[通道文档](./providers/sms/README.md)）
 
 - **🤖 企业微信机器人**: 企业微信机器人消息（[通道文档](./providers/wecombot/README.md)） | [官方文档](https://developer.work.weixin.qq.com/document/path/91770)
 - **🔔 钉钉机器人**: 钉钉群机器人消息（[通道文档](./providers/dingtalk/README.md)） | [官方文档](https://open.dingtalk.com/document/robots/custom-robot-access)
@@ -72,12 +72,6 @@ Go-Sender 基于**装饰器模式**和**插件架构**设计，让你可以轻�
 - **多账号**: 支持多个邮件账号、机器人、webhook 端点
 - **负载均衡**: 轮询、随机、权重和基于健康状态的策略
 - **上下文感知**: 通过上下文覆盖每个请求的策略
-
-### 📊 可观测性
-
-- **指标收集**: 性能和结果指标
-- **健康监控**: 提供者和系统健康检查
-- **结构化日志**: 可插拔的日志接口
 
 ## 🚀 快速开始
 
@@ -197,17 +191,8 @@ wecomConfig := wecombot.Config{
 queue := queue.NewMemoryQueue[*core.QueueItem](1000)
 sender.SetQueue(queue)
 
-// 发送带回调的消息
-err := sender.Send(ctx, message,
-    core.WithSendAsync(),
-    core.WithSendCallback(func(err error) {
-        if err != nil {
-            log.Printf("消息发送失败: %v", err)
-        } else {
-            log.Printf("消息发送成功")
-        }
-    }),
-)
+// 异步发送消息
+err := sender.Send(ctx, message, core.WithSendAsync())
 ```
 
 ### 4. 熔断器和限流

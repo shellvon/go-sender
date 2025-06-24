@@ -5,11 +5,6 @@ import (
 	"fmt"
 	"sync"
 	"time"
-
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -25,8 +20,6 @@ type ProviderDecorator struct {
 	ctx        context.Context
 	cancel     context.CancelFunc
 	logger     Logger
-	tracer     trace.Tracer
-	meter      metric.Meter
 }
 
 // Global callbackRegistry, only used for local/in-memory queue/testing scenarios
@@ -42,8 +35,6 @@ func NewProviderDecorator(provider Provider, middleware *SenderMiddleware, logge
 		ctx:        ctx,
 		cancel:     cancel,
 		logger:     logger,
-		tracer:     otel.Tracer("provider-decorator"),
-		meter:      otel.Meter("provider-decorator"),
 	}
 
 	// Check if provider supports logger injection
@@ -90,12 +81,7 @@ func (pd *ProviderDecorator) executeWithMiddleware(ctx context.Context, message 
 		return ctx.Err()
 	}
 
-	ctx, span := pd.tracer.Start(ctx, "provider.send",
-		trace.WithAttributes(attribute.String("provider", pd.Provider.Name())),
-	)
-	defer span.End()
-
-	pd.logger.Log(LevelDebug, "message", "provider send start", "message_id", message.MsgID())
+	pd.logger.Log(LevelDebug, "message", "provider send start", "message_id", message.MsgID(), "provider", pd.Provider.Name())
 
 	// Rate limiting
 	if pd.middleware != nil && pd.middleware.RateLimiter != nil && !opts.DisableRateLimiter {

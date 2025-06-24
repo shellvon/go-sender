@@ -7,7 +7,7 @@ import (
 
 	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/utils"
-	"gopkg.in/gomail.v2"
+	"github.com/wneessen/go-mail"
 )
 
 // Provider supports multiple accounts and strategy selection
@@ -60,33 +60,81 @@ func (p *Provider) Send(ctx context.Context, message core.Message) error {
 	return p.doSendEmail(ctx, account, emailMsg)
 }
 
-
 // doSendEmail performs the actual email sending
 func (p *Provider) doSendEmail(ctx context.Context, account *Account, emailMsg *Message) error {
+	// Set default From if not provided
 	if emailMsg.From == "" {
 		emailMsg.From = account.From
 	}
 
-	m := gomail.NewMessage()
-	m.SetHeader("From", emailMsg.From)
-	m.SetHeader("To", emailMsg.To...)
+	// Create new mail message
+	m := mail.NewMsg()
+
+	// Set From address
+	if err := m.From(emailMsg.From); err != nil {
+		return fmt.Errorf("failed to set from: %w", err)
+	}
+
+	// Set To addresses
+	if err := m.To(emailMsg.To...); err != nil {
+		return fmt.Errorf("failed to set to: %w", err)
+	}
+
+	// Set CC addresses
 	if len(emailMsg.Cc) > 0 {
-		m.SetHeader("Cc", emailMsg.Cc...)
+		if err := m.Cc(emailMsg.Cc...); err != nil {
+			return fmt.Errorf("failed to set cc: %w", err)
+		}
 	}
+
+	// Set BCC addresses
 	if len(emailMsg.Bcc) > 0 {
-		m.SetHeader("Bcc", emailMsg.Bcc...)
+		if err := m.Bcc(emailMsg.Bcc...); err != nil {
+			return fmt.Errorf("failed to set bcc: %w", err)
+		}
 	}
-	m.SetHeader("Subject", emailMsg.Subject)
+
+	// Set Reply-To address
+	if emailMsg.ReplyTo != "" {
+		if err := m.ReplyTo(emailMsg.ReplyTo); err != nil {
+			return fmt.Errorf("failed to set reply-to: %w", err)
+		}
+	}
+
+	// Set subject only if not empty
+	if emailMsg.Subject != "" {
+		m.Subject(emailMsg.Subject)
+	}
+
+	// Set body
 	if emailMsg.IsHTML {
-		m.SetBody("text/html", emailMsg.Body)
+		m.SetBodyString(mail.TypeTextHTML, emailMsg.Body)
 	} else {
-		m.SetBody("text/plain", emailMsg.Body)
+		m.SetBodyString(mail.TypeTextPlain, emailMsg.Body)
 	}
+
+	// Add attachments
 	for _, att := range emailMsg.Attachments {
-		m.Attach(att)
+		m.AttachFile(att)
 	}
-	d := gomail.NewDialer(account.Host, account.Port, account.Username, account.Password)
-	return d.DialAndSend(m)
+
+	// Create client and send
+	client, err := mail.NewClient(account.Host,
+		mail.WithPort(account.Port),
+		mail.WithUsername(account.Username),
+		mail.WithPassword(account.Password),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create mail client: %w", err)
+	}
+	defer client.Close()
+
+	client.SetSSL(true)
+	if err := client.DialAndSendWithContext(ctx, m); err != nil {
+		return fmt.Errorf("failed to send email: %w", err)
+	}
+
+	return nil
 }
 
 func (p *Provider) Name() string {

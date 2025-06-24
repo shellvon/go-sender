@@ -35,7 +35,7 @@ Business Logic → Sender → ProviderDecorator → Provider
 
 #### Currently Supported Providers
 
-- **📧 Email**: SMTP with multi-account support ([provider docs](./providers/email/README.md))
+- **📧 Email**: SMTP with multi-account support using [wneessen/go-mail](https://github.com/wneessen/go-mail) ([provider docs](./providers/email/README.md))
 - **📱 SMS**: Multi-platform SMS support ([provider docs](./providers/sms/README.md))
 
   - **Aliyun SMS (阿里云, Mainland)**: [Official Documentation](https://help.aliyun.com/document_detail/419273.html) ([provider docs](./providers/sms/README.md))
@@ -72,12 +72,6 @@ Business Logic → Sender → ProviderDecorator → Provider
 - **Multiple Accounts**: Support multiple email accounts, bots, webhook endpoints
 - **Load Balancing**: Round-robin, random, weighted, and health-based strategies
 - **Context-Aware**: Override strategies per request via context
-
-### 📊 Observability
-
-- **Metrics Collection**: Performance and outcome metrics
-- **Health Monitoring**: Provider and system health checks
-- **Structured Logging**: Pluggable logger interface
 
 ## 🚀 Quick Start
 
@@ -197,17 +191,8 @@ wecomConfig := wecombot.Config{
 queue := queue.NewMemoryQueue[*core.QueueItem](1000)
 sender.SetQueue(queue)
 
-// Send message with callback
-err := sender.Send(ctx, message,
-    core.WithSendAsync(),
-    core.WithSendCallback(func(err error) {
-        if err != nil {
-            log.Printf("Message send failed: %v", err)
-        } else {
-            log.Printf("Message sent successfully")
-        }
-    }),
-)
+// Send message asynchronously
+err := sender.Send(ctx, message, core.WithSendAsync())
 ```
 
 ### 4. Circuit Breaker and Rate Limiting
