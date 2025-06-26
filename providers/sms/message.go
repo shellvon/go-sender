@@ -1,8 +1,6 @@
 package sms
 
 import (
-	"strconv"
-
 	"github.com/shellvon/go-sender/core"
 )
 
@@ -217,104 +215,6 @@ func NewPromotionMessage(mobile string, content string, opts ...MessageOption) *
 		WithContent(content),
 	}, opts...)
 	return NewMessage(mobile, opts...)
-}
-
-// GetExtraString safely gets a string value from Extras map
-func (m *Message) GetExtraString(key string) (string, bool) {
-	if m.Extras == nil {
-		return "", false
-	}
-	if value, ok := m.Extras[key]; ok {
-		if str, ok := value.(string); ok {
-			return str, true
-		}
-	}
-	return "", false
-}
-
-// GetExtraInt safely gets an int value from Extras map
-func (m *Message) GetExtraInt(key string) (int, bool) {
-	if m.Extras == nil {
-		return 0, false
-	}
-	if value, ok := m.Extras[key]; ok {
-		switch v := value.(type) {
-		case int:
-			return v, true
-		case float64:
-			return int(v), true
-		case string:
-			if i, err := strconv.Atoi(v); err == nil {
-				return i, true
-			}
-		}
-	}
-	return 0, false
-}
-
-// GetExtraBool safely gets a bool value from Extras map
-func (m *Message) GetExtraBool(key string) (bool, bool) {
-	if m.Extras == nil {
-		return false, false
-	}
-	if value, ok := m.Extras[key]; ok {
-		if b, ok := value.(bool); ok {
-			return b, true
-		}
-	}
-	return false, false
-}
-
-// GetExtraFloat safely gets a float64 value from Extras map
-func (m *Message) GetExtraFloat(key string) (float64, bool) {
-	if m.Extras == nil {
-		return 0, false
-	}
-	if value, ok := m.Extras[key]; ok {
-		switch v := value.(type) {
-		case float64:
-			return v, true
-		case int:
-			return float64(v), true
-		case string:
-			if f, err := strconv.ParseFloat(v, 64); err == nil {
-				return f, true
-			}
-		}
-	}
-	return 0, false
-}
-
-// GetExtraStringOrDefault gets a string value from Extras map with default value
-func (m *Message) GetExtraStringOrDefault(key, defaultValue string) string {
-	if value, ok := m.GetExtraString(key); ok && value != "" {
-		return value
-	}
-	return defaultValue
-}
-
-// GetExtraIntOrDefault gets an int value from Extras map with default value
-func (m *Message) GetExtraIntOrDefault(key string, defaultValue int) int {
-	if value, ok := m.GetExtraInt(key); ok {
-		return value
-	}
-	return defaultValue
-}
-
-// GetExtraBoolOrDefault gets a bool value from Extras map with default value
-func (m *Message) GetExtraBoolOrDefault(key string, defaultValue bool) bool {
-	if value, ok := m.GetExtraBool(key); ok {
-		return value
-	}
-	return defaultValue
-}
-
-// GetExtraFloatOrDefault gets a float64 value from Extras map with default value
-func (m *Message) GetExtraFloatOrDefault(key string, defaultValue float64) float64 {
-	if value, ok := m.GetExtraFloat(key); ok {
-		return value
-	}
-	return defaultValue
 }
 
 // String returns the string representation of MessageType

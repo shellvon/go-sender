@@ -57,14 +57,18 @@ Business Logic → Sender → ProviderDecorator → Provider
 
 ### 📧 Email
 
-| Provider           | Website                                        | API Docs                                                              | Provider Doc                                |
-| ------------------ | ---------------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------- |
-| go-mail (SMTP)     | [go-mail](https://github.com/wneessen/go-mail) | [Docs](https://pkg.go.dev/github.com/wneessen/go-mail)                | [Email README](./providers/email/README.md) |
-| (Planned) Mailgun  | [mailgun.com](https://www.mailgun.com/)        | [API](https://documentation.mailgun.com/en/latest/api_reference.html) | N/A                                         |
-| (Planned) Mailjet  | [mailjet.com](https://www.mailjet.com/)        | [API](https://dev.mailjet.com/email/guides/send-api-v31/)             | N/A                                         |
-| (Planned) Mailtrap | [mailtrap.io](https://mailtrap.io/)            | [API](https://api-docs.mailtrap.io/docs)                              | N/A                                         |
-| (Planned) Brevo    | [brevo.com](https://www.brevo.com/)            | [API](https://developers.brevo.com/docs)                              | N/A                                         |
-| (Planned) Braze    | [braze.com](https://www.braze.com/)            | [API](https://www.braze.com/docs/api/)                                | N/A                                         |
+| Provider             | Website                                        | API Docs                                                              | Provider Doc                                | Status      |
+| -------------------- | ---------------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------- | ----------- |
+| go-mail (SMTP)       | [go-mail](https://github.com/wneessen/go-mail) | [Docs](https://pkg.go.dev/github.com/wneessen/go-mail)                | [Email README](./providers/email/README.md) | Implemented |
+| EmailJS (API)        | [emailjs.com](https://www.emailjs.com/)        | [API](https://www.emailjs.com/docs/rest-api/send/)                    | [emailapi](./providers/emailapi/README.md)  | Implemented |
+| Resend (API)         | [resend.com](https://resend.com/)              | [API](https://resend.com/docs/api-reference/emails/send-batch-emails) | [emailapi](./providers/emailapi/README.md)  | Implemented |
+| (Planned) Mailgun    | [mailgun.com](https://www.mailgun.com/)        | [API](https://documentation.mailgun.com/en/latest/api_reference.html) | N/A                                         | Planned     |
+| (Planned) Mailjet    | [mailjet.com](https://www.mailjet.com/)        | [API](https://dev.mailjet.com/email/guides/send-api-v31/)             | N/A                                         | Planned     |
+| (Planned) Brevo      | [brevo.com](https://www.brevo.com/)            | [API](https://developers.brevo.com/docs)                              | N/A                                         | Planned     |
+| (Planned) Mailersend | [mailersend.com](https://www.mailersend.com/)  | [API](https://developers.mailersend.com/)                             | N/A                                         | Planned     |
+| (Planned) Mailtrap   | [mailtrap.io](https://mailtrap.io/)            | [API](https://api-docs.mailtrap.io/docs)                              | N/A                                         | Planned     |
+
+> **Note:** The `emailapi` provider is experimental and under active development. APIs may change at any time.
 
 ### 🤖 IM/Bot/Enterprise Notification
 
