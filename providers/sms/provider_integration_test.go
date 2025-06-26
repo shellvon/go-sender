@@ -38,7 +38,6 @@ func TestSMSProviderIntegration(t *testing.T) {
 		Type:      ProviderType(providerType),
 		AppID:     appID,
 		AppSecret: appSecret,
-		SignName:  signName,
 	}
 	config := Config{
 		Providers: []SMSProvider{provider},
@@ -80,7 +79,7 @@ func TestSMSProviderIntegration(t *testing.T) {
 		}
 		msg := &Message{
 			Mobiles:        mobiles,
-			TemplateCode:   templateCode,
+			TemplateID:     templateCode,
 			TemplateParams: params,
 			SignName:       signName,
 		}

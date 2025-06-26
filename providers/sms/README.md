@@ -1,59 +1,125 @@
-# go-sender SMS Providers
+# SMS Provider Support Matrix / 短信服务商支持矩阵
 
-> **Status: In Development**
+> **⚠️ Development Notice / 开发说明**: This module is currently under active development. APIs may be unstable and subject to change. Please use with caution in production environments.
 >
-> This SMS module is under active development. APIs, features, and supported providers may change in the future. Contributions and feedback are welcome!
+> 本模块正在积极开发中，API 可能不稳定且会发生变化。请在生产环境中谨慎使用。
+>
+> **本 Provider 力求支持所有主流平台的短信、彩信、语音短信三种能力，具体每个服务商的能力支持情况请查阅下方[能力矩阵](./capabilities.md)。**
 
-## Supported SMS Providers
+## Supported Providers / 已支持的提供商
 
-| Provider Name (品牌)           | Website/Docs                                                                                                                  | Source Code                  | Bulk SMS | International |
-| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- | ---------------------------- | -------- | ------------- |
-| Aliyun (阿里云, Mainland/Intl) | [Aliyun SMS](https://help.aliyun.com/document_detail/419273.html) [Intl](https://help.aliyun.com/document_detail/108084.html) | [aliyun.go](./aliyun.go)     | ✅       | ✅            |
-| Huawei Cloud (华为云)          | [Huawei SMS](https://support.huaweicloud.com/intl/en-us/api-msgsms/)                                                          | [huawei.go](./huawei.go)     | ✅       | ✅            |
-| Luosimao (螺丝帽)              | [Luosimao](https://luosimao.com/docs/api/)                                                                                    | [luosimao.go](./luosimao.go) | ✅       | ❌            |
-| 253 Yun (创蓝 253)             | [253 云通讯](https://doc.253.com/)                                                                                            | [cl253.go](./cl253.go)       | ✅       | ❌            |
-| Juhe (聚合数据)                | [Juhe Data](https://www.juhe.cn/docs/api/id/54)                                                                               | [juhe.go](./juhe.go)         | ❌       | ❌            |
-| SMSBao (短信宝)                | [SMSBao](https://www.smsbao.com/openapi/213.html)                                                                             | [smsbao.go](./smsbao.go)     | ✅       | ❌            |
-| UCP (云之讯)                   | [UCP](https://doc.ucpaas.com/doku.php?id=%E7%9F%AD%E4%BF%A1:sms:index)                                                        | [ucp.go](./ucp.go)           | ✅       | ❌            |
-| Yunpian (云片)                 | [Yunpian](https://www.yunpian.com/official/document/sms/zh_CN/domestic_list)                                                  | [yunpian.go](./yunpian.go)   | ✅       | ✅            |
-| Submail (赛邮)                 | [Submail](https://www.mysubmail.com/documents/FppOR3)                                                                         | [submail.go](./submail.go)   | ✅       | ✅            |
-| Volcengine (火山引擎)          | [Volcengine](https://www.volcengine.com/docs/6361/67380)                                                                      | [volc.go](./volc.go)         | ✅       | ❌            |
-| Tencent Cloud SMS (腾讯云)     | [Tencent Cloud SMS](https://cloud.tencent.com/document/product/382/5976)                                                      | (WIP)                        | ✅       | ✅            |
+The following SMS service providers are currently implemented based on official documentation, but not all have been fully tested:
 
-**Legend:**
+以下短信服务提供商目前已按官方文档实现，尚未全部经过实际测试：
 
-- ✅: Supported
-- ❌: Not supported
-- WIP: Work in progress (only for 未实现/部分实现)
+| Provider / 提供商            | Website / 官网                                             | API Docs / API 文档                                                                                                                   | Implementation / 实现文件        |
+| ---------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| Aliyun / 阿里云              | [https://www.aliyun.com](https://www.aliyun.com)           | [API Docs](https://help.aliyun.com/zh/sms/developer-reference/api-dysmsapi-2017-05-25-sendsms)                                        | [aliyun.go](./aliyun.go)         |
+| Cl253 (Chuanglan) / 创蓝 253 | [https://www.253.com](https://www.253.com)                 | [API Docs](https://www.253.com/api)                                                                                                   | [cl253.go](./cl253.go)           |
+| Huawei Cloud / 华为云        | [https://www.huaweicloud.com](https://www.huaweicloud.com) | [API Docs](https://support.huaweicloud.com/intl/zh-cn/api-msgsms/sms_05_0001.html)                                                    | [huawei.go](./huawei.go)         |
+| Juhe / 聚合数据              | [https://www.juhe.cn](https://www.juhe.cn)                 | [API Docs](https://www.juhe.cn/docs)                                                                                                  | [juhe.go](./juhe.go)             |
+| Luosimao / 螺丝帽            | [https://luosimao.com](https://luosimao.com)               | [API Docs](https://luosimao.com/docs)                                                                                                 | [luosimao.go](./luosimao.go)     |
+| Smsbao / 短信宝              | [https://www.smsbao.com](https://www.smsbao.com)           | [API Docs](https://www.smsbao.com/openapi)                                                                                            | [smsbao.go](./smsbao.go)         |
+| Submail / 赛邮               | [https://www.mysubmail.com/](https://www.mysubmail.com/)   | [API Docs](https://www.mysubmail.com/documents)                                                                                       | [submail.go](./submail.go)       |
+| Tencent / 腾讯云             | [https://cloud.tencent.com](https://cloud.tencent.com)     | [SMS API](https://cloud.tencent.com/document/product/382/55981)<br>[Voice API](https://cloud.tencent.com/document/product/1128/51559) | [tencent.go](./tencent.go)       |
+| UCP / 云之讯                 | [https://www.ucpaas.com](https://www.ucpaas.com)           | [API Docs](http://docs.ucpaas.com)                                                                                                    | [ucp.go](./ucp.go)               |
+| Volcengine / 火山引擎        | [https://www.volcengine.com](https://www.volcengine.com)   | [API Docs](https://www.volcengine.com/docs/63933)                                                                                     | [volc.go](./volc.go)             |
+| Yunpian / 云片               | [https://www.yunpian.com](https://www.yunpian.com)         | [API Docs](https://www.yunpian.com/official/document/sms/zh_CN/domestic_list)                                                         | [yunpian.go](./yunpian.go)       |
+| Yuntongxun / 云讯通          | [https://www.yuntongxun.com](https://www.yuntongxun.com)   | [API Docs](https://www.yuntongxun.com/developer-center)                                                                               | [yuntongxun.go](./yuntongxun.go) |
 
-- Some providers support only single or bulk SMS, or only domestic/international. See the table above for details.
-- This module is under active development. APIs and features may change.
-- For questions or contributions, please open an issue or pull request.
+## Planned Providers / 计划支持的提供商
 
----
+The following providers are planned for future implementation:
 
-## Planned / Not Yet Implemented Providers
+以下提供商计划在未来实现：
 
-- Tencent Cloud SMS (腾讯云)
-- Ucloud
-- Qiniu Cloud (七牛云)
-- SendCloud
-- Yuntongxun (容联云通讯)
-- ihuyi (互亿无线)
-- Baidu Cloud (百度云)
-- Huaxin (华信短信平台)
-- Chuanglan Cloud Intelligence (创蓝云智)
-- RongCloud (融云)
-- Tianyi Wireless (天毅无线)
-- Netease Yunxin (网易云信)
-- KXTON (凯信通)
-- UE35.net
-- Tiniyo
-- Moduyun (摩杜云)
-- Zhutong (融合云/助通)
-- Zhizhuyun (蜘蛛云)
-- Ronghe Yunxin (融合云信)
-- Tianruiyun (天瑞云)
-- Era Interconnect (时代互联)
-- CTWing (电信天翼云)
-- Twilio (国际)
+- NetEase Cloud Communication / 网易云信
+- Baidu Cloud SMS / 百度云短信
+- Qiniu Cloud SMS / 七牛云短信
+- More international providers... / 更多国际提供商...
+
+## Capability Matrix / 能力矩阵
+
+For detailed capability information including SMS, MMS, and Voice support (domestic/international), please see the [Capability Matrix](./capabilities.md).
+
+有关短信、彩信和语音支持（国内/国际）的详细能力信息，请参阅[能力矩阵](./capabilities.md)。
+
+The capability matrix is automatically generated and includes:
+能力矩阵是自动生成的，包括：
+
+- ✅ Supported features / 支持的功能
+- ❌ Unsupported features / 不支持的功能
+- 🚧 Features under development / 开发中的功能
+- Detailed notes and limitations for each provider / 每个提供商的详细说明和限制
+
+## Quick Start / 快速开始
+
+```go
+import "github.com/shellvon/go-sender/providers/sms"
+
+// Configure SMS provider / 配置短信提供商
+config := sms.Config{
+    Providers: []sms.SMSProvider{
+        {
+            Name:      "aliyun",
+            Type:      sms.ProviderTypeAliyun,
+            AppID:     "your-app-id",
+            AppSecret: "your-app-secret",
+            SignName:  "your-sign-name",
+        },
+    },
+}
+
+// Create provider / 创建提供商
+provider, err := sms.New(config)
+if err != nil {
+    log.Fatal(err)
+}
+
+// Send SMS / 发送短信
+msg := &sms.Message{
+    Type:        sms.SMSText, // 普通短信
+    Category:    sms.CategoryVerification,
+    TemplateID:  "SMS_123456789",
+    TemplateParams: map[string]string{"code": "123456"},
+    Mobiles:     []string{"***REMOVED***"},
+    RegionCode:  86,
+}
+
+// Send Voice SMS / 发送语音短信（如腾讯云、阿里云等支持的语音验证码/通知）
+voiceMsg := &sms.Message{
+    Type:        sms.Voice, // 语音短信
+    Category:    sms.CategoryVerification, // 或 sms.CategoryNotification
+    TemplateID:  "123456",
+    TemplateParams: map[string]string{"code": "654321"},
+    Mobiles:     []string{"***REMOVED***"},
+    RegionCode:  86,
+}
+
+err = provider.Send(context.Background(), msg)
+err = provider.Send(context.Background(), voiceMsg)
+```
+
+## Contributing / 贡献
+
+If you'd like to add support for a new SMS provider or improve existing implementations, please:
+
+如果您想添加新的短信提供商支持或改进现有实现，请：
+
+1. Check the [capability matrix](./capabilities.md) for current status / 查看[能力矩阵](./capabilities.md)了解当前状态
+2. Review existing provider implementations for reference / 参考现有提供商实现
+3. Follow the established patterns for capability definition and error handling / 遵循既定的能力定义和错误处理模式
+4. Include proper documentation links and website references / 包含适当的文档链接和网站引用
+5. Submit a pull request with tests / 提交包含测试的拉取请求
+
+## Notes / 说明
+
+- All providers implement the `SMSProviderInterface` / 所有提供商都实现 `SMSProviderInterface`
+- Capabilities are defined using the `Capabilities` struct / 能力使用 `Capabilities` 结构体定义
+- Error handling follows consistent patterns across providers / 错误处理遵循跨提供商的一致模式
+- International SMS support varies by provider / 国际短信支持因提供商而异
+- Voice and MMS support is limited to specific providers / 语音和彩信支持仅限于特定提供商
+
+For detailed implementation information, please refer to individual provider files and their inline documentation.
+
+有关详细实现信息，请参阅各个提供商文件及其内联文档。

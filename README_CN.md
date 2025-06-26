@@ -1,10 +1,87 @@
 # Go-Sender
 
+> ⚠️ **项目状态：开发中**
+>
+> 本项目正在积极开发中，API 可能不稳定且随时变动。请在生产环境中谨慎使用。
+
 [English](./README.md) | 中文
 
 一个高性能、可扩展的 Go 消息发送框架，支持多种通知渠道和丰富的中间件功能。
 
 一个灵活的 Go 通知发送库，支持 Webhook、企业微信、邮件等多种渠道。专注于可扩展性和可靠性设计。
+
+## 🚦 支持的通道（按类型分组）
+
+### 📱 短信/语音
+
+| 提供商   | 官网                                           | API 文档                                                                                                                             | Provider 文档                           |
+| -------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------- |
+| 阿里云   | [aliyun.com](https://www.aliyun.com)           | [API](https://help.aliyun.com/zh/sms/developer-reference/api-dysmsapi-2017-05-25-sendsms)                                            | [SMS README](./providers/sms/README.md) |
+| 腾讯云   | [cloud.tencent.com](https://cloud.tencent.com) | [短信 API](https://cloud.tencent.com/document/product/382/55981) / [语音 API](https://cloud.tencent.com/document/product/1128/51559) | [SMS README](./providers/sms/README.md) |
+| 华为云   | [huaweicloud.com](https://www.huaweicloud.com) | [API](https://support.huaweicloud.com/intl/zh-cn/api-msgsms/sms_05_0001.html)                                                        | [SMS README](./providers/sms/README.md) |
+| 火山引擎 | [volcengine.com](https://www.volcengine.com)   | [API](https://www.volcengine.com/docs/63933)                                                                                         | [SMS README](./providers/sms/README.md) |
+| 云片     | [yunpian.com](https://www.yunpian.com)         | [API](https://www.yunpian.com/official/document/sms/zh_CN/domestic_list)                                                             | [SMS README](./providers/sms/README.md) |
+| 创蓝 253 | [253.com](https://www.253.com)                 | [API](https://www.253.com/api)                                                                                                       | [SMS README](./providers/sms/README.md) |
+| 赛邮     | [mysubmail.com](https://www.mysubmail.com/)    | [API](https://www.mysubmail.com/documents)                                                                                           | [SMS README](./providers/sms/README.md) |
+| 云之讯   | [ucpaas.com](https://www.ucpaas.com)           | [API](http://docs.ucpaas.com)                                                                                                        | [SMS README](./providers/sms/README.md) |
+| 聚合数据 | [juhe.cn](https://www.juhe.cn)                 | [API](https://www.juhe.cn/docs)                                                                                                      | [SMS README](./providers/sms/README.md) |
+| 短信宝   | [smsbao.com](https://www.smsbao.com)           | [API](https://www.smsbao.com/openapi)                                                                                                | [SMS README](./providers/sms/README.md) |
+| 云讯通   | [yuntongxun.com](https://www.yuntongxun.com)   | [API](https://www.yuntongxun.com/developer-center)                                                                                   | [SMS README](./providers/sms/README.md) |
+
+> 详细短信/彩信/语音能力请见 [能力矩阵](./providers/sms/capabilities.md)。
+
+### 📧 邮件
+
+| 提供商           | 官网                                           | API 文档                                                              | Provider 文档                               |
+| ---------------- | ---------------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------- |
+| go-mail (SMTP)   | [go-mail](https://github.com/wneessen/go-mail) | [Docs](https://pkg.go.dev/github.com/wneessen/go-mail)                | [Email README](./providers/email/README.md) |
+| （计划）Mailgun  | [mailgun.com](https://www.mailgun.com/)        | [API](https://documentation.mailgun.com/en/latest/api_reference.html) | N/A                                         |
+| （计划）Mailjet  | [mailjet.com](https://www.mailjet.com/)        | [API](https://dev.mailjet.com/email/guides/send-api-v31/)             | N/A                                         |
+| （计划）Mailtrap | [mailtrap.io](https://mailtrap.io/)            | [API](https://api-docs.mailtrap.io/docs)                              | N/A                                         |
+| （计划）Brevo    | [brevo.com](https://www.brevo.com/)            | [API](https://developers.brevo.com/docs)                              | N/A                                         |
+| （计划）Braze    | [braze.com](https://www.braze.com/)            | [API](https://www.braze.com/docs/api/)                                | N/A                                         |
+
+### 🤖 IM/Bot/企业通知
+
+- [企业微信机器人](https://developer.work.weixin.qq.com/document/path/91770) ([Provider 文档](./providers/wecombot/README.md))
+- [钉钉机器人](https://open.dingtalk.com/document/robots/custom-robot-access) ([Provider 文档](./providers/dingtalk/README.md))
+- [飞书/Lark](https://open.feishu.cn/document/ukTMukTMukTM/ucTM5YjL3ETO24yNxkjN) ([Provider 文档](./providers/lark/README.md))
+- [Telegram](https://core.telegram.org/bots/api) ([Provider 文档](./providers/telegram/README.md))
+- （计划）Slack（[API](https://api.slack.com/messaging/webhooks)）
+- [Server 酱](https://sct.ftqq.com/) ([Provider 文档](./providers/serverchan/README.md))
+
+### 🌐 通用推送 / Webhook
+
+以下所有平台均通过 [Webhook Provider](./providers/webhook/README.md)（通用 HTTP 集成）支持：
+
+- [ntfy](https://ntfy.sh/)
+- [IFTTT](https://ifttt.com/)
+- [Bark](https://github.com/Finb/Bark)
+- [PushDeer](https://github.com/easychen/pushdeer)
+- [PushPlus](https://pushplus.hxtrip.com/)
+- [PushAll](https://pushall.ru/)
+- [PushBack](https://pushback.io/)
+- [Pushy](https://pushy.me/)
+- [Pushbullet](https://www.pushbullet.com/)
+- [Gotify](https://gotify.net/)
+- [OneBot](https://github.com/botuniverse/onebot)
+- [Push](https://push.techulus.com/)
+- [Pushjet](https://pushjet.io/)
+- [Pushsafer](https://www.pushsafer.com/)
+- [Pushover](https://pushover.net/)
+- [Simplepush](https://simplepush.io/)
+- [Zulip](https://zulip.com/)
+- [Mattermost](https://mattermost.com/)
+- [Discord](https://discord.com/)（仅支持消息推送，交互/事件需专用 provider）
+
+> 详见 [Webhook Provider 文档](./providers/webhook/README.md)，了解已支持的推送平台和用法示例。
+
+### 🚀 推送服务
+
+| 推送服务                                | 官网                                                                        | API 文档                                                           | Provider 文档 |
+| --------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------- |
+| （计划）FCM（Firebase Cloud Messaging） | [firebase.google.com](https://firebase.google.com/products/cloud-messaging) | [API](https://firebase.google.com/docs/cloud-messaging)            | N/A           |
+| （计划）极光推送（JPush）               | [jiguang.cn](https://www.jiguang.cn/)                                       | [API](https://docs.jiguang.cn/jpush/server/push/rest_api_v3_push/) | N/A           |
 
 ## 🎯 设计理念
 
@@ -254,24 +331,3 @@ sender.RegisterProvider("my-provider", &MyProvider{}, nil)
 | `random`       | 随机选择     | 简单分发         |
 | `weighted`     | 基于权重选择 | 基于优先级的路由 |
 | `health_based` | 基于健康状态 | 自定义健康检查   |
-
-## 🚀 已支持的推送/通知渠道
-
-go-sender 已经原生支持以下主流推送和通知渠道：
-
-- **Pushover**（通过 webhook 配置）
-- **SimplePush**（通过 webhook 配置）
-- **Bark**（通过 webhook 配置）
-- **PushDeer**（通过 webhook 配置）
-- **企业微信（WeCom/WeChat Work）**（群机器人、应用消息）
-- **钉钉（DingTalk）**（群机器人、应用消息）
-- **飞书（Lark/Feishu）**（群机器人、应用消息）
-- **Telegram**（机器人）
-- **Slack**（webhook/机器人）
-- **ServerChan（方糖推送）**
-- **Webhook**（通用 HTTP 推送）
-- **邮件（SMTP）**
-- **短信**（阿里云、华为云、云片、赛邮、火山引擎等）
-- ...以及任何支持 HTTP 推送/webhook 的服务！
-
-> 更多配置细节和支持的服务请参考各 provider 的 README。

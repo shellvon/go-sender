@@ -2,9 +2,6 @@ package dingtalk
 
 import (
 	"context"
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -98,9 +95,8 @@ func (p *Provider) doSendDingtalk(ctx context.Context, account *core.Account, me
 // generateSignature generates signature for DingTalk webhook
 func (p *Provider) generateSignature(timestamp, secret string) string {
 	stringToSign := timestamp + "\n" + secret
-	hash := hmac.New(sha256.New, []byte(secret))
-	hash.Write([]byte(stringToSign))
-	return base64.StdEncoding.EncodeToString(hash.Sum(nil))
+	hash := utils.HMACSHA256([]byte(secret), []byte(stringToSign))
+	return utils.Base64EncodeBytes(hash)
 }
 
 // Name returns the name of the provider.

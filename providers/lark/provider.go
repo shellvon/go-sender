@@ -2,13 +2,12 @@ package lark
 
 import (
 	"context"
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
+
 	"strconv"
+	"time"
 
 	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/utils"
@@ -46,6 +45,7 @@ func New(config Config) (*Provider, error) {
 	}, nil
 }
 
+// https://open.feishu.cn/document/client-docs/bot-v3/add-custom-bot
 // Send sends a message using the Lark provider
 func (p *Provider) Send(ctx context.Context, msg core.Message) error {
 	larkMsg, ok := msg.(Message)
@@ -58,13 +58,26 @@ func (p *Provider) Send(ctx context.Context, msg core.Message) error {
 		return errors.New("no available account")
 	}
 
-	// Build webhook URL
-	webhookURL := fmt.Sprintf("https://open.feishu.cn/open-apis/bot/v2/hook/%s", selectedAccount.Key)
+	var webhookURL string
+	var timestamp, sign string
+	if selectedAccount.Webhook != "" {
+		webhookURL = selectedAccount.Webhook
+		if selectedAccount.Key != "" {
+			timestamp = strconv.FormatInt(time.Now().Unix(), 10)
+			sign = utils.HMACSHA256Base64(selectedAccount.Key, timestamp+"\n"+selectedAccount.Key)
+		}
+	} else {
+		webhookURL = fmt.Sprintf("https://open.feishu.cn/open-apis/bot/v2/hook/%s", selectedAccount.Key)
+	}
 
 	// Prepare the request payload
 	payload := map[string]interface{}{
 		"msg_type": larkMsg.GetMsgType(),
 		"content":  larkMsg,
+	}
+	if timestamp != "" && sign != "" {
+		payload["timestamp"] = timestamp
+		payload["sign"] = sign
 	}
 
 	// Marshal message to JSON
@@ -102,17 +115,6 @@ func (p *Provider) Send(ctx context.Context, msg core.Message) error {
 	}
 
 	return nil
-}
-
-// generateSign generates the signature for Lark webhook
-func (p *Provider) generateSign(timestamp int64, secret string) string {
-	// Lark signature format: timestamp + "\n" + secret
-	stringToSign := strconv.FormatInt(timestamp, 10) + "\n" + secret
-
-	h := hmac.New(sha256.New, []byte(secret))
-	h.Write([]byte(stringToSign))
-
-	return base64.StdEncoding.EncodeToString(h.Sum(nil))
 }
 
 // Name returns the name of the provider.

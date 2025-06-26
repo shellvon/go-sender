@@ -187,3 +187,37 @@ For detailed API documentation, visit:
 
 - [Lark Bot API](https://open.feishu.cn/document/ukTMukTMukTM/ucTM5YjL3ETO24yNxkjN)
 - [Feishu Bot API](https://open.feishu.cn/document/ukTMukTMukTM/ucTM5YjL3ETO24yNxkjN)
+
+## Security (Signature Verification)
+
+Lark/Feishu group bots support optional security signature verification. This provider supports both standard and signature-protected webhooks:
+
+- If the `webhook` field is set in the account, it will be used as the full webhook URL. If the `key` field is also set, the provider will automatically append `timestamp` and `sign` parameters using the key as the secret for signature calculation.
+- If only the `webhook` field is set (and `key` is empty), the provider will use the webhook as-is (you can manually append signature parameters if needed).
+- If the `webhook` field is empty, the provider will construct the webhook URL using the `key` field (no signature will be used).
+
+**Signature Calculation:**
+
+The signature is calculated as:
+
+```
+sign = base64(HMAC-SHA256(timestamp + "\n" + secret, secret))
+```
+
+**Example configuration with signature:**
+
+```go
+config := lark.Config{
+    Accounts: []core.Account{
+        {
+            Name:    "lark-secure-bot",
+            Webhook: "https://open.feishu.cn/open-apis/bot/v2/hook/your-webhook-id",
+            Key:     "your-signature-secret", // Secret for signature calculation
+        },
+    },
+}
+```
+
+For more details on Lark/Feishu bot security settings, see:
+
+- [Lark Bot Security Settings](https://open.feishu.cn/document/client-docs/bot-v3/add-custom-bot)
