@@ -1,10 +1,16 @@
 # Go-Sender
 
+> ⚠️ **Project Status: In Active Development**
+>
+> This project is under heavy development. APIs may be unstable and subject to change. Please use with caution in production environments.
+
 English | [中文](./README_CN.md)
 
 A high-performance, extensible Go message sending framework supporting multiple notification channels and rich middleware capabilities.
 
-## 🎯 Design Philosophy
+---
+
+## Design Philosophy
 
 Go-Sender is designed around the **Decorator Pattern** and **Plugin Architecture**, making it easy to add new notification channels or cross-cutting concerns without changing your business logic.
 
@@ -31,47 +37,98 @@ Business Logic → Sender → ProviderDecorator → Provider
 
 ## ✨ Features
 
-### 🚀 Multi-Channel Support
+### 🚦 Supported Providers (Grouped by Type)
 
-#### Currently Supported Providers
+### 📱 SMS & Voice
 
-- **📧 Email**: SMTP with multi-account support using [wneessen/go-mail](https://github.com/wneessen/go-mail) ([provider docs](./providers/email/README.md))
-- **📱 SMS**: Multi-platform SMS support ([provider docs](./providers/sms/README.md))
+| Provider                  | Website                                        | API Docs                                                                                                                             | Provider Doc                            |
+| ------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------- |
+| Aliyun (阿里云)           | [aliyun.com](https://www.aliyun.com)           | [API](https://help.aliyun.com/zh/sms/developer-reference/api-dysmsapi-2017-05-25-sendsms)                                            | [SMS README](./providers/sms/README.md) |
+| Tencent Cloud (腾讯云)    | [cloud.tencent.com](https://cloud.tencent.com) | [SMS API](https://cloud.tencent.com/document/product/382/55981) / [Voice API](https://cloud.tencent.com/document/product/1128/51559) | [SMS README](./providers/sms/README.md) |
+| Huawei Cloud (华为云)     | [huaweicloud.com](https://www.huaweicloud.com) | [API](https://support.huaweicloud.com/intl/zh-cn/api-msgsms/sms_05_0001.html)                                                        | [SMS README](./providers/sms/README.md) |
+| Volcano Engine (火山引擎) | [volcengine.com](https://www.volcengine.com)   | [API](https://www.volcengine.com/docs/63933)                                                                                         | [SMS README](./providers/sms/README.md) |
+| Yunpian (云片)            | [yunpian.com](https://www.yunpian.com)         | [API](https://www.yunpian.com/official/document/sms/zh_CN/domestic_list)                                                             | [SMS README](./providers/sms/README.md) |
+| CL253 (创蓝 253)          | [253.com](https://www.253.com)                 | [API](https://www.253.com/api)                                                                                                       | [SMS README](./providers/sms/README.md) |
+| Submail (赛邮)            | [mysubmail.com](https://www.mysubmail.com/)    | [API](https://www.mysubmail.com/documents)                                                                                           | [SMS README](./providers/sms/README.md) |
+| UCP (云之讯)              | [ucpaas.com](https://www.ucpaas.com)           | [API](http://docs.ucpaas.com)                                                                                                        | [SMS README](./providers/sms/README.md) |
+| Juhe (聚合数据)           | [juhe.cn](https://www.juhe.cn)                 | [API](https://www.juhe.cn/docs)                                                                                                      | [SMS README](./providers/sms/README.md) |
+| SMSBao (短信宝)           | [smsbao.com](https://www.smsbao.com)           | [API](https://www.smsbao.com/openapi)                                                                                                | [SMS README](./providers/sms/README.md) |
+| Yuntongxun (云讯通)       | [yuntongxun.com](https://www.yuntongxun.com)   | [API](https://www.yuntongxun.com/developer-center)                                                                                   | [SMS README](./providers/sms/README.md) |
 
-  - **Aliyun SMS (阿里云, Mainland)**: [Official Documentation](https://help.aliyun.com/document_detail/419273.html) ([provider docs](./providers/sms/README.md))
-  - **Aliyun Intl SMS (阿里云国际)**: [Official Documentation](https://help.aliyun.com/document_detail/108146.html) ([provider docs](./providers/sms/README.md))
-  - **Huawei Cloud SMS (华为云)**: [Official Documentation](https://support.huaweicloud.com/sms/index.html) ([provider docs](./providers/sms/README.md))
-  - **Luosimao (螺丝帽)**: [Official Documentation](https://luosimao.com/docs/api/) ([provider docs](./providers/sms/README.md))
-  - **CL253 (创蓝 253)**: [Official Documentation](http://www.253.com/) ([provider docs](./providers/sms/README.md))
-  - **Juhe (聚合数据)**: [Official Documentation](https://www.juhe.cn/docs/api/id/54) ([provider docs](./providers/sms/README.md))
-  - **SMSBao (短信宝)**: [Official Documentation](https://www.smsbao.com/openapi/213.html) ([provider docs](./providers/sms/README.md))
-  - **UCP (云之讯)**: [Official Documentation](https://doc.ucpaas.com/doku.php?id=%E7%9F%AD%E4%BF%A1:sms:index) ([provider docs](./providers/sms/README.md))
-  - **Tencent Cloud SMS (腾讯云)** (WIP) ([provider docs](./providers/sms/README.md))
-  - **Yunpian (云片)** (WIP) ([provider docs](./providers/sms/README.md))
-  - **Submail (赛邮)** (WIP) ([provider docs](./providers/sms/README.md))
-  - **Volcano Engine (火山引擎)** (WIP) ([provider docs](./providers/sms/README.md))
+### 📧 Email
 
-- **🤖 WeCom Bot**: Enterprise WeChat bot messages ([provider docs](./providers/wecombot/README.md)) | [Official Documentation](https://developer.work.weixin.qq.com/document/path/91770)
-- **🔔 DingTalk Bot**: DingTalk group bot messages ([provider docs](./providers/dingtalk/README.md)) | [Official Documentation](https://open.dingtalk.com/document/robots/custom-robot-access)
-- **📢 Lark/Feishu**: Lark (International) and Feishu (China) bot messages ([provider docs](./providers/lark/README.md)) | [Official Documentation](https://open.feishu.cn/document/ukTMukTMukTM/ucTM5YjL3ETO24yNxkjN)
-- **💬 Slack**: Slack bot messages | [Official Documentation](https://api.slack.com/messaging/webhooks)
-- **📨 ServerChan**: ServerChan push service ([provider docs](./providers/serverchan/README.md)) | [Official Site](https://sct.ftqq.com/)
-- **📱 Telegram**: Telegram Bot messages ([provider docs](./providers/telegram/README.md)) | [Official Documentation](https://core.telegram.org/bots/api)
-- **🔗 Webhook**: Generic HTTP webhook calls ([provider docs](./providers/webhook/README.md))
+| Provider           | Website                                        | API Docs                                                              | Provider Doc                                |
+| ------------------ | ---------------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------- |
+| go-mail (SMTP)     | [go-mail](https://github.com/wneessen/go-mail) | [Docs](https://pkg.go.dev/github.com/wneessen/go-mail)                | [Email README](./providers/email/README.md) |
+| (Planned) Mailgun  | [mailgun.com](https://www.mailgun.com/)        | [API](https://documentation.mailgun.com/en/latest/api_reference.html) | N/A                                         |
+| (Planned) Mailjet  | [mailjet.com](https://www.mailjet.com/)        | [API](https://dev.mailjet.com/email/guides/send-api-v31/)             | N/A                                         |
+| (Planned) Mailtrap | [mailtrap.io](https://mailtrap.io/)            | [API](https://api-docs.mailtrap.io/docs)                              | N/A                                         |
+| (Planned) Brevo    | [brevo.com](https://www.brevo.com/)            | [API](https://developers.brevo.com/docs)                              | N/A                                         |
+| (Planned) Braze    | [braze.com](https://www.braze.com/)            | [API](https://www.braze.com/docs/api/)                                | N/A                                         |
 
-### 🛡️ Advanced Reliability Features
+### 🤖 IM/Bot/Enterprise Notification
 
-- **Smart Retry**: Configurable retry policies with exponential backoff
-- **Circuit Breaker**: Prevents cascading failures
-- **Rate Limiting**: Token bucket and sliding window algorithms
-- **Queue Support**: In-memory and distributed queues
-- **Health Checks**: Comprehensive health monitoring
+- [WeCom Bot (企业微信机器人)](https://developer.work.weixin.qq.com/document/path/91770) ([Provider Doc](./providers/wecombot/README.md))
+- [DingTalk Bot (钉钉机器人)](https://open.dingtalk.com/document/robots/custom-robot-access) ([Provider Doc](./providers/dingtalk/README.md))
+- [Lark/Feishu (飞书/国际版)](https://open.feishu.cn/document/ukTMukTMukTM/ucTM5YjL3ETO24yNxkjN) ([Provider Doc](./providers/lark/README.md))
+- [Telegram](https://core.telegram.org/bots/api) ([Provider Doc](./providers/telegram/README.md))
+- (Planned) Slack ([API](https://api.slack.com/messaging/webhooks))
+- [ServerChan](https://sct.ftqq.com/) ([Provider Doc](./providers/serverchan/README.md))
+
+### 🌐 Universal Push / Webhook
+
+All the following are supported via the [Webhook Provider](./providers/webhook/README.md) (generic HTTP integration):
+
+- [ntfy](https://ntfy.sh/)
+- [IFTTT](https://ifttt.com/)
+- [Bark](https://github.com/Finb/Bark)
+- [PushDeer](https://github.com/easychen/pushdeer)
+- [PushPlus](https://pushplus.hxtrip.com/)
+- [PushAll](https://pushall.ru/)
+- [PushBack](https://pushback.io/)
+- [Pushy](https://pushy.me/)
+- [Pushbullet](https://www.pushbullet.com/)
+- [Gotify](https://gotify.net/)
+- [OneBot](https://github.com/botuniverse/onebot)
+- [Push](https://push.techulus.com/)
+- [Pushjet](https://pushjet.io/)
+- [Pushsafer](https://www.pushsafer.com/)
+- [Pushover](https://pushover.net/)
+- [Simplepush](https://simplepush.io/)
+- [Zulip](https://zulip.com/)
+- [Mattermost](https://mattermost.com/)
+- [Discord](https://discord.com/) (message push supported via webhook; for advanced/interaction features, a dedicated provider is needed)
+
+> See [Webhook Provider documentation](./providers/webhook/README.md) for details and examples of supported push platforms.
+
+### 🚀 Push Providers
+
+| Provider                                 | Website                                                                     | API Docs                                                           | Provider Doc |
+| ---------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------ |
+| (Planned) FCM (Firebase Cloud Messaging) | [firebase.google.com](https://firebase.google.com/products/cloud-messaging) | [API](https://firebase.google.com/docs/cloud-messaging)            | N/A          |
+| (Planned) JPush (极光推送)               | [jiguang.cn](https://www.jiguang.cn/)                                       | [API](https://docs.jiguang.cn/jpush/server/push/rest_api_v3_push/) | N/A          |
+
+---
+
+### 🛡️ Advanced Reliability
+
+- Built-in retry, circuit breaker, and rate limiting
+- Token bucket and sliding window algorithms
+- Health checks and observability
 
 ### 🎛️ Multi-Instance & Strategy Support
 
-- **Multiple Accounts**: Support multiple email accounts, bots, webhook endpoints
-- **Load Balancing**: Round-robin, random, weighted, and health-based strategies
-- **Context-Aware**: Override strategies per request via context
+- Multiple accounts/providers per channel
+- Load balancing: round-robin, random, weighted, health-based
+- Context-aware strategy override
+
+### 🧩 Middleware & Plugin Architecture
+
+- Rate limiter, circuit breaker, retry, queue, metrics, etc.
+
+### 📊 Observability
+
+- Metrics, tracing, health checks
 
 ## 🚀 Quick Start
 
@@ -254,24 +311,3 @@ sender.RegisterProvider("my-provider", &MyProvider{}, nil)
 | `random`       | Random selection           | Simple distribution    |
 | `weighted`     | Weight-based selection     | Priority-based routing |
 | `health_based` | Health-based selection     | Custom health checks   |
-
-## 🚀 Supported Notification Channels (Push/IM/Alert)
-
-go-sender supports a wide range of popular push and notification channels out of the box:
-
-- **Pushover** (via webhook)
-- **SimplePush** (via webhook)
-- **Bark** (via webhook)
-- **PushDeer** (via webhook)
-- **WeCom/WeChat Work (企业微信)** (group bot, app message)
-- **DingTalk (钉钉)** (group bot, app message)
-- **Lark/Feishu (飞书)** (group bot, app message)
-- **Telegram** (bot)
-- **Slack** (webhook/bot)
-- **ServerChan**
-- **Webhook** (generic HTTP)
-- **Email (SMTP)**
-- **SMS** (Aliyun, Huawei, Yunpian, Submail, Volcengine, etc.)
-- ...and any service that supports HTTP push/webhook!
-
-> See each provider's README for configuration details and more supported services.

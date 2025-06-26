@@ -218,7 +218,7 @@ func TestEmailProvider_Validation(t *testing.T) {
 
 	t.Run("EmptyBody", func(t *testing.T) {
 		msg := NewMessage(
-			[]string{globalTestConfig.To},
+			[]string{"test@gmail.com"},
 			"",
 			WithSubject("Test"),
 		)
