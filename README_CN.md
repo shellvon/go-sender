@@ -32,14 +32,18 @@
 
 ### 📧 邮件
 
-| 提供商           | 官网                                           | API 文档                                                              | Provider 文档                               |
-| ---------------- | ---------------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------- |
-| go-mail (SMTP)   | [go-mail](https://github.com/wneessen/go-mail) | [Docs](https://pkg.go.dev/github.com/wneessen/go-mail)                | [Email README](./providers/email/README.md) |
-| （计划）Mailgun  | [mailgun.com](https://www.mailgun.com/)        | [API](https://documentation.mailgun.com/en/latest/api_reference.html) | N/A                                         |
-| （计划）Mailjet  | [mailjet.com](https://www.mailjet.com/)        | [API](https://dev.mailjet.com/email/guides/send-api-v31/)             | N/A                                         |
-| （计划）Mailtrap | [mailtrap.io](https://mailtrap.io/)            | [API](https://api-docs.mailtrap.io/docs)                              | N/A                                         |
-| （计划）Brevo    | [brevo.com](https://www.brevo.com/)            | [API](https://developers.brevo.com/docs)                              | N/A                                         |
-| （计划）Braze    | [braze.com](https://www.braze.com/)            | [API](https://www.braze.com/docs/api/)                                | N/A                                         |
+| 提供方             | 官网                                           | API 文档                                                              | Provider 文档                               | 状态   |
+| ------------------ | ---------------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------- | ------ |
+| go-mail (SMTP)     | [go-mail](https://github.com/wneessen/go-mail) | [Docs](https://pkg.go.dev/github.com/wneessen/go-mail)                | [Email README](./providers/email/README.md) | 已实现 |
+| EmailJS (API)      | [emailjs.com](https://www.emailjs.com/)        | [API](https://www.emailjs.com/docs/rest-api/send/)                    | [emailapi](./providers/emailapi/README.md)  | 已实现 |
+| Resend (API)       | [resend.com](https://resend.com/)              | [API](https://resend.com/docs/api-reference/emails/send-batch-emails) | [emailapi](./providers/emailapi/README.md)  | 已实现 |
+| （计划）Mailgun    | [mailgun.com](https://www.mailgun.com/)        | [API](https://documentation.mailgun.com/en/latest/api_reference.html) | N/A                                         | 计划中 |
+| （计划）Mailjet    | [mailjet.com](https://www.mailjet.com/)        | [API](https://dev.mailjet.com/email/guides/send-api-v31/)             | N/A                                         | 计划中 |
+| （计划）Brevo      | [brevo.com](https://www.brevo.com/)            | [API](https://developers.brevo.com/docs)                              | N/A                                         | 计划中 |
+| （计划）Mailersend | [mailersend.com](https://www.mailersend.com/)  | [API](https://developers.mailersend.com/)                             | N/A                                         | 计划中 |
+| （计划）Mailtrap   | [mailtrap.io](https://mailtrap.io/)            | [API](https://api-docs.mailtrap.io/docs)                              | N/A                                         | 计划中 |
+
+> **注意：** `emailapi` 类型为实验性特性，API 可能随时变更。
 
 ### 🤖 IM/Bot/企业通知
 

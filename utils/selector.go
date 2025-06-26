@@ -111,3 +111,11 @@ func InitProvider[T core.Selectable](config core.ConfigProvider, items []T) ([]T
 
 	return enabledItems, selector, nil
 }
+
+// DefaultStringIfEmpty returns def if s is empty, otherwise returns s.
+func DefaultStringIfEmpty(s, def string) string {
+	if s == "" {
+		return def
+	}
+	return s
+}

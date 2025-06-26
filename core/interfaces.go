@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -30,6 +31,8 @@ const (
 	ProviderTypeLark ProviderType = "lark"
 	// ProviderTypeServerChan represents a ServerChan notification provider.
 	ProviderTypeServerChan ProviderType = "serverchan"
+	// ProviderTypeEmailAPI represents an emailapi notification provider.
+	ProviderTypeEmailAPI ProviderType = "emailapi"
 )
 
 // HealthStatus represents the health status of a component
@@ -89,7 +92,8 @@ type Message interface {
 
 // DefaultMessage provides a base implementation for Message with a unique id.
 type DefaultMessage struct {
-	id string `json:"-"`
+	id     string                 `json:"-"`
+	Extras map[string]interface{} `json:"extras,omitempty"`
 }
 
 // LoggerAware defines an interface for components that can have a logger injected
@@ -342,3 +346,93 @@ const (
 	OperationDequeue = "dequeue"
 	OperationSent    = "sent"
 )
+
+func (m *DefaultMessage) GetExtraString(key string) (string, bool) {
+	if m.Extras == nil {
+		return "", false
+	}
+	if value, ok := m.Extras[key]; ok {
+		if str, ok := value.(string); ok {
+			return str, true
+		}
+	}
+	return "", false
+}
+
+func (m *DefaultMessage) GetExtraStringOrDefault(key, defaultValue string) string {
+	if value, ok := m.GetExtraString(key); ok && value != "" {
+		return value
+	}
+	return defaultValue
+}
+
+func (m *DefaultMessage) GetExtraInt(key string) (int, bool) {
+	if m.Extras == nil {
+		return 0, false
+	}
+	if value, ok := m.Extras[key]; ok {
+		switch v := value.(type) {
+		case int:
+			return v, true
+		case float64:
+			return int(v), true
+		case string:
+			if i, err := strconv.Atoi(v); err == nil {
+				return i, true
+			}
+		}
+	}
+	return 0, false
+}
+
+func (m *DefaultMessage) GetExtraIntOrDefault(key string, defaultValue int) int {
+	if value, ok := m.GetExtraInt(key); ok {
+		return value
+	}
+	return defaultValue
+}
+
+func (m *DefaultMessage) GetExtraBool(key string) (bool, bool) {
+	if m.Extras == nil {
+		return false, false
+	}
+	if value, ok := m.Extras[key]; ok {
+		if b, ok := value.(bool); ok {
+			return b, true
+		}
+	}
+	return false, false
+}
+
+func (m *DefaultMessage) GetExtraBoolOrDefault(key string, defaultValue bool) bool {
+	if value, ok := m.GetExtraBool(key); ok {
+		return value
+	}
+	return defaultValue
+}
+
+func (m *DefaultMessage) GetExtraFloat(key string) (float64, bool) {
+	if m.Extras == nil {
+		return 0, false
+	}
+	if value, ok := m.Extras[key]; ok {
+		switch v := value.(type) {
+		case float64:
+			return v, true
+		case int:
+			return float64(v), true
+		case string:
+			if f, err := strconv.ParseFloat(v, 64); err == nil {
+				return f, true
+			}
+		}
+	}
+	return 0, false
+}
+
+func (m *DefaultMessage) GetExtraFloatOrDefault(key string, defaultValue float64) float64 {
+	if value, ok := m.GetExtraFloat(key); ok {
+		return value
+	}
+	return defaultValue
+}
