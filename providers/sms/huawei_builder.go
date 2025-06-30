@@ -46,5 +46,5 @@ func NewHuaweiTextMessage(
 // 华为云短信服务中，from 字段用于指定发送方号码
 // 文档地址: https://support.huaweicloud.com/api-msgsms/sms_05_0002.html
 func WithHuaweiFrom(from string) MessageOption {
-	return WithExtra(huaweiFrom, from)
+	return WithExtra(huaweiFromKey, from)
 }

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"sort"
 	"strconv"
@@ -90,9 +91,7 @@ func (t *juheTransformer) transformDomesticSMS(
 	params.Set("tpl_id", msg.TemplateID)
 	params.Set("tpl_value", t.buildTemplateValue(msg.TemplateParams))
 	params.Set("key", account.Key)
-	if extend := msg.GetExtraStringOrDefault("ext", ""); extend != "" {
-		params.Set("ext", extend)
-	}
+	params.Set("ext", msg.Extend)
 	body := []byte(params.Encode())
 	endpoint := account.Endpoint
 	if endpoint == "" {
@@ -164,7 +163,7 @@ func (t *juheTransformer) transformMMSSMS(
 }
 
 func (t *juheTransformer) handleJuheResponse(statusCode int, body []byte) error {
-	if statusCode < 200 || statusCode >= 300 {
+	if statusCode < http.StatusOK || statusCode >= http.StatusMultipleChoices {
 		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
 	}
 	var result struct {

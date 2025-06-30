@@ -133,20 +133,7 @@ func (t *smsbaoTransformer) transformTextSMS(
 		"p": utils.MD5Hex(account.Secret),
 		"m": mobiles,
 		"c": content,
-	}
-
-	// 当客户使用专用通道产品时，需要指定产品ID
-	// 产品ID可在短信宝后台或联系客服获得,不填则默认使用通用短信产品
-	// 文档
-	//   - 国内短信: https://www.smsbao.com/openapi/213.html
-	//
-	// 对于短信宝而言，TemplateID 和 ProductID 是同一个概念
-	// 且可以从账号的配置中from字段获取
-	if msg.IsDomestic() {
-		productID := utils.DefaultStringIfEmpty(msg.TemplateID, account.From)
-		if productID != "" {
-			queryParams["g"] = productID
-		}
+		"g": msg.GetExtraStringOrDefault(smsbaoProductIDKey, ""),
 	}
 
 	var apiPath string

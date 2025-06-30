@@ -31,12 +31,3 @@ func NewJuheTextMessage(mobiles []string, content, sign string, opts ...MessageO
 	baseOpts = append(baseOpts, opts...)
 	return NewMessageWithOptions(baseOpts...)
 }
-
-// WithJuheExtendCode 设置扩展码
-//
-// 扩展码，9位以内的数字，具体模板支持的长度可以提前咨询客服
-// 文档地址:
-//   - 国内短信API: https://www.juhe.cn/docs/api/id/54
-func WithJuheExtendCode(extend string) MessageOption {
-	return WithExtra("ext", extend)
-}

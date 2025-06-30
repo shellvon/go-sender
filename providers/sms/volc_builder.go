@@ -31,3 +31,9 @@ func NewVolcTextMessage(mobiles []string, content, sign string, opts ...MessageO
 	baseOpts = append(baseOpts, opts...)
 	return NewMessageWithOptions(baseOpts...)
 }
+
+// WithVolcTag 设置火山引擎短信标签.
+//   - 短信API: https://www.volcengine.com/docs/6348/70146
+func WithVolcTag(tag string) MessageOption {
+	return WithExtra(volcTagKey, tag)
+}

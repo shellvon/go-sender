@@ -10,6 +10,10 @@ type AliyunSMSBuilder struct {
 }
 
 // NewAliyunSMSBuilder creates a new Aliyun SMS builder.
+//   - SMS(普通文本): https://help.aliyun.com/zh/sms/developer-reference/api-dysmsapi-2017-05-25-sendsms
+//   - MMS(卡片消息): https://help.aliyun.com/zh/sms/developer-reference/api-dysmsapi-2017-05-25-sendcardsms
+//   - Voice(验证码或文本转语音): https://help.aliyun.com/zh/vms/developer-reference/api-dyvmsapi-2017-05-25-singlecallbytts
+//   - Vocie(通知): https://help.aliyun.com/zh/vms/developer-reference/api-dyvmsapi-2017-05-25-singlecallbyvoice
 func NewAliyunSMSBuilder() *AliyunSMSBuilder {
 	return &AliyunSMSBuilder{
 		BaseSMSBuilder: BaseSMSBuilder{subProvider: SubProviderAliyun},
@@ -57,35 +61,6 @@ func (b *AliyunSMSBuilder) newMessage(
 	return NewMessageWithOptions(baseOpts...)
 }
 
-// WithAliyunTemplateCode 短信模板 Code。必须使用已审核通过的模板 Code 发送短信。
-//
-//   - SMS(普通文本): https://help.aliyun.com/zh/sms/developer-reference/api-dysmsapi-2017-05-25-sendsms
-//   - MMS(卡片消息): https://help.aliyun.com/zh/sms/developer-reference/api-dysmsapi-2017-05-25-sendcardsms
-//   - Voice(验证码或文本转语音): https://help.aliyun.com/zh/vms/developer-reference/api-dyvmsapi-2017-05-25-singlecallbytts
-//   - Vocie(通知): https://help.aliyun.com/zh/vms/developer-reference/api-dyvmsapi-2017-05-25-singlecallbyvoice
-//
-// 对于普通文本短信，则表示 `TemplateCode`, 格式通常为 `SMS_xxx`, 此字段必填
-// 对于语音短信，则表示 `VoiceCode`, 格式通常为 `VOICE_xxx`, 此字段必填
-// 对于验证码短信，则表示 `TtsCode`, 格式通常为 `TTS_xxx`, 此字段必填
-// 对于卡片短信(MMS), 则表示 `CardTemplateCode`, 格式通常为 `CARD_SMS_xxx`, 此字段必填.
-func WithAliyunTemplateCode(templateCode string) MessageOption {
-	return WithTemplateID(templateCode)
-}
-
-// WithAliyunTemplateParams 短信模板变量对应的实际值，请传入JSON 字符串。当您选择的模板内容含有变量时，此参数必填。参数个数应与模板内变量个数一致
-//
-//   - SMS(普通文本): https://help.aliyun.com/zh/sms/developer-reference/api-dysmsapi-2017-05-25-sendsms
-//   - MMS(卡片消息): https://help.aliyun.com/zh/sms/developer-reference/api-dysmsapi-2017-05-25-sendcardsms
-//   - Voice(验证码或文本转语音): https://help.aliyun.com/zh/vms/developer-reference/api-dyvmsapi-2017-05-25-singlecallbytts
-//   - Vocie(通知): https://help.aliyun.com/zh/vms/developer-reference/api-dyvmsapi-2017-05-25-singlecallbyvoice
-//
-// 对于普通文本短信，则表示 `TemplateParams`
-// 对于语音短信，则对应于 `TtsParam`
-// 对于卡片消息则表示 `TemplateParams`.
-func WithAliyunTemplateParams(params map[string]string) MessageOption {
-	return WithTemplateParams(params)
-}
-
 // WithAliyunCalledShowNumber 语音短信可选参数
 // 发送语音通知的通话号码（被叫显号）。若此参数不填，则为公共模式通话；若传入真实号或服务实例 ID，则为专属模式通话。
 //   - Voice(验证码或文本转语音): https://help.aliyun.com/zh/vms/developer-reference/api-dyvmsapi-2017-05-25-singlecallbytts
@@ -93,7 +68,7 @@ func WithAliyunTemplateParams(params map[string]string) MessageOption {
 //
 // 当发送语音短信时，优先使用消息本身指定的显示号码，若不存在，则会使用账号信息上配置的 From 字段。
 func WithAliyunCalledShowNumber(calledShowNumber string) MessageOption {
-	return WithExtra(aliyunCalledShowNumber, calledShowNumber)
+	return WithExtra(aliyunCalledShowNumberKey, calledShowNumber)
 }
 
 // WithAliyunPlayTimes 语音短信可选参数
@@ -102,7 +77,7 @@ func WithAliyunCalledShowNumber(calledShowNumber string) MessageOption {
 //
 // 语音通知文件的播放次数。取值范围：1~3。
 func WithAliyunPlayTimes(playTimes int) MessageOption {
-	return WithExtra(aliyunPlayTimes, strconv.Itoa(playTimes))
+	return WithExtra(aliyunPlayTimesKey, strconv.Itoa(playTimes))
 }
 
 // WithAliyunVolume 语音短信可选参数
@@ -111,7 +86,7 @@ func WithAliyunPlayTimes(playTimes int) MessageOption {
 //
 // 语音通知文件播放的音量。取值范围：0~100，默认取值 100。
 func WithAliyunVolume(volume int) MessageOption {
-	return WithExtra(aliyunVolume, strconv.Itoa(volume))
+	return WithExtra(aliyunVolumeKey, strconv.Itoa(volume))
 }
 
 // WithAliyunSpeed 语音短信可选参数
@@ -120,14 +95,14 @@ func WithAliyunVolume(volume int) MessageOption {
 //
 // 语音文件播放的语速。取值范围：-500~500。
 func WithAliyunSpeed(speed int) MessageOption {
-	return WithExtra(aliyunSpeed, strconv.Itoa(speed))
+	return WithExtra(aliyunSpeedKey, strconv.Itoa(speed))
 }
 
 // WithAliyunOutID 可选参数:外部流水号
 // 外部流水扩展字段，用于标识业务流水号，在状态报告中会原样返回。
 // https://help.aliyun.com/zh/sms/developer-reference/api-dysmsapi-2017-05-25-sendsms
 func WithAliyunOutID(outID string) MessageOption {
-	return WithExtra(aliyunOutID, outID)
+	return WithExtra(aliyunOutIDKey, outID)
 }
 
 // WithAliyunFallbackType 卡片短信可选参数 回落类型。取值：
@@ -137,37 +112,37 @@ func WithAliyunOutID(outID string) MessageOption {
 //
 // https://help.aliyun.com/zh/sms/developer-reference/api-dysmsapi-2017-05-25-sendcardsms
 func WithAliyunFallbackType(fallbackType string) MessageOption {
-	return WithExtra(aliyunFallbackType, fallbackType)
+	return WithExtra(aliyunFallbackTypeKey, fallbackType)
 }
 
 // WithAliyunSmsTemplateCode 卡片短信可选参数，回落文本短信的模板 Code。FallbackType 选择 SMS 回落文本短信时，此参数必填
 // https://help.aliyun.com/zh/sms/developer-reference/api-dysmsapi-2017-05-25-sendcardsms
 func WithAliyunSmsTemplateCode(smsTemplateCode string) MessageOption {
-	return WithExtra(aliyunSmsTemplateCode, smsTemplateCode)
+	return WithExtra(aliyunSmsTemplateCodeKey, smsTemplateCode)
 }
 
 // WithAliyunDigitalTemplateCode 卡片短信可选参数，回落数字短信的模板 Code。FallbackType 选择 DIGITALSMS 回落数字短信时，此参数必填。
 // https://help.aliyun.com/zh/sms/developer-reference/api-dysmsapi-2017-05-25-sendcardsms
 func WithAliyunDigitalTemplateCode(digitalTemplateCode string) MessageOption {
-	return WithExtra(aliyunDigitalTemplateCode, digitalTemplateCode)
+	return WithExtra(aliyunDigitalTemplateCodeKey, digitalTemplateCode)
 }
 
 // WithAliyunSmsTemplateParam 卡片短信可选参数: 回落文本短信的模板变量对应的实际值。SmsTemplateCode 回落的文本短信模板内含有变量时，此参数必填。
 // https://help.aliyun.com/zh/sms/developer-reference/api-dysmsapi-2017-05-25-sendcardsms
 func WithAliyunSmsTemplateParam(smsTemplateParam string) MessageOption {
-	return WithExtra(aliyunSmsTemplateParam, smsTemplateParam)
+	return WithExtra(aliyunSmsTemplateParamKey, smsTemplateParam)
 }
 
 // WithAliyuDigitalTemplateParam 卡片短信可选参数: 回落数字短信的模板变量对应的实际值。DigitalTemplateCode 回落的数字短信模板内含有变量时，此参数必填。
 // https://help.aliyun.com/zh/sms/developer-reference/api-dysmsapi-2017-05-25-sendcardsms
 func WithAliyuDigitalTemplateParam(digitalTemplateParam string) MessageOption {
-	return WithExtra(aliyunDigitalTemplateParam, digitalTemplateParam)
+	return WithExtra(aliyunDigitalTemplateParamKey, digitalTemplateParam)
 }
 
 // WithAliyunSmsUpExtendCode 可选参数:上行短信扩展码。上行短信指发送给通信服务提供商的短信，用于定制某种服务、完成查询，或是办理某种业务等，需要收费，按运营商普通短信资费进行扣费。
 // https://help.aliyun.com/zh/sms/developer-reference/api-dysmsapi-2017-05-25-sendsms
 func WithAliyunSmsUpExtendCode(smsUpExtendCode string) MessageOption {
-	return WithExtra(aliyunSmsUpExtendCode, smsUpExtendCode)
+	return WithExtra(aliyunSmsUpExtendCodeKey, smsUpExtendCode)
 }
 
 // WithAliyunCardObjects 卡片短信可选参数: 卡片消息的卡片对象。
@@ -175,5 +150,5 @@ func WithAliyunSmsUpExtendCode(smsUpExtendCode string) MessageOption {
 // 每个卡片对象包含卡片的配置信息，如卡片类型、内容、样式等。
 // https://help.aliyun.com/zh/sms/developer-reference/api-dysmsapi-2017-05-25-sendcardsms
 func WithAliyunCardObjects(cardObjects string) MessageOption {
-	return WithExtra(aliyunCardObjects, cardObjects)
+	return WithExtra(aliyunCardObjectsKey, cardObjects)
 }

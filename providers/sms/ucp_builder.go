@@ -27,8 +27,3 @@ func NewUcpTextMessage(mobiles []string, templateID string, paramsOrder []string
 	baseOpts = append(baseOpts, opts...)
 	return NewMessageWithOptions(baseOpts...)
 }
-
-// WithUcpUID 设置自定义UID（回调用）.
-func WithUcpUID(uid string) MessageOption {
-	return WithUID(uid)
-}

@@ -111,23 +111,23 @@ func (t *tencentTransformer) transformTextSMS(
 
 	params := map[string]interface{}{
 		"PhoneNumberSet":   phoneNumbers,
-		"SmsSdkAppId":      msg.GetExtraStringOrDefault(tencentSmsSdkAppID, account.Key),
+		"SmsSdkAppId":      msg.GetExtraStringOrDefault(tencentSmsSdkAppIDKey, account.Key),
 		"TemplateId":       msg.TemplateID,
 		"SignName":         msg.SignName,
 		"TemplateParamSet": msg.ParamsOrder,
 	}
 
-	if extendCode := msg.GetExtraStringOrDefault(tencentExtendCode, ""); extendCode != "" {
-		params["ExtendCode"] = extendCode
+	if extendCode := msg.GetExtraStringOrDefault(tencentExtendCodeKey, msg.Extend); extendCode != "" {
+		params[tencentExtendCodeKey] = extendCode
 	}
-	if senderID := msg.GetExtraStringOrDefault(tencentSenderID, ""); senderID != "" {
+	if senderID := msg.GetExtraStringOrDefault(tencentSenderIDKey, ""); senderID != "" {
 		params["SenderId"] = senderID
 	}
 
 	requestBody := map[string]interface{}{
 		"Action":  "SendSms",
 		"Version": "2021-01-11",
-		"Region":  msg.GetExtraStringOrDefault(tencentRegion, tencentDefaultRegion),
+		"Region":  msg.GetExtraStringOrDefault(tencentRegionKey, tencentDefaultRegion),
 		"Request": params,
 	}
 
@@ -143,7 +143,7 @@ func (t *tencentTransformer) transformTextSMS(
 		Endpoint:  endpoint,
 		Action:    "SendSms",
 		Version:   "2021-01-11",
-		Region:    msg.GetExtraStringOrDefault(tencentRegion, tencentDefaultRegion),
+		Region:    msg.GetExtraStringOrDefault(tencentRegionKey, tencentDefaultRegion),
 		AppSecret: account.Secret,
 		BodyData:  bodyData,
 		Timestamp: timestamp,
@@ -182,7 +182,7 @@ func (t *tencentTransformer) transformVoiceSMS(
 
 	params := map[string]interface{}{
 		"CalledNumber":  calledNumber,
-		"VoiceSdkAppId": msg.GetExtraStringOrDefault("VoiceSdkAppId", account.Key),
+		"VoiceSdkAppId": msg.GetExtraStringOrDefault(tencentVoiceSdkAppIDKey, ""),
 	}
 
 	var action string
@@ -195,7 +195,7 @@ func (t *tencentTransformer) transformVoiceSMS(
 		params["VoiceId"] = msg.TemplateID
 		params["TemplateParamSet"] = msg.ParamsOrder
 	}
-	if playTimes := msg.GetExtraStringOrDefault("PlayTimes", "2"); playTimes != "" {
+	if playTimes := msg.GetExtraStringOrDefault(tencentPlayTimesKey, "2"); playTimes != "" {
 		params["PlayTimes"] = playTimes
 	}
 

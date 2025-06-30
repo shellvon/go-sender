@@ -62,7 +62,7 @@ func NewTencentVoiceMessage(mobile string, templateID string, paramsOrder []stri
 //
 //   - 注：月度使用量达到指定量级可申请独立 SenderId 使用，详情请联系 腾讯云短信小助手。示例值：Qsms
 func WithTencentSenderID(senderID string) MessageOption {
-	return WithExtra(tencentSenderID, senderID)
+	return WithExtra(tencentSenderIDKey, senderID)
 }
 
 // WithTencentRegion 设置 Region
@@ -73,7 +73,7 @@ func WithTencentSenderID(senderID string) MessageOption {
 //   - 华南地区（广州）	ap-guangzhou
 //   - 华东地区（南京）	ap-nanjing
 func WithTencentRegion(region string) MessageOption {
-	return WithExtra("Region", region)
+	return WithExtra(tencentRegionKey, region)
 }
 
 // WithTencentPlayTimes 设置语音播放次数
@@ -91,5 +91,12 @@ func WithTencentRegion(region string) MessageOption {
 //
 //	msg := NewTencentVoiceMessage("***REMOVED***", "1234", nil, WithTencentPlayTimes(3))
 func WithTencentPlayTimes(times int) MessageOption {
-	return WithExtra("PlayTimes", times)
+	return WithExtra(tencentPlayTimesKey, times)
+}
+
+// WithTencentSmsSdkAppID sets the SmsSdkAppId for Tencent SMS.
+//   - This is required for most Tencent SMS API calls.
+//   - See: https://cloud.tencent.com/document/product/382/55981
+func WithTencentSmsSdkAppID(appID string) MessageOption {
+	return WithExtra(tencentSmsSdkAppIDKey, appID)
 }

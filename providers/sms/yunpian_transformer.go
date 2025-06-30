@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"sort"
 	"strconv"
@@ -16,10 +17,10 @@ import (
 
 // @ProviderName: Yunpian / 云片
 // @Website: https://www.yunpian.com
-// @APIDoc: https://www.yunpian.com/official/document/sms/zh_CN/api_reference.html
+// @APIDoc: https://www.yunpian.com/dev-doc
 //
 // 官方文档:
-//   - 短信API: https://www.yunpian.com/official/document/sms/zh_CN/api_reference.html
+//   - 短信API: https://www.yunpian.com/official/document/sms/zh_CN/domestic_list
 //   - 语音API: https://www.yunpian.com/official/document/sms/zh_CN/voice_send
 //   - 超级短信API: https://www.yunpian.com/official/document/sms/zh_CN/super_sms_send
 //
@@ -112,32 +113,14 @@ func (t *yunpianTransformer) transformSingleSMS(
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	endpoint := t.yunpianEndpoint("sms", "/v2/sms/single_send.json", account.Endpoint)
 	params := map[string]string{
-		"apikey": account.Secret,
-		"mobile": msg.Mobiles[0],
-		"text":   utils.AddSignature(msg.Content, msg.SignName),
-	}
-
-	// 处理统一的接口字段 - 适配到云片特定的key
-	if msg.Extend != "" {
-		params["extend"] = msg.Extend // 云片使用 extend
-	} else if ext := msg.GetExtraStringOrDefault("extend", ""); ext != "" {
-		params["extend"] = ext
-	}
-	if msg.UID != "" {
-		params["uid"] = msg.UID // 云片使用 uid
-	} else if uid := msg.GetExtraStringOrDefault("uid", ""); uid != "" {
-		params["uid"] = uid
-	}
-	if msg.CallbackURL != "" {
-		params["callback_url"] = msg.CallbackURL // 云片使用 callback_url
-	} else if cb := msg.GetExtraStringOrDefault("callback_url", account.Webhook); cb != "" {
-		params["callback_url"] = cb
-	}
-	if reg, ok := msg.GetExtraBool("register"); ok {
-		params["register"] = strconv.FormatBool(reg)
-	}
-	if stat, ok := msg.GetExtraBool("mobile_stat"); ok {
-		params["mobile_stat"] = strconv.FormatBool(stat)
+		"apikey":       account.Secret,
+		"mobile":       msg.Mobiles[0],
+		"text":         utils.AddSignature(msg.Content, msg.SignName),
+		"extend":       msg.Extend,
+		"uid":          msg.UID,
+		"callback_url": utils.DefaultStringIfEmpty(msg.CallbackURL, account.Webhook),
+		"register":     strconv.FormatBool(msg.GetExtraBoolOrDefault(yunpianRegisterKey, false)),
+		"mobile_stat":  strconv.FormatBool(msg.GetExtraBoolOrDefault(yunpianMobileStatKey, false)),
 	}
 
 	return t.buildRequest(endpoint, params)
@@ -150,21 +133,14 @@ func (t *yunpianTransformer) transformBatchSMS(
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	endpoint := t.yunpianEndpoint("sms", "/v2/sms/batch_send.json", account.Endpoint)
 	params := map[string]string{
-		"apikey": account.Secret,
-		"mobile": strings.Join(msg.Mobiles, ","),
-		"text":   utils.AddSignature(msg.Content, msg.SignName),
-	}
-	if ext := msg.GetExtraStringOrDefault("extend", ""); ext != "" {
-		params["extend"] = ext
-	}
-	if uid := msg.GetExtraStringOrDefault("uid", ""); uid != "" {
-		params["uid"] = uid
-	}
-	if cb := msg.GetExtraStringOrDefault("callback_url", account.Webhook); cb != "" {
-		params["callback_url"] = cb
-	}
-	if stat, ok := msg.GetExtraBool("mobile_stat"); ok {
-		params["mobile_stat"] = strconv.FormatBool(stat)
+		"apikey":       account.Secret,
+		"mobile":       strings.Join(msg.Mobiles, ","),
+		"text":         utils.AddSignature(msg.Content, msg.SignName),
+		"extend":       msg.Extend,
+		"uid":          msg.UID,
+		"callback_url": utils.DefaultStringIfEmpty(msg.CallbackURL, account.Webhook),
+		"register":     strconv.FormatBool(msg.GetExtraBoolOrDefault(yunpianRegisterKey, false)),
+		"mobile_stat":  strconv.FormatBool(msg.GetExtraBoolOrDefault(yunpianMobileStatKey, false)),
 	}
 
 	return t.buildRequest(endpoint, params)
@@ -177,19 +153,13 @@ func (t *yunpianTransformer) transformTplSMS(
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	endpoint := t.yunpianEndpoint("sms", "/v2/sms/tpl_single_send.json", account.Endpoint)
 	params := map[string]string{
-		"apikey":    account.Secret,
-		"mobile":    msg.Mobiles[0],
-		"tpl_id":    msg.TemplateID,
-		"tpl_value": t.buildTemplateValue(msg.TemplateParams),
-	}
-	if ext := msg.GetExtraStringOrDefault("extend", ""); ext != "" {
-		params["extend"] = ext
-	}
-	if uid := msg.GetExtraStringOrDefault("uid", ""); uid != "" {
-		params["uid"] = uid
-	}
-	if cb := msg.GetExtraStringOrDefault("callback_url", account.Webhook); cb != "" {
-		params["callback_url"] = cb
+		"apikey":       account.Secret,
+		"mobile":       msg.Mobiles[0],
+		"tpl_id":       msg.TemplateID,
+		"tpl_value":    t.buildTemplateValue(msg.TemplateParams),
+		"extend":       msg.Extend,
+		"uid":          msg.UID,
+		"callback_url": utils.DefaultStringIfEmpty(msg.CallbackURL, account.Webhook),
 	}
 
 	return t.buildRequest(endpoint, params)
@@ -202,19 +172,13 @@ func (t *yunpianTransformer) transformTplBatchSMS(
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	endpoint := t.yunpianEndpoint("sms", "/v2/sms/tpl_batch_send.json", account.Endpoint)
 	params := map[string]string{
-		"apikey":    account.Secret,
-		"mobile":    strings.Join(msg.Mobiles, ","),
-		"tpl_id":    msg.TemplateID,
-		"tpl_value": t.buildTemplateValue(msg.TemplateParams),
-	}
-	if ext := msg.GetExtraStringOrDefault("extend", ""); ext != "" {
-		params["extend"] = ext
-	}
-	if uid := msg.GetExtraStringOrDefault("uid", ""); uid != "" {
-		params["uid"] = uid
-	}
-	if cb := msg.GetExtraStringOrDefault("callback_url", account.Webhook); cb != "" {
-		params["callback_url"] = cb
+		"apikey":       account.Secret,
+		"mobile":       strings.Join(msg.Mobiles, ","),
+		"tpl_id":       msg.TemplateID,
+		"tpl_value":    t.buildTemplateValue(msg.TemplateParams),
+		"extend":       msg.Extend,
+		"uid":          msg.UID,
+		"callback_url": utils.DefaultStringIfEmpty(msg.CallbackURL, account.Webhook),
 	}
 
 	return t.buildRequest(endpoint, params)
@@ -227,18 +191,12 @@ func (t *yunpianTransformer) transformIntlSMS(
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	endpoint := t.yunpianEndpoint("sms", "/v2/sms/single_send.json", account.IntlEndpoint)
 	params := map[string]string{
-		"apikey": account.Secret,
-		"mobile": fmt.Sprintf("+%d%s", msg.RegionCode, msg.Mobiles[0]),
-		"text":   utils.AddSignature(msg.Content, msg.SignName),
-	}
-	if ext := msg.GetExtraStringOrDefault("extend", ""); ext != "" {
-		params["extend"] = ext
-	}
-	if uid := msg.GetExtraStringOrDefault("uid", ""); uid != "" {
-		params["uid"] = uid
-	}
-	if cb := msg.GetExtraStringOrDefault("callback_url", account.Webhook); cb != "" {
-		params["callback_url"] = cb
+		"apikey":       account.Secret,
+		"mobile":       fmt.Sprintf("+%d%s", msg.RegionCode, msg.Mobiles[0]),
+		"text":         utils.AddSignature(msg.Content, msg.SignName),
+		"extend":       msg.Extend,
+		"uid":          msg.UID,
+		"callback_url": utils.DefaultStringIfEmpty(msg.CallbackURL, account.Webhook),
 	}
 
 	return t.buildRequest(endpoint, params)
@@ -251,18 +209,12 @@ func (t *yunpianTransformer) transformVoiceSMS(
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	endpoint := t.yunpianEndpoint("voice", "/v2/voice/send.json", account.Endpoint)
 	params := map[string]string{
-		"apikey": account.Secret,
-		"mobile": msg.Mobiles[0],
-		"code":   msg.Content,
-	}
-	if ext := msg.GetExtraStringOrDefault("extend", ""); ext != "" {
-		params["extend"] = ext
-	}
-	if uid := msg.GetExtraStringOrDefault("uid", ""); uid != "" {
-		params["uid"] = uid
-	}
-	if cb := msg.GetExtraStringOrDefault("callback_url", account.Webhook); cb != "" {
-		params["callback_url"] = cb
+		"apikey":       account.Secret,
+		"mobile":       msg.Mobiles[0],
+		"code":         msg.Content,
+		"extend":       msg.Extend,
+		"uid":          msg.UID,
+		"callback_url": utils.DefaultStringIfEmpty(msg.CallbackURL, account.Webhook),
 	}
 
 	return t.buildRequest(endpoint, params)
@@ -275,19 +227,13 @@ func (t *yunpianTransformer) transformMMSSMS(
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	endpoint := t.yunpianEndpoint("vsms", "/v2/vsms/tpl_batch_send.json", account.Endpoint)
 	params := map[string]string{
-		"apikey":    account.Secret,
-		"mobile":    strings.Join(msg.Mobiles, ","),
-		"tpl_id":    msg.TemplateID,
-		"tpl_value": t.buildTemplateValue(msg.TemplateParams),
-	}
-	if ext := msg.GetExtraStringOrDefault("extend", ""); ext != "" {
-		params["extend"] = ext
-	}
-	if uid := msg.GetExtraStringOrDefault("uid", ""); uid != "" {
-		params["uid"] = uid
-	}
-	if cb := msg.GetExtraStringOrDefault("callback_url", account.Webhook); cb != "" {
-		params["callback_url"] = cb
+		"apikey":       account.Secret,
+		"mobile":       strings.Join(msg.Mobiles, ","),
+		"tpl_id":       msg.TemplateID,
+		"tpl_value":    t.buildTemplateValue(msg.TemplateParams),
+		"extend":       msg.Extend,
+		"uid":          msg.UID,
+		"callback_url": utils.DefaultStringIfEmpty(msg.CallbackURL, account.Webhook),
 	}
 
 	return t.buildRequest(endpoint, params)
@@ -340,7 +286,7 @@ func (t *yunpianTransformer) buildTemplateValue(params map[string]string) string
 
 // handleYunpianResponse 处理云片API响应.
 func (t *yunpianTransformer) handleYunpianResponse(statusCode int, body []byte) error {
-	if statusCode < 200 || statusCode >= 300 {
+	if statusCode < http.StatusOK || statusCode >= http.StatusMultipleChoices {
 		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
 	}
 

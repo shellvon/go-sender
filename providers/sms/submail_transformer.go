@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"sort"
 	"strconv"
@@ -258,9 +259,11 @@ func (t *submailTransformer) addContentOrTemplate(params map[string]string, msg 
 }
 
 func (t *submailTransformer) addCommonParams(params map[string]string, msg *Message, account *core.Account) {
-	// 添加tag（如果提供）
-	if tag := msg.GetExtraStringOrDefault("tag", ""); tag != "" {
-		params["tag"] = tag
+	if tag := msg.GetExtraStringOrDefault(submailTagKey, ""); tag != "" {
+		params[submailTagKey] = tag
+	}
+	if signType := msg.GetExtraStringOrDefault(submailSignTypeKey, ""); signType != "" {
+		params[submailSignTypeKey] = signType
 	}
 
 	// 添加时间戳
@@ -271,21 +274,20 @@ func (t *submailTransformer) addCommonParams(params map[string]string, msg *Mess
 	params["signature"] = t.calculateSignature(account, params)
 }
 
+// calculateSignature 计算签名.
+//   - https://www.mysubmail.com/documents/pdxzv1
 func (t *submailTransformer) calculateSignature(account *core.Account, params map[string]string) string {
 	// 获取签名类型，默认为md5
 	signType := "md5"
-	if account.From != "" {
-		signType = account.From
-	}
 	// 或者从消息的extras中获取
-	if msgSignType := params["signType"]; msgSignType != "" {
+	if msgSignType := params[submailTagKey]; msgSignType != "" {
 		signType = msgSignType
 	}
 
 	// 构建签名字符串
 	var keys []string
 	for k := range params {
-		if k != "signature" && k != "sign_type" && k != "sign_version" {
+		if k != "signature" && k != submailSignTypeKey && k != "sign_version" {
 			keys = append(keys, k)
 		}
 	}
@@ -317,8 +319,8 @@ func (t *submailTransformer) encodeParams(params map[string]string) []byte {
 }
 
 func (t *submailTransformer) handleSubmailResponse(statusCode int, body []byte) error {
-	if statusCode < 200 || statusCode >= 300 {
-		return fmt.Errorf("submail API returned non-OK status: %d", statusCode)
+	if statusCode < http.StatusOK || statusCode >= http.StatusMultipleChoices {
+		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
 	}
 
 	var result struct {

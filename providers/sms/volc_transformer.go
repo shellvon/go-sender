@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -77,8 +78,8 @@ func (t *volcTransformer) transformTextSMS(
 	if len(msg.TemplateParams) > 0 {
 		body["TemplateParam"] = utils.ToJSONString(msg.TemplateParams)
 	}
-	if tag, ok := msg.GetExtraString("tag"); ok && tag != "" {
-		body["Tag"] = tag
+	if tag, ok := msg.GetExtraString(volcTagKey); ok && tag != "" {
+		body[volcTagKey] = tag
 	}
 	bodyJSON, err := json.Marshal(body)
 	if err != nil {
@@ -133,7 +134,7 @@ func (t *volcTransformer) buildVolcHeaders(account *core.Account, body []byte) m
 
 // handleVolcResponse 处理火山引擎API响应.
 func (t *volcTransformer) handleVolcResponse(statusCode int, body []byte) error {
-	if statusCode < 200 || statusCode >= 300 {
+	if statusCode < http.StatusOK || statusCode >= http.StatusMultipleChoices {
 		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
 	}
 

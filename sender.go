@@ -22,18 +22,36 @@ type Sender struct {
 	defaultHTTPClient *http.Client
 }
 
-// NewSender creates a new Sender instance.
-func NewSender(logger core.Logger) *Sender {
-	if logger == nil {
-		logger = &core.NoOpLogger{}
-	}
+// Option defines a function type for configuring Sender.
+type Option func(*Sender)
 
-	return &Sender{
+// WithLogger sets a custom logger for the Sender.
+//
+//   - logger: a custom logger implementing core.Logger interface.
+//   - If nil, the default logger is retained (NoOpLogger).
+func WithLogger(logger core.Logger) Option {
+	return func(s *Sender) {
+		if logger != nil {
+			s.logger = logger
+		}
+	}
+}
+
+// NewSender creates a new Sender instance with optional configurations.
+//
+//   - opts: optional configuration options (e.g., WithLogger, WithMiddleware, etc.)
+//   - The default logger is NoOpLogger. Use WithLogger to set a custom logger.
+func NewSender(opts ...Option) *Sender {
+	s := &Sender{
 		providers:         make(map[core.ProviderType]*core.ProviderDecorator),
 		middleware:        &core.SenderMiddleware{},
-		logger:            logger,
+		logger:            &core.NoOpLogger{}, // Default to NoOpLogger. Use WithLogger for custom logging.
 		defaultHTTPClient: core.DefaultHTTPClient(),
 	}
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s
 }
 
 // RegisterProvider registers a provider with the sender.
