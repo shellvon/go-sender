@@ -277,11 +277,12 @@ func WithRegionCode(regionCode int) MessageOption {
 }
 
 // WithCallbackURL sets the callback URL for the message.
+//
 // Note: This feature requires SMS platform support. For example:
-// - CL253: Uses "callbackUrl"
-// - Yunpian: Uses "callback_url"
-// - Huawei: Uses "statusCallback"
-// - Some platforms may not support callback URLs.
+//   - CL253: Uses "callbackUrl"
+//   - Yunpian: Uses "callback_url"
+//   - Huawei: Uses "statusCallback"
+//   - Some platforms may not support callback URLs.
 func WithCallbackURL(callbackURL string) MessageOption {
 	return func(m *Message) {
 		m.CallbackURL = callbackURL
@@ -289,10 +290,11 @@ func WithCallbackURL(callbackURL string) MessageOption {
 }
 
 // WithScheduledAt sets the scheduled send time for the message
+//
 // Note: This feature requires SMS platform support. Currently supported platforms:
-// - CL253: Uses "sendtime" parameter with format "yyyyMMddHHmm"
-// - Luosimao: Uses "time" parameter with format "yyyy-MM-dd HH:mm:ss"
-// - Other platforms: May not support scheduled sending.
+//   - CL253: Uses "sendtime" parameter with format "yyyyMMddHHmm"
+//   - Luosimao: Uses "time" parameter with format "yyyy-MM-dd HH:mm:ss"
+//   - Other platforms: May not support scheduled sending.
 func WithScheduledAt(scheduledAt time.Time) MessageOption {
 	return func(m *Message) {
 		m.ScheduledAt = &scheduledAt
@@ -300,9 +302,10 @@ func WithScheduledAt(scheduledAt time.Time) MessageOption {
 }
 
 // WithExtend sets the extend field for the message.
+//
 // Note: This feature requires SMS platform support. For example:
-// - CL253, Yunpian, Huawei: Uses "extend"
-// - Some platforms may not support the extend field.
+//   - CL253, Yunpian, Huawei: Uses "extend"
+//   - Some platforms may not support the extend field.
 func WithExtend(extend string) MessageOption {
 	return func(m *Message) {
 		m.Extend = extend
@@ -310,9 +313,10 @@ func WithExtend(extend string) MessageOption {
 }
 
 // WithUID sets the user ID for the message.
+//
 // Note: This feature requires SMS platform support. For example:
-// - CL253, Yunpian, UCP: Uses "uid"
-// - Some platforms may not support the UID field.
+//   - CL253, Yunpian, UCP: Uses "uid"
+//   - Some platforms may not support the UID field.
 func WithUID(uid string) MessageOption {
 	return func(m *Message) {
 		m.UID = uid
@@ -402,7 +406,7 @@ func (m *Message) GetScheduledTime() string {
 	if m.ScheduledAt == nil {
 		return ""
 	}
-	return m.ScheduledAt.Format("2006-01-02 15:04:05")
+	return m.ScheduledAt.Format(time.DateTime)
 }
 
 // GetScheduledTimeForPlatform returns the scheduled time formatted for a specific platform.
@@ -417,10 +421,10 @@ func (m *Message) GetScheduledTimeForPlatform(platform string) string {
 		return m.ScheduledAt.Format("200601021504")
 	case string(SubProviderLuosimao):
 		// Luosimao format: yyyy-MM-dd HH:mm:ss
-		return m.ScheduledAt.Format("2006-01-02 15:04:05")
+		return m.ScheduledAt.Format(time.DateTime)
 	default:
 		// Default format for other platforms
-		return m.ScheduledAt.Format("2006-01-02 15:04:05")
+		return m.ScheduledAt.Format(time.DateTime)
 	}
 }
 
@@ -503,5 +507,3 @@ func (m *Message) GetExtraBoolOrDefault(key string, defaultValue bool) bool {
 func (m *Message) GetSubProvider() string {
 	return m.SubProvider
 }
-
-// NewUnsupportedMessageTypeError creates an error for unsupported message types.

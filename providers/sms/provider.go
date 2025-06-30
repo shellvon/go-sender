@@ -61,6 +61,10 @@ func (t *smsTransformer) Transform(
 		return nil, nil, fmt.Errorf("unsupported message type for sms transformer: %T", msg)
 	}
 
+	if smsMsg.SubProvider == "" {
+		return nil, nil, errors.New("sub-provider is required for sms transformer")
+	}
+
 	// 从注册表获取transformer
 	transformer, exists := GetTransformer(smsMsg.SubProvider)
 	if !exists {
