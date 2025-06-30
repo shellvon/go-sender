@@ -62,6 +62,9 @@ func (t *emailAPITransformer) Transform(
 		return nil, nil, fmt.Errorf("unsupported message type for emailapi transformer: %T", msg)
 	}
 
+	if emailMsg.SubProvider == "" {
+		return nil, nil, errors.New("sub-provider is required for emailapi transformer")
+	}
 	// Get transformer from registry
 	transformer, exists := GetTransformer(emailMsg.SubProvider)
 	if !exists {

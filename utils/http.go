@@ -27,6 +27,7 @@ type HTTPRequestOptions struct {
 	Timeout time.Duration     // Request timeout
 
 	// Query string parameters
+	//
 	// Supports:
 	//   - string: single value (e.g., "api_key": "your-key")
 	//   - []string: array values (e.g., "tags": []string{"tag1", "tag2"})
@@ -50,11 +51,11 @@ type HTTPRequestOptions struct {
 // It automatically handles data formatting based on the provided fields.
 //
 // Data handling priority:
-// 1. Raw/RawReader (highest priority)
-// 2. JSON
-// 3. Form (multipart)
-// 4. Data (urlencoded)
-// 5. Files
+//  1. Raw/RawReader (highest priority)
+//  2. JSON
+//  3. Form (multipart)
+//  4. Data (urlencoded)
+//  5. Files
 //
 // Returns:
 //   - []byte: Response body
@@ -76,7 +77,7 @@ func DoRequest(ctx context.Context, requestURL string, options HTTPRequestOption
 		return nil, 0, err
 	}
 
-	method := setDefaultMethod(options.Method, reqBody)
+	method := getDefaultMethod(options.Method, reqBody)
 	req, err := http.NewRequestWithContext(ctx, method, finalURL, reqBody)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to create HTTP request: %w", err)
@@ -116,6 +117,8 @@ func prepareContext(ctx context.Context, options *HTTPRequestOptions) (context.C
 	return ctx, nil
 }
 
+// buildFinalURL builds the final request URL by appending query parameters to the base URL.
+// Supports string and []string values in the query map. Returns the final URL or an error.
 func buildFinalURL(requestURL string, query map[string]interface{}) (string, error) {
 	if len(query) == 0 {
 		return requestURL, nil
@@ -141,7 +144,9 @@ func buildFinalURL(requestURL string, query map[string]interface{}) (string, err
 	return parsedURL.String(), nil
 }
 
-func setDefaultMethod(method string, reqBody io.Reader) string {
+// getDefaultMethod returns the HTTP method to use based on the provided method and request body.
+// If method is not empty, it is returned as is. If there is a request body, POST is returned. Otherwise, GET is returned.
+func getDefaultMethod(method string, reqBody io.Reader) string {
 	if method != "" {
 		return method
 	}
@@ -151,6 +156,8 @@ func setDefaultMethod(method string, reqBody io.Reader) string {
 	return http.MethodGet
 }
 
+// setRequestHeaders sets the headers for the HTTP request, including the Content-Type if provided.
+// If User-Agent is not set, it sets a default User-Agent. Content-Type is set if not empty.
 func setRequestHeaders(req *http.Request, headers map[string]string, contentType string) {
 	for key, value := range headers {
 		req.Header.Set(key, value)
@@ -163,16 +170,44 @@ func setRequestHeaders(req *http.Request, headers map[string]string, contentType
 	}
 }
 
+// buildRawBody creates an io.Reader from a raw byte slice for the request body.
+// Returns the reader, an empty content type, and any error encountered.
+func buildRawBody(raw []byte) (io.Reader, string, error) {
+	return bytes.NewReader(raw), "", nil
+}
+
+// buildRawReaderBody uses the provided io.Reader as the request body.
+// Returns the reader, an empty content type, and any error encountered.
+func buildRawReaderBody(reader io.Reader) (io.Reader, string, error) {
+	return reader, "", nil
+}
+
+// buildJSONBody marshals the given object to JSON and returns an io.Reader for the request body.
+// Returns the reader, the content type "application/json", and any error encountered.
+func buildJSONBody(jsonObj interface{}) (io.Reader, string, error) {
+	jsonData, err := json.Marshal(jsonObj)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to marshal JSON: %w", err)
+	}
+	return bytes.NewReader(jsonData), "application/json", nil
+}
+
+// sendRequest sends the HTTP request using the provided client and returns the response.
+// Returns the HTTP response and any error encountered.
 func sendRequest(client *http.Client, req *http.Request) (*http.Response, error) {
 	return client.Do(req)
 }
 
+// readResponseBody reads and returns the response body as a byte slice.
+// Returns the body and any error encountered.
 func readResponseBody(resp *http.Response) ([]byte, error) {
 	return io.ReadAll(resp.Body)
 }
 
+// checkStatusCode checks if the HTTP status code is in the 2xx range.
+// Returns an error if the status code is not successful (i.e., not between http.StatusOK and http.StatusMultipleChoices-1).
 func checkStatusCode(statusCode int, body []byte) error {
-	if statusCode < 200 || statusCode >= 300 {
+	if statusCode < http.StatusOK || statusCode >= http.StatusMultipleChoices {
 		return fmt.Errorf(
 			"HTTP request failed with status code %d. Response body: %s",
 			statusCode,
@@ -202,22 +237,8 @@ func buildRequestBody(options HTTPRequestOptions) (io.Reader, string, error) {
 	return nil, "", nil
 }
 
-func buildRawBody(raw []byte) (io.Reader, string, error) {
-	return bytes.NewReader(raw), "", nil
-}
-
-func buildRawReaderBody(reader io.Reader) (io.Reader, string, error) {
-	return reader, "", nil
-}
-
-func buildJSONBody(jsonObj interface{}) (io.Reader, string, error) {
-	jsonData, err := json.Marshal(jsonObj)
-	if err != nil {
-		return nil, "", fmt.Errorf("failed to marshal JSON: %w", err)
-	}
-	return bytes.NewReader(jsonData), "application/json", nil
-}
-
+// buildMultipartBody constructs a multipart/form-data request body from form fields and files.
+// Returns the body as an io.Reader, the content type, and any error encountered.
 func buildMultipartBody(form map[string]string, files map[string]string) (io.Reader, string, error) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
@@ -243,6 +264,8 @@ func buildMultipartBody(form map[string]string, files map[string]string) (io.Rea
 	return body, writer.FormDataContentType(), nil
 }
 
+// buildURLEncodedBody constructs an application/x-www-form-urlencoded request body from form data.
+// Returns the body as an io.Reader, the content type, and any error encountered.
 func buildURLEncodedBody(data map[string]string) (io.Reader, string, error) {
 	values := url.Values{}
 	for key, value := range data {
@@ -252,7 +275,8 @@ func buildURLEncodedBody(data map[string]string) (io.Reader, string, error) {
 	return strings.NewReader(encoded), "application/x-www-form-urlencoded", nil
 }
 
-// addFileToMultipart adds a file to multipart form.
+// addFileToMultipart adds a file to a multipart.Writer with the given field name and file path.
+// Returns any error encountered during file reading or writing.
 func addFileToMultipart(writer *multipart.Writer, fieldName, filePath string) error {
 	file, err := os.Open(filePath)
 	if err != nil {

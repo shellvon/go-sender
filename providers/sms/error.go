@@ -44,7 +44,6 @@ func (e *Error) Error() string {
 // IsRetryable returns whether the error is retryable.
 func (e *Error) IsRetryable() bool { return false }
 
-// 通用错误码常量.
 const (
 	ErrorCodeUnsupportedMessageType   = "UNSUPPORTED_MESSAGE_TYPE"
 	ErrorCodeUnsupportedInternational = "UNSUPPORTED_INTERNATIONAL"

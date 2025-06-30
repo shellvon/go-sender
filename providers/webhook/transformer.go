@@ -31,12 +31,13 @@ func (t *webhookTransformer) CanTransform(msg core.Message) bool {
 }
 
 // Transform 构造 Webhook HTTPRequestSpec
-// 参数:
+//
+// Parameters:
 //   - ctx: 上下文
 //   - msg: Webhook 消息体
 //   - endpoint: webhook endpoint 配置
 //
-// 返回:
+// Returns:
 //   - HTTPRequestSpec: HTTP 请求规范
 //   - ResponseHandler: 响应处理器
 //   - error: 错误信息
