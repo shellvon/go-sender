@@ -1,19 +1,16 @@
 package dingtalk
 
 import (
-	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
 
 	"github.com/shellvon/go-sender/core"
+	"github.com/shellvon/go-sender/providers"
 	"github.com/shellvon/go-sender/utils"
 )
 
-// Provider implements the DingTalk provider
+// Provider implements the DingTalk provider using generic base
 type Provider struct {
-	accounts []*core.Account
-	selector *utils.Selector[*core.Account]
+	*providers.HTTPProvider[*core.Account]
 }
 
 var _ core.Provider = (*Provider)(nil)
@@ -24,82 +21,33 @@ func New(config Config) (*Provider, error) {
 		return nil, errors.New("dingtalk provider is not configured or is disabled")
 	}
 
-	// Convert to pointer slice
 	accounts := make([]*core.Account, len(config.Accounts))
 	for i := range config.Accounts {
 		accounts[i] = &config.Accounts[i]
 	}
 
-	// Use common initialization logic
-	enabledAccounts, selector, err := utils.InitProvider(&config, accounts)
+	enabledAccounts, _, err := utils.InitProvider(&config, accounts)
 	if err != nil {
 		return nil, errors.New("no enabled dingtalk accounts found")
 	}
 
+	// Get strategy
+	strategy := utils.GetStrategy(config.GetStrategy())
+
+	// Create generic provider with transformer from transformer.go
+	httpProvider := providers.NewHTTPProvider(
+		string(core.ProviderTypeDingtalk),
+		enabledAccounts,
+		newDingTalkTransformer(),
+		strategy,
+	)
+
 	return &Provider{
-		accounts: enabledAccounts,
-		selector: selector,
+		HTTPProvider: httpProvider,
 	}, nil
 }
 
-func (p *Provider) Send(ctx context.Context, msg core.Message) error {
-	dingMsg, ok := msg.(Message)
-	if !ok {
-		return fmt.Errorf("unsupported message type for dingtalk provider: %T", msg)
-	}
-
-	selectedAccount := p.selector.Select(ctx)
-	if selectedAccount == nil {
-		return errors.New("no available account")
-	}
-
-	return p.doSendDingtalk(ctx, selectedAccount, dingMsg)
-}
-
-// doSendDingtalk sends a message using the specified account
-func (p *Provider) doSendDingtalk(ctx context.Context, account *core.Account, message Message) error {
-	// Build webhook URL
-	webhookURL := fmt.Sprintf("https://oapi.dingtalk.com/robot/send?access_token=%s", account.Key)
-
-	// Send request
-	body, statusCode, err := utils.DoRequest(ctx, webhookURL, utils.RequestOptions{
-		Method: "POST",
-		JSON:   message,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to send request: %w", err)
-	}
-
-	// Check response
-	if statusCode != 200 {
-		return fmt.Errorf("dingtalk API returned non-OK status: %d", statusCode)
-	}
-
-	// Parse response
-	var result struct {
-		ErrCode int    `json:"errcode"`
-		ErrMsg  string `json:"errmsg"`
-	}
-
-	if err := json.Unmarshal(body, &result); err != nil {
-		return fmt.Errorf("failed to parse response: %w", err)
-	}
-
-	if result.ErrCode != 0 {
-		return fmt.Errorf("dingtalk error: code=%d, msg=%s", result.ErrCode, result.ErrMsg)
-	}
-
-	return nil
-}
-
-// generateSignature generates signature for DingTalk webhook
-func (p *Provider) generateSignature(timestamp, secret string) string {
-	stringToSign := timestamp + "\n" + secret
-	hash := utils.HMACSHA256([]byte(secret), []byte(stringToSign))
-	return utils.Base64EncodeBytes(hash)
-}
-
-// Name returns the name of the provider.
+// Name returns the provider name
 func (p *Provider) Name() string {
 	return string(core.ProviderTypeDingtalk)
 }

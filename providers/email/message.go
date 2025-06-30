@@ -81,8 +81,11 @@ func NewMessage(to []string, body string, opts ...MessageOption) *Message {
 		To:   to,
 		Body: body,
 	}
+	// Apply optional configurations
 	for _, opt := range opts {
-		opt(msg)
+		if opt != nil {
+			opt(msg)
+		}
 	}
 	return msg
 }

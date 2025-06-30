@@ -26,6 +26,10 @@ func (m *MockSelectable) IsEnabled() bool {
 	return m.enabled
 }
 
+func (m *MockSelectable) GetType() string {
+	return ""
+}
+
 func TestRoundRobinStrategy(t *testing.T) {
 	items := []Selectable{
 		&MockSelectable{name: "item1", weight: 1, enabled: true},

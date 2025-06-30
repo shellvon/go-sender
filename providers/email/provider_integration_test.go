@@ -82,7 +82,7 @@ func TestEmailProvider_Integration(t *testing.T) {
 			WithFrom(globalTestConfig.From),
 		)
 
-		err := provider.Send(context.Background(), msg)
+		err := provider.Send(context.Background(), msg, nil)
 		assert.NoError(t, err)
 	})
 
@@ -104,7 +104,7 @@ func TestEmailProvider_Integration(t *testing.T) {
 			WithHTML(),
 		)
 
-		err := provider.Send(context.Background(), msg)
+		err := provider.Send(context.Background(), msg, nil)
 		assert.NoError(t, err)
 	})
 
@@ -117,7 +117,7 @@ func TestEmailProvider_Integration(t *testing.T) {
 			WithCc(globalTestConfig.Cc),
 		)
 
-		err := provider.Send(context.Background(), msg)
+		err := provider.Send(context.Background(), msg, nil)
 		assert.NoError(t, err)
 	})
 
@@ -130,7 +130,7 @@ func TestEmailProvider_Integration(t *testing.T) {
 			WithBcc(globalTestConfig.Bcc),
 		)
 
-		err := provider.Send(context.Background(), msg)
+		err := provider.Send(context.Background(), msg, nil)
 		assert.NoError(t, err)
 	})
 
@@ -147,7 +147,7 @@ func TestEmailProvider_Integration(t *testing.T) {
 			WithFrom(globalTestConfig.From),
 		)
 
-		err := provider.Send(context.Background(), msg)
+		err := provider.Send(context.Background(), msg, nil)
 		assert.NoError(t, err)
 	})
 
@@ -163,7 +163,7 @@ func TestEmailProvider_Integration(t *testing.T) {
 			WithFrom(fromWithName),
 		)
 
-		err := provider.Send(context.Background(), msg)
+		err := provider.Send(context.Background(), msg, nil)
 		assert.NoError(t, err)
 	})
 
@@ -174,7 +174,7 @@ func TestEmailProvider_Integration(t *testing.T) {
 			WithSubject("Test"),
 		)
 
-		err := provider.Send(context.Background(), msg)
+		err := provider.Send(context.Background(), msg, nil)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "email body cannot be empty")
 	})
@@ -187,7 +187,7 @@ func TestEmailProvider_Validation(t *testing.T) {
 
 	t.Run("InvalidMessageType", func(t *testing.T) {
 		wrongMessage := &mockMessage{}
-		err := provider.Send(context.Background(), wrongMessage)
+		err := provider.Send(context.Background(), wrongMessage, nil)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "invalid message type")
 	})
@@ -199,7 +199,7 @@ func TestEmailProvider_Validation(t *testing.T) {
 			WithSubject("Test"),
 		)
 
-		err := provider.Send(context.Background(), msg)
+		err := provider.Send(context.Background(), msg, nil)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "recipient list cannot be empty")
 	})
@@ -211,7 +211,7 @@ func TestEmailProvider_Validation(t *testing.T) {
 			WithSubject("Test"),
 		)
 
-		err := provider.Send(context.Background(), msg)
+		err := provider.Send(context.Background(), msg, nil)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "invalid recipient email")
 	})

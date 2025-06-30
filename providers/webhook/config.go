@@ -68,3 +68,8 @@ func (e *Endpoint) GetWeight() int {
 	}
 	return e.Weight
 }
+
+// GetType returns the subprovider type of this endpoint
+func (e *Endpoint) GetType() string {
+	return "" // Webhook endpoints don't have subprovider types
+}

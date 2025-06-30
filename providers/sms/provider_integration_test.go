@@ -55,7 +55,7 @@ func TestSMSProviderIntegration(t *testing.T) {
 			Content:  "🧪 集成测试: 普通短信发送" + time.Now().Format("15:04:05"),
 			SignName: signName,
 		}
-		err := p.Send(ctx, msg)
+		err := p.Send(ctx, msg, nil)
 		if err != nil {
 			t.Errorf("普通短信发送失败: %v", err)
 		} else {
@@ -83,7 +83,7 @@ func TestSMSProviderIntegration(t *testing.T) {
 			TemplateParams: params,
 			SignName:       signName,
 		}
-		err := p.Send(ctx, msg)
+		err := p.Send(ctx, msg, nil)
 		if err != nil {
 			t.Errorf("模板短信发送失败: %v", err)
 		} else {

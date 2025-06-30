@@ -1,14 +1,19 @@
 # Go-Sender
 
-> ⚠️ **Project Status: In Active Development**
->
-> This project is under heavy development. APIs may be unstable and subject to change. Please use with caution in production environments.
+> ⚠️ **Warning: This project is under active development. APIs are not stable and may change without notice.**
 
 English | [中文](./README_CN.md)
 
 A high-performance, extensible Go message sending framework supporting multiple notification channels and rich middleware capabilities.
 
 ---
+
+## Why Go-Sender?
+
+- **Ultra-lightweight dependencies**: Only uses Go standard library and a handful of well-maintained third-party packages. No heavy frameworks, no bloat.
+- **No capability matrix**: No complex or redundant configuration. All features are directly reflected in code and documentation.
+- **Easy to maintain and extend**: Clean, idiomatic Go code. Easy to read, debug, and extend for your own needs.
+- **Pure Go implementation**: No CGo, no external runtime dependencies.
 
 ## Design Philosophy
 
@@ -22,6 +27,67 @@ Go-Sender is designed around the **Decorator Pattern** and **Plugin Architecture
 - **📊 Observable**: Comprehensive metrics and health checks
 - **🧩 Flexible**: Support for multiple instances, strategies, and configurations
 
+### HTTP-Transformer Architecture
+
+Go-Sender implements a sophisticated **HTTP-Transformer Architecture** that provides exceptional flexibility and maintainability for HTTP-based providers:
+
+#### 🏗️ **Unified HTTP Provider Base**
+
+- **Generic HTTP Provider**: All HTTP-based providers (DingTalk, Lark, SMS, Webhook, WeComBot, Telegram, etc.) inherit from a unified `HTTPProvider[T]` base class
+- **Type-Safe Design**: Uses Go generics to ensure type safety while maintaining flexibility
+- **Stateless Transformers**: Each provider implements a stateless `HTTPTransformer[T]` interface that converts messages to HTTP requests
+
+#### 🔧 **Custom HTTPClient Support**
+
+Go-Sender provides **per-request HTTPClient customization** for all HTTP-based providers:
+
+**Supported Features:**
+
+- ✅ **Proxy Configuration**: Set custom proxies for specific requests
+- ✅ **Custom Timeouts**: Override default timeouts per request
+- ✅ **TLS Configuration**: Custom TLS settings and certificates
+- ✅ **Custom Transport**: Advanced transport configurations
+- ✅ **Headers & Authentication**: Custom headers and auth mechanisms
+
+**Usage Example:**
+
+```go
+// Create custom HTTPClient with proxy
+customClient := &http.Client{
+    Timeout: 60 * time.Second,
+    Transport: &http.Transport{
+        Proxy: http.ProxyURL(proxyURL),
+        TLSClientConfig: &tls.Config{
+            InsecureSkipVerify: true, // For testing only
+        },
+    },
+}
+
+// Send with custom HTTPClient
+err := sender.Send(ctx, message,
+    core.WithSendHTTPClient(customClient),
+)
+```
+
+#### 📋 **Provider Support Matrix**
+
+| Provider Type           | HTTP-Transformer    | Custom HTTPClient  | Notes                          |
+| ----------------------- | ------------------- | ------------------ | ------------------------------ |
+| **SMS Providers**       | ✅ All 12 providers | ✅ Fully supported | Aliyun, Tencent, Huawei, etc.  |
+| **IM/Bot Providers**    | ✅ All 5 providers  | ✅ Fully supported | DingTalk, Lark, WeComBot, etc. |
+| **Email API Providers** | ✅ All 2 providers  | ✅ Fully supported | EmailJS, Resend                |
+| **Webhook Provider**    | ✅ Generic          | ✅ Fully supported | Universal HTTP integration     |
+| **SMTP Email Provider** | ❌ SMTP-based       | ❌ Not applicable  | Uses SMTP protocol             |
+
+#### 🎯 **Architecture Benefits**
+
+1. **🔧 Flexibility**: Per-request HTTPClient customization without affecting other requests
+2. **🛡️ Security**: Support for corporate proxies, custom certificates, and security policies
+3. **⚡ Performance**: Optimized HTTP client configurations for different environments
+4. **🧪 Testing**: Easy mocking and testing with custom HTTP clients
+5. **🌐 Network Control**: Fine-grained control over network behavior and routing
+6. **📊 Monitoring**: Custom clients can include logging, metrics, and tracing
+
 ### Architecture Overview
 
 ```
@@ -33,6 +99,16 @@ Business Logic → Sender → ProviderDecorator → Provider
                 - Retry Policy
                 - Queue
                 - Metrics
+```
+
+**For HTTP-based providers:**
+
+```
+Provider → HTTPProvider[T] → HTTPTransformer[T] → HTTP Request
+                                    ↓
+                            Custom HTTPClient Support
+                                    ↓
+                            utils.DoRequest() → External API
 ```
 
 ## ✨ Features
@@ -111,28 +187,6 @@ All the following are supported via the [Webhook Provider](./providers/webhook/R
 | ---------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------ |
 | (Planned) FCM (Firebase Cloud Messaging) | [firebase.google.com](https://firebase.google.com/products/cloud-messaging) | [API](https://firebase.google.com/docs/cloud-messaging)            | N/A          |
 | (Planned) JPush (极光推送)               | [jiguang.cn](https://www.jiguang.cn/)                                       | [API](https://docs.jiguang.cn/jpush/server/push/rest_api_v3_push/) | N/A          |
-
----
-
-### 🛡️ Advanced Reliability
-
-- Built-in retry, circuit breaker, and rate limiting
-- Token bucket and sliding window algorithms
-- Health checks and observability
-
-### 🎛️ Multi-Instance & Strategy Support
-
-- Multiple accounts/providers per channel
-- Load balancing: round-robin, random, weighted, health-based
-- Context-aware strategy override
-
-### 🧩 Middleware & Plugin Architecture
-
-- Rate limiter, circuit breaker, retry, queue, metrics, etc.
-
-### 📊 Observability
-
-- Metrics, tracing, health checks
 
 ## 🚀 Quick Start
 
@@ -286,6 +340,70 @@ if health.Status != core.HealthStatusHealthy {
     }
 }
 ```
+
+### 6. Custom HTTPClient Configuration
+
+Go-Sender supports **per-request HTTPClient customization** for all HTTP-based providers:
+
+```go
+// Example 1: Custom HTTPClient with proxy
+proxyURL, _ := url.Parse("http://proxy.company.com:8080")
+proxyClient := &http.Client{
+    Timeout: 30 * time.Second,
+    Transport: &http.Transport{
+        Proxy: http.ProxyURL(proxyURL),
+        TLSClientConfig: &tls.Config{
+            InsecureSkipVerify: false, // Use proper certificates
+        },
+        MaxIdleConns:        100,
+        MaxIdleConnsPerHost: 10,
+        IdleConnTimeout:     90 * time.Second,
+    },
+}
+
+// Send SMS with proxy
+err := sender.Send(ctx, smsMessage,
+    core.WithSendHTTPClient(proxyClient),
+)
+
+// Example 2: Custom HTTPClient with authentication
+authClient := &http.Client{
+    Timeout: 60 * time.Second,
+    Transport: &http.Transport{
+        TLSClientConfig: &tls.Config{
+            Certificates: []tls.Certificate{customCert},
+        },
+    },
+}
+
+// Send DingTalk message with custom cert
+err := sender.Send(ctx, dingTalkMessage,
+    core.WithSendHTTPClient(authClient),
+)
+
+// Example 3: Custom HTTPClient for testing
+testClient := &http.Client{
+    Timeout: 5 * time.Second,
+    Transport: &http.Transport{
+        TLSClientConfig: &tls.Config{
+            InsecureSkipVerify: true, // For testing only
+        },
+    },
+}
+
+// Send webhook with test client
+err := sender.Send(ctx, webhookMessage,
+    core.WithSendHTTPClient(testClient),
+)
+```
+
+**Supported HTTP-based Providers:**
+
+- ✅ **SMS**: Aliyun, Tencent, Huawei, Yunpian, CL253, etc. (12 providers)
+- ✅ **IM/Bot**: DingTalk, Lark, WeComBot, Telegram, ServerChan (5 providers)
+- ✅ **Email API**: EmailJS, Resend (2 providers)
+- ✅ **Webhook**: Universal HTTP integration
+- ❌ **SMTP Email**: Not applicable (uses SMTP protocol)
 
 ## 🎯 Extending Go-Sender
 

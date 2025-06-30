@@ -3,6 +3,7 @@ package gosender
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"sync"
 	"time"
 
@@ -16,6 +17,8 @@ type Sender struct {
 	logger     core.Logger
 	mu         sync.RWMutex
 	closed     bool
+	// defaultHTTPClient is the global default HTTP client for all HTTP-based providers. SMTP/email is not affected.
+	defaultHTTPClient *http.Client
 }
 
 // NewSender creates a new Sender instance
@@ -25,9 +28,10 @@ func NewSender(logger core.Logger) *Sender {
 	}
 
 	return &Sender{
-		providers:  make(map[core.ProviderType]*core.ProviderDecorator),
-		middleware: &core.SenderMiddleware{},
-		logger:     logger,
+		providers:         make(map[core.ProviderType]*core.ProviderDecorator),
+		middleware:        &core.SenderMiddleware{},
+		logger:            logger,
+		defaultHTTPClient: core.DefaultHTTPClient(),
 	}
 }
 
@@ -147,6 +151,14 @@ func (s *Sender) SetMetrics(metrics core.MetricsCollector) {
 	defer s.mu.Unlock()
 
 	s.middleware.Metrics = metrics
+}
+
+// SetDefaultHTTPClient sets the global default HTTP client for all HTTP-based providers.
+// This only affects HTTP/REST providers; SMTP/email providers are not affected.
+func (s *Sender) SetDefaultHTTPClient(client *http.Client) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.defaultHTTPClient = client
 }
 
 // HealthCheck performs a health check on the sender and all its components

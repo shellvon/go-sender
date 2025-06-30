@@ -38,7 +38,7 @@ func TestDoRequest_GET(t *testing.T) {
 	defer server.Close()
 
 	// Test GET request with query parameters
-	options := RequestOptions{
+	options := HTTPRequestOptions{
 		Method: http.MethodGet,
 		Query: map[string]interface{}{
 			"key1": "value1",
@@ -82,7 +82,7 @@ func TestDoRequest_QueryArray(t *testing.T) {
 	}))
 	defer server.Close()
 
-	options := RequestOptions{
+	options := HTTPRequestOptions{
 		Method: http.MethodGet,
 		Query: map[string]interface{}{
 			"tags": []string{"tag1", "tag2", "tag3"},
@@ -130,7 +130,7 @@ func TestDoRequest_POST_JSON(t *testing.T) {
 	}))
 	defer server.Close()
 
-	options := RequestOptions{
+	options := HTTPRequestOptions{
 		Method: http.MethodPost,
 		JSON: map[string]interface{}{
 			"name": "John",
@@ -177,7 +177,7 @@ func TestDoRequest_POST_Form(t *testing.T) {
 	}))
 	defer server.Close()
 
-	options := RequestOptions{
+	options := HTTPRequestOptions{
 		Method: http.MethodPost,
 		Data: map[string]string{
 			"field1": "value1",
@@ -225,7 +225,7 @@ func TestDoRequest_POST_Multipart(t *testing.T) {
 	}))
 	defer server.Close()
 
-	options := RequestOptions{
+	options := HTTPRequestOptions{
 		Method: http.MethodPost,
 		Form: map[string]string{
 			"field1": "value1",
@@ -290,7 +290,7 @@ func TestDoRequest_FileUpload(t *testing.T) {
 	}))
 	defer server.Close()
 
-	options := RequestOptions{
+	options := HTTPRequestOptions{
 		Method: http.MethodPost,
 		Files: map[string]string{
 			"file": tempFile,
@@ -312,7 +312,7 @@ func TestDoRequest_Timeout(t *testing.T) {
 	}))
 	defer server.Close()
 
-	options := RequestOptions{
+	options := HTTPRequestOptions{
 		Method:  http.MethodGet,
 		Timeout: 1 * time.Second, // 1 second timeout
 	}
@@ -334,7 +334,7 @@ func TestDoRequest_ErrorStatus(t *testing.T) {
 	}))
 	defer server.Close()
 
-	options := RequestOptions{
+	options := HTTPRequestOptions{
 		Method: http.MethodGet,
 	}
 
@@ -372,7 +372,7 @@ func TestDoRequest_Headers(t *testing.T) {
 	}))
 	defer server.Close()
 
-	options := RequestOptions{
+	options := HTTPRequestOptions{
 		Method: http.MethodGet,
 		Headers: map[string]string{
 			"X-Custom-Header": "custom-value",
@@ -397,7 +397,7 @@ func TestDoRequest_DefaultMethod(t *testing.T) {
 	}))
 	defer server.Close()
 
-	options := RequestOptions{} // No method specified
+	options := HTTPRequestOptions{} // No method specified
 
 	_, _, err := DoRequest(context.Background(), server.URL, options)
 	if err != nil {
@@ -416,7 +416,7 @@ func TestDoRequest_DefaultPostMethod(t *testing.T) {
 	}))
 	defer server.Close()
 
-	options := RequestOptions{
+	options := HTTPRequestOptions{
 		JSON: map[string]interface{}{
 			"test": "data",
 		},

@@ -1,0 +1,156 @@
+package webhook
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"regexp"
+	"time"
+
+	"github.com/shellvon/go-sender/core"
+)
+
+// WebhookRequestTransformer 负责 Webhook 消息的请求组装与响应解析
+// 详见各自 Webhook 服务 API 文档
+type WebhookRequestTransformer interface {
+	Transform(ctx context.Context, msg core.Message, endpoint *Endpoint) (*core.HTTPRequestSpec, core.ResponseHandler, error)
+	CanTransform(msg core.Message) bool
+}
+
+// webhookTransformer 实现 core.HTTPTransformer[*Endpoint]
+type webhookTransformer struct{}
+
+// 确保 webhookTransformer 实现了 core.HTTPTransformer[*Endpoint]
+var _ core.HTTPTransformer[*Endpoint] = (*webhookTransformer)(nil)
+
+// CanTransform 判断是否为 Webhook 消息
+func (t *webhookTransformer) CanTransform(msg core.Message) bool {
+	return msg.ProviderType() == core.ProviderTypeWebhook
+}
+
+// Transform 构造 Webhook HTTPRequestSpec
+// 参数:
+//   - ctx: 上下文
+//   - msg: Webhook 消息体
+//   - endpoint: webhook endpoint 配置
+//
+// 返回:
+//   - HTTPRequestSpec: HTTP 请求规范
+//   - ResponseHandler: 响应处理器
+//   - error: 错误信息
+func (t *webhookTransformer) Transform(ctx context.Context, msg core.Message, endpoint *Endpoint) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+	whMsg, ok := msg.(*Message)
+	if !ok {
+		return nil, nil, fmt.Errorf("unsupported message type for webhook transformer: %T", msg)
+	}
+	// 构造URL（支持PathParams/QueryParams）
+	url := endpoint.URL
+	if len(whMsg.PathParams) > 0 || len(whMsg.QueryParams) > 0 {
+		builtURL, err := whMsg.buildURL(endpoint.URL)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to build URL: %w", err)
+		}
+		url = builtURL
+	}
+	// 合并Headers
+	headers := make(map[string]string)
+	for k, v := range endpoint.Headers {
+		headers[k] = v
+	}
+	for k, v := range whMsg.Headers {
+		headers[k] = v
+	}
+	if _, exists := headers["Content-Type"]; !exists {
+		headers["Content-Type"] = "application/json"
+	}
+	// 选择HTTP方法
+	method := endpoint.Method
+	if whMsg.Method != "" {
+		method = whMsg.Method
+	}
+	if method == "" {
+		method = "POST"
+	}
+	// Body已经是[]byte，直接使用
+	reqSpec := &core.HTTPRequestSpec{
+		Method:   method,
+		URL:      url,
+		Headers:  headers,
+		Body:     whMsg.Body,
+		BodyType: "raw",
+		Timeout:  30 * time.Second,
+	}
+	return reqSpec, t.buildResponseHandler(endpoint), nil
+}
+
+// buildResponseHandler 构造响应处理器，支持多种响应校验方式
+func (t *webhookTransformer) buildResponseHandler(endpoint *Endpoint) core.ResponseHandler {
+	return func(statusCode int, body []byte) error {
+		cfg := endpoint.ResponseConfig
+		if cfg == nil || !cfg.ValidateResponse {
+			if statusCode < 200 || statusCode >= 300 {
+				return fmt.Errorf("webhook API returned non-2xx status: %d", statusCode)
+			}
+			return nil
+		}
+		switch cfg.ResponseType {
+		case "json":
+			var resp map[string]interface{}
+			if err := json.Unmarshal(body, &resp); err != nil {
+				return fmt.Errorf("failed to parse webhook response: %w", err)
+			}
+			if cfg.SuccessField != "" {
+				if v, ok := resp[cfg.SuccessField]; ok {
+					if fmt.Sprintf("%v", v) != cfg.SuccessValue {
+						errMsg := t.extractErrorMessage(cfg, resp)
+						return fmt.Errorf("webhook returned failure: %s", errMsg)
+					}
+				}
+			}
+		case "text":
+			respText := string(body)
+			if cfg.ErrorPattern != "" {
+				matched, err := regexp.MatchString(cfg.ErrorPattern, respText)
+				if err != nil {
+					return fmt.Errorf("invalid error pattern: %w", err)
+				}
+				if matched {
+					return fmt.Errorf("webhook returned error response: %s", respText)
+				}
+			}
+			if cfg.SuccessPattern != "" {
+				matched, err := regexp.MatchString(cfg.SuccessPattern, respText)
+				if err != nil {
+					return fmt.Errorf("invalid success pattern: %w", err)
+				}
+				if !matched {
+					return fmt.Errorf("webhook response does not match success pattern: %s", respText)
+				}
+			}
+		case "none":
+			// 不校验响应体
+			return nil
+		default:
+			// 默认只校验状态码
+			if statusCode < 200 || statusCode >= 300 {
+				return fmt.Errorf("webhook API returned non-2xx status: %d", statusCode)
+			}
+		}
+		return nil
+	}
+}
+
+// extractErrorMessage 从 JSON 响应中提取错误信息
+func (t *webhookTransformer) extractErrorMessage(cfg *ResponseConfig, resp map[string]interface{}) string {
+	if cfg.ErrorField != "" {
+		if v, ok := resp[cfg.ErrorField]; ok {
+			return fmt.Sprintf("%v", v)
+		}
+	}
+	if cfg.MessageField != "" {
+		if v, ok := resp[cfg.MessageField]; ok {
+			return fmt.Sprintf("%v", v)
+		}
+	}
+	return "unknown error"
+}

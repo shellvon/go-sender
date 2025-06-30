@@ -4,9 +4,43 @@ import (
 	"context"
 	"errors"
 	"log"
+	"net/http"
 	"sync"
 	"time"
 )
+
+const (
+	// DefaultUserAgent is the default User-Agent for HTTP requests
+	DefaultUserAgent = "go-sender/1.0.0"
+	// DefaultHTTPTimeout is the default timeout for HTTP requests
+	DefaultHTTPTimeout = 30 * time.Second
+)
+
+// DefaultHTTPClient returns a default HTTP client with proper settings
+func DefaultHTTPClient() *http.Client {
+	return &http.Client{
+		Timeout: DefaultHTTPTimeout,
+		Transport: &http.Transport{
+			MaxIdleConns:        100,
+			MaxIdleConnsPerHost: 10,
+			IdleConnTimeout:     90 * time.Second,
+		},
+	}
+}
+
+// EnsureHTTPClient ensures that the HTTP client has a default User-Agent
+func EnsureHTTPClient(client *http.Client) *http.Client {
+	if client == nil {
+		client = DefaultHTTPClient()
+	}
+
+	// Ensure User-Agent is set
+	if client.Transport == nil {
+		client.Transport = &http.Transport{}
+	}
+
+	return client
+}
 
 // SendOptions manages all configurations related to sending notifications.
 type SendOptions struct {
@@ -19,6 +53,8 @@ type SendOptions struct {
 	DisableRateLimiter    bool                   // Disable rate limiter
 	Callback              func(error)            // Callback executed after message processing (only effective for local/in-memory queue or async goroutine, not called in distributed queue like Redis)
 	RetryPolicy           *RetryPolicy           // Custom retry policy (overrides global), deserializable from queue will lost the filter function.
+	// HTTPClient allows per-send custom HTTP client. Only affects HTTP-based providers; SMTP/email is not affected.
+	HTTPClient *http.Client // Optional: custom HTTP client for this send
 }
 
 // NotificationMiddleware holds configurations for notification middlewares.
@@ -217,6 +253,14 @@ func WithSendRetryPolicy(policy *RetryPolicy) SendOption {
 	}
 }
 
+// WithSendient sets a custom HTTP client for this send operation.
+// Only affects HTTP-based providers; SMTP/email providers are not affected.
+func WithSendHTTPClient(client *http.Client) SendOption {
+	return func(opts *SendOptions) {
+		opts.HTTPClient = EnsureHTTPClient(client)
+	}
+}
+
 // frameworkMetadataKey is the namespaced key for storing SendOptions in Metadata.
 const frameworkMetadataKey = "__gosender_framework_send_options"
 
@@ -323,7 +367,9 @@ func NewRetryPolicy(opts ...RetryOption) *RetryPolicy {
 
 	// Apply all options
 	for _, opt := range opts {
-		opt(policy)
+		if opt != nil {
+			opt(policy)
+		}
 	}
 
 	return policy

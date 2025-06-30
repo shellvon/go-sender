@@ -13,12 +13,14 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/shellvon/go-sender/core"
 	// For a default timeout
 )
 
 // RequestOptions holds the parameters for your HTTP request.
 // Similar to Python requests, supports data, json, form fields for easy data handling.
-type RequestOptions struct {
+type HTTPRequestOptions struct {
 	Method  string            // e.g., http.MethodGet, http.MethodPost
 	Headers map[string]string // Custom headers
 	Timeout time.Duration     // Request timeout
@@ -38,6 +40,9 @@ type RequestOptions struct {
 
 	// File upload support
 	Files map[string]string // Field name -> file path for multipart uploads
+
+	// Client allows custom HTTP client for this request. Only affects HTTP-based providers; SMTP/email is not affected.
+	Client *http.Client // Optional: custom HTTP client (proxy, timeout, etc.)
 }
 
 // DoRequest performs an HTTP request and returns the response body.
@@ -54,7 +59,7 @@ type RequestOptions struct {
 //   - []byte: Response body
 //   - int: HTTP status code
 //   - error: Request error
-func DoRequest(ctx context.Context, requestURL string, options RequestOptions) ([]byte, int, error) {
+func DoRequest(ctx context.Context, requestURL string, options HTTPRequestOptions) ([]byte, int, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -122,13 +127,21 @@ func DoRequest(ctx context.Context, requestURL string, options RequestOptions) (
 		req.Header.Set(key, value)
 	}
 
+	// Set default User-Agent if not provided
+	if req.Header.Get("User-Agent") == "" {
+		req.Header.Set("User-Agent", core.DefaultUserAgent)
+	}
+
 	// Set content type if determined
 	if contentType != "" {
 		req.Header.Set("Content-Type", contentType)
 	}
 
+	// Use custom client if provided, otherwise default
+	client := core.EnsureHTTPClient(options.Client)
+
 	// Perform request
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, 0, fmt.Errorf("HTTP request failed: %w", err)
 	}
@@ -149,7 +162,7 @@ func DoRequest(ctx context.Context, requestURL string, options RequestOptions) (
 }
 
 // buildRequestBody builds the request body and determines content type
-func buildRequestBody(options RequestOptions) (io.Reader, string, error) {
+func buildRequestBody(options HTTPRequestOptions) (io.Reader, string, error) {
 	// Priority 1: Raw data
 	if options.Raw != nil {
 		return bytes.NewReader(options.Raw), "", nil

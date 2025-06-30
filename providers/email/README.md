@@ -1,3 +1,5 @@
+[⬅️ Back to Main README](../../README.md)
+
 # Email Provider
 
 The Email Provider for go-sender supports sending emails through SMTP servers using the [go-mail](https://github.com/wneessen/go-mail) library.

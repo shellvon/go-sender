@@ -11,13 +11,13 @@ import (
 	"path/filepath"
 
 	"github.com/shellvon/go-sender/core"
+	"github.com/shellvon/go-sender/providers"
 	"github.com/shellvon/go-sender/utils"
 )
 
 // Provider implements the WeCom Bot provider
 type Provider struct {
-	accounts []*core.Account
-	selector *utils.Selector[*core.Account]
+	*providers.HTTPProvider[*core.Account]
 }
 
 var _ core.Provider = (*Provider)(nil)
@@ -35,71 +35,30 @@ func New(config Config) (*Provider, error) {
 	}
 
 	// Use common initialization logic
-	enabledAccounts, selector, err := utils.InitProvider(&config, accounts)
+	enabledAccounts, _, err := utils.InitProvider(&config, accounts)
 	if err != nil {
 		return nil, errors.New("no enabled wecombot accounts found")
 	}
 
+	strategy := utils.GetStrategy(core.StrategyType(config.Strategy))
+
+	// Create generic provider
+	httpProvider := providers.NewHTTPProvider(
+		string(core.ProviderTypeWecombot),
+		enabledAccounts,
+		newWecombotTransformer(),
+		strategy,
+	)
+
 	return &Provider{
-		accounts: enabledAccounts,
-		selector: selector,
+		HTTPProvider: httpProvider,
 	}, nil
-}
-
-func (p *Provider) Send(ctx context.Context, msg core.Message) error {
-	wecomMsg, ok := msg.(Message)
-	if !ok {
-		return fmt.Errorf("unsupported message type for wecombot provider: %T", msg)
-	}
-
-	selectedAccount := p.selector.Select(ctx)
-	if selectedAccount == nil {
-		return errors.New("no available account")
-	}
-
-	return p.doSendWecom(ctx, selectedAccount, wecomMsg)
-}
-
-// doSendWecom sends a message using the specified account
-func (p *Provider) doSendWecom(ctx context.Context, account *core.Account, message Message) error {
-	// Build webhook URL
-	webhookURL := fmt.Sprintf("https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=%s", account.Key)
-
-	// Send request
-	body, statusCode, err := utils.DoRequest(ctx, webhookURL, utils.RequestOptions{
-		Method: "POST",
-		JSON:   message,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to send request: %w", err)
-	}
-
-	// Check response
-	if statusCode != 200 {
-		return fmt.Errorf("wecom API returned non-OK status: %d", statusCode)
-	}
-
-	// Parse response
-	var result struct {
-		ErrCode int    `json:"errcode"`
-		ErrMsg  string `json:"errmsg"`
-	}
-
-	if err := json.Unmarshal(body, &result); err != nil {
-		return fmt.Errorf("failed to parse response: %w", err)
-	}
-
-	if result.ErrCode != 0 {
-		return fmt.Errorf("wecom error: code=%d, msg=%s", result.ErrCode, result.ErrMsg)
-	}
-
-	return nil
 }
 
 // UploadMedia uploads a media file and returns the media_id
 // This method can be used to upload images, files, etc. before sending them
 func (p *Provider) UploadMedia(ctx context.Context, filePath string, bodyReader io.Reader) (mediaId string, account *core.Account, err error) {
-	selectedAccount := p.selector.Select(ctx)
+	selectedAccount := p.SelectConfig(ctx)
 	if selectedAccount == nil {
 		return "", nil, errors.New("no available account")
 	}
@@ -127,7 +86,7 @@ func (p *Provider) UploadMedia(ctx context.Context, filePath string, bodyReader 
 		return "", nil, fmt.Errorf("failed to close writer: %w", err)
 	}
 
-	respBody, statusCode, err := utils.DoRequest(ctx, uploadURL, utils.RequestOptions{
+	respBody, statusCode, err := utils.DoRequest(ctx, uploadURL, utils.HTTPRequestOptions{
 		Method:    "POST",
 		RawReader: body,
 		Headers: map[string]string{
