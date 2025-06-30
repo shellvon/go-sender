@@ -39,8 +39,8 @@ func NewSMSBaoTextMessage(mobiles []string, content string, opts ...MessageOptio
 		WithMobiles(mobiles),
 		WithContent(content),
 	}
-	allOpts := append(baseOpts, opts...)
-	return NewMessageWithOptions(allOpts...)
+	baseOpts = append(baseOpts, opts...)
+	return NewMessageWithOptions(baseOpts...)
 }
 
 // NewSMSBaoVoiceMessage 创建短信宝语音验证码消息（仅支持国内单号码）
@@ -64,17 +64,17 @@ func NewSMSBaoVoiceMessage(mobile string, code string, opts ...MessageOption) *M
 		WithMobiles([]string{mobile}),
 		WithContent(code),
 	}
-	allOpts := append(baseOpts, opts...)
-	return NewMessageWithOptions(allOpts...)
+	baseOpts = append(baseOpts, opts...)
+	return NewMessageWithOptions(baseOpts...)
 }
 
-// 当客户使用专用通道产品时，需要指定产品ID
+// WithSMSBaoProductID 当客户使用专用通道产品时，需要指定产品ID
 // 产品ID可在短信宝后台或联系客服获得,不填则默认使用通用短信产品
 // 文档
 //   - 国内短信: https://www.smsbao.com/openapi/213.html
 //
 // Alias: WithSMSBaoProductID
-// Equivalent to WithTemplateID
+// Equivalent to WithTemplateID.
 func WithSMSBaoProductID(productID string) MessageOption {
 	return WithTemplateID(productID)
 }

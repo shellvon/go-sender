@@ -12,6 +12,8 @@ import (
 	"github.com/shellvon/go-sender/utils"
 )
 
+const cloopenEndpoint = "app.cloopen.com:8883"
+
 // @ProviderName: Yuntongxun / 云讯通
 // @Website: https://www.yuntongxun.com
 // @APIDoc: https://www.yuntongxun.com/developer-center
@@ -24,10 +26,6 @@ import (
 
 type yuntongxunTransformer struct{}
 
-func newYuntongxunTransformer() core.HTTPTransformer[*core.Account] {
-	return &yuntongxunTransformer{}
-}
-
 func init() {
 	RegisterTransformer(string(SubProviderYuntongxun), &yuntongxunTransformer{})
 }
@@ -37,10 +35,14 @@ func (t *yuntongxunTransformer) CanTransform(msg core.Message) bool {
 	return ok && smsMsg.SubProvider == string(SubProviderYuntongxun)
 }
 
-func (t *yuntongxunTransformer) Transform(ctx context.Context, msg core.Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+func (t *yuntongxunTransformer) Transform(
+	ctx context.Context,
+	msg core.Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
-		return nil, nil, fmt.Errorf("unsupported message type for yuntongxun: %T", msg)
+		return nil, nil, errors.New("invalid message type for yuntongxunTransformer")
 	}
 	if err := t.validateMessage(smsMsg); err != nil {
 		return nil, nil, err
@@ -50,8 +52,10 @@ func (t *yuntongxunTransformer) Transform(ctx context.Context, msg core.Message,
 		return t.transformTextSMS(ctx, smsMsg, account)
 	case Voice:
 		return t.transformVoiceSMS(ctx, smsMsg, account)
+	case MMS:
+		fallthrough
 	default:
-		return nil, nil, fmt.Errorf("unsupported yuntongxun message type: %s", smsMsg.Type)
+		return nil, nil, fmt.Errorf("unsupported yuntongxun message type: %v", smsMsg.Type)
 	}
 }
 
@@ -74,7 +78,11 @@ func (t *yuntongxunTransformer) validateMessage(msg *Message) error {
 	return nil
 }
 
-func (t *yuntongxunTransformer) transformTextSMS(ctx context.Context, msg *Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+func (t *yuntongxunTransformer) transformTextSMS(
+	ctx context.Context,
+	msg *Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	// 判断是否为国际短信
 	if msg.IsIntl() {
 		return t.transformIntlSMS(ctx, msg, account)
@@ -82,7 +90,11 @@ func (t *yuntongxunTransformer) transformTextSMS(ctx context.Context, msg *Messa
 	return t.transformDomesticSMS(ctx, msg, account)
 }
 
-func (t *yuntongxunTransformer) transformDomesticSMS(ctx context.Context, msg *Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+func (t *yuntongxunTransformer) transformDomesticSMS(
+	_ context.Context,
+	msg *Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	datetime := time.Now().Format("20060102150405")
 	accountSid := account.From
 	accountToken := account.Secret
@@ -108,7 +120,7 @@ func (t *yuntongxunTransformer) transformDomesticSMS(ctx context.Context, msg *M
 	// 构建完整URL
 	endpoint := account.Endpoint
 	if endpoint == "" {
-		endpoint = "app.cloopen.com:8883"
+		endpoint = cloopenEndpoint
 	}
 	url := fmt.Sprintf("https://%s/%s/Accounts/%s/SMS/TemplateSMS?sig=%s",
 		endpoint, "2013-12-26", accountSid, sig)
@@ -124,11 +136,14 @@ func (t *yuntongxunTransformer) transformDomesticSMS(ctx context.Context, msg *M
 		Headers:  headers,
 		Body:     bodyData,
 		BodyType: "json",
-		Timeout:  30 * time.Second,
 	}, t.handleYuntongxunResponse, nil
 }
 
-func (t *yuntongxunTransformer) transformIntlSMS(ctx context.Context, msg *Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+func (t *yuntongxunTransformer) transformIntlSMS(
+	_ context.Context,
+	msg *Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	datetime := time.Now().Format("20060102150405")
 	accountSid := account.From
 	accountToken := account.Secret
@@ -153,7 +168,7 @@ func (t *yuntongxunTransformer) transformIntlSMS(ctx context.Context, msg *Messa
 	// 构建完整URL
 	endpoint := account.IntlEndpoint
 	if endpoint == "" {
-		endpoint = "app.cloopen.com:8883"
+		endpoint = cloopenEndpoint
 	}
 	url := fmt.Sprintf("https://%s/%s/account/%s/international/send?sig=%s",
 		endpoint, "v2", accountSid, sig)
@@ -169,11 +184,14 @@ func (t *yuntongxunTransformer) transformIntlSMS(ctx context.Context, msg *Messa
 		Headers:  headers,
 		Body:     bodyData,
 		BodyType: "json",
-		Timeout:  30 * time.Second,
 	}, t.handleYuntongxunResponse, nil
 }
 
-func (t *yuntongxunTransformer) transformVoiceSMS(ctx context.Context, msg *Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+func (t *yuntongxunTransformer) transformVoiceSMS(
+	_ context.Context,
+	msg *Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	// 只支持国内
 	if msg.IsIntl() {
 		return nil, nil, NewUnsupportedInternationalError(string(SubProviderYuntongxun), "voice call")
@@ -221,7 +239,7 @@ func (t *yuntongxunTransformer) transformVoiceSMS(ctx context.Context, msg *Mess
 	// 构建完整URL
 	endpoint := account.Endpoint
 	if endpoint == "" {
-		endpoint = "app.cloopen.com:8883"
+		endpoint = cloopenEndpoint
 	}
 	url := fmt.Sprintf("https://%s/%s/Accounts/%s/Calls/VoiceNotify?sig=%s",
 		endpoint, "2013-12-26", accountSid, sig)
@@ -237,11 +255,10 @@ func (t *yuntongxunTransformer) transformVoiceSMS(ctx context.Context, msg *Mess
 		Headers:  headers,
 		Body:     bodyData,
 		BodyType: "json",
-		Timeout:  30 * time.Second,
 	}, t.handleYuntongxunResponse, nil
 }
 
-// handleYuntongxunResponse 处理云讯通API响应
+// handleYuntongxunResponse 处理云讯通API响应.
 func (t *yuntongxunTransformer) handleYuntongxunResponse(statusCode int, body []byte) error {
 	if statusCode < 200 || statusCode >= 300 {
 		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
@@ -255,7 +272,7 @@ func (t *yuntongxunTransformer) handleYuntongxunResponse(statusCode int, body []
 		return fmt.Errorf("failed to parse yuntongxun response: %w", err)
 	}
 	if result.StatusCode != "000000" {
-		return &SMSError{
+		return &Error{
 			Code:     result.StatusCode,
 			Message:  result.StatusMsg,
 			Provider: string(SubProviderYuntongxun),

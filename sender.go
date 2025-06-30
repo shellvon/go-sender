@@ -2,6 +2,7 @@ package gosender
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"sync"
@@ -10,7 +11,7 @@ import (
 	"github.com/shellvon/go-sender/core"
 )
 
-// Sender is the main entry point for the go-sender framework
+// Sender is the main entry point for the go-sender framework.
 type Sender struct {
 	providers  map[core.ProviderType]*core.ProviderDecorator
 	middleware *core.SenderMiddleware
@@ -21,7 +22,7 @@ type Sender struct {
 	defaultHTTPClient *http.Client
 }
 
-// NewSender creates a new Sender instance
+// NewSender creates a new Sender instance.
 func NewSender(logger core.Logger) *Sender {
 	if logger == nil {
 		logger = &core.NoOpLogger{}
@@ -35,27 +36,39 @@ func NewSender(logger core.Logger) *Sender {
 	}
 }
 
-// RegisterProvider registers a provider with the sender
-func (s *Sender) RegisterProvider(providerType core.ProviderType, provider core.Provider, middleware *core.SenderMiddleware) {
+// RegisterProvider registers a provider with the sender.
+func (s *Sender) RegisterProvider(
+	providerType core.ProviderType,
+	provider core.Provider,
+	middleware *core.SenderMiddleware,
+) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	if middleware == nil {
-		copy := *s.middleware
-		middleware = &copy
+		copyMiddleware := *s.middleware
+		middleware = &copyMiddleware
 	}
 
 	s.providers[providerType] = core.NewProviderDecorator(provider, middleware, s.logger)
-	s.logger.Log(core.LevelInfo, "message", "provider registered", "provider", provider.Name(), "type", providerType)
+	_ = s.logger.Log(
+		core.LevelInfo,
+		"message",
+		"provider registered",
+		"provider",
+		provider.Name(),
+		"type",
+		providerType,
+	) // ignore log error
 }
 
-// UnregisterProvider removes a provider from the sender
+// UnregisterProvider removes a provider from the sender.
 func (s *Sender) UnregisterProvider(providerType core.ProviderType) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	if s.closed {
-		return fmt.Errorf("sender is closed, cannot unregister provider")
+		return errors.New("sender is closed, cannot unregister provider")
 	}
 
 	if _, exists := s.providers[providerType]; !exists {
@@ -63,17 +76,17 @@ func (s *Sender) UnregisterProvider(providerType core.ProviderType) error {
 	}
 
 	delete(s.providers, providerType)
-	s.logger.Log(core.LevelInfo, "message", "provider unregistered", "type", providerType)
+	_ = s.logger.Log(core.LevelInfo, "message", "provider unregistered", "type", providerType) // ignore log error
 	return nil
 }
 
-// Send sends a message using the appropriate provider
+// Send sends a message using the appropriate provider.
 func (s *Sender) Send(ctx context.Context, message core.Message, opts ...core.SendOption) error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	if s.closed {
-		return fmt.Errorf("sender is closed")
+		return errors.New("sender is closed")
 	}
 
 	providerType := message.ProviderType()
@@ -85,7 +98,7 @@ func (s *Sender) Send(ctx context.Context, message core.Message, opts ...core.Se
 	return provider.Send(ctx, message, opts...)
 }
 
-// GetProvider retrieves a provider by type
+// GetProvider retrieves a provider by type.
 func (s *Sender) GetProvider(providerType core.ProviderType) (*core.ProviderDecorator, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -106,7 +119,7 @@ func (s *Sender) SendVia(ctx context.Context, channel string, message core.Messa
 	return s.Send(ctx, message, opts...)
 }
 
-// SetRateLimiter sets the rate limiter for the sender
+// SetRateLimiter sets the rate limiter for the sender.
 func (s *Sender) SetRateLimiter(rateLimiter core.RateLimiter) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -114,7 +127,7 @@ func (s *Sender) SetRateLimiter(rateLimiter core.RateLimiter) {
 	s.middleware.RateLimiter = rateLimiter
 }
 
-// SetRetryPolicy sets the retry policy for the sender
+// SetRetryPolicy sets the retry policy for the sender.
 func (s *Sender) SetRetryPolicy(retryPolicy *core.RetryPolicy) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -129,7 +142,7 @@ func (s *Sender) SetRetryPolicy(retryPolicy *core.RetryPolicy) error {
 	return nil
 }
 
-// SetQueue sets the queue for the sender
+// SetQueue sets the queue for the sender.
 func (s *Sender) SetQueue(queue core.Queue) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -137,7 +150,7 @@ func (s *Sender) SetQueue(queue core.Queue) {
 	s.middleware.Queue = queue
 }
 
-// SetCircuitBreaker sets the circuit breaker for the sender
+// SetCircuitBreaker sets the circuit breaker for the sender.
 func (s *Sender) SetCircuitBreaker(circuitBreaker core.CircuitBreaker) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -145,7 +158,7 @@ func (s *Sender) SetCircuitBreaker(circuitBreaker core.CircuitBreaker) {
 	s.middleware.CircuitBreaker = circuitBreaker
 }
 
-// SetMetrics sets the metrics collector for the sender
+// SetMetrics sets the metrics collector for the sender.
 func (s *Sender) SetMetrics(metrics core.MetricsCollector) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -161,7 +174,7 @@ func (s *Sender) SetDefaultHTTPClient(client *http.Client) {
 	s.defaultHTTPClient = client
 }
 
-// HealthCheck performs a health check on the sender and all its components
+// HealthCheck performs a health check on the sender and all its components.
 func (s *Sender) HealthCheck(ctx context.Context) *core.SenderHealth {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -216,7 +229,16 @@ func (s *Sender) HealthCheck(ctx context.Context) *core.SenderHealth {
 	return health
 }
 
-// Close gracefully shuts down the sender and all its components
+// closeComponent safely closes a component and appends any error to errs.
+func closeComponent(closer interface{ Close() error }, errs *[]error, desc string) {
+	if closer != nil {
+		if err := closer.Close(); err != nil {
+			*errs = append(*errs, fmt.Errorf("failed to close %s: %w", desc, err))
+		}
+	}
+}
+
+// Close gracefully shuts down the sender and all its components.
 func (s *Sender) Close() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -238,21 +260,9 @@ func (s *Sender) Close() error {
 
 	// Close middleware components
 	if s.middleware != nil {
-		if s.middleware.RateLimiter != nil {
-			if err := s.middleware.RateLimiter.Close(); err != nil {
-				errs = append(errs, fmt.Errorf("failed to close rate limiter: %w", err))
-			}
-		}
-		if s.middleware.Queue != nil {
-			if err := s.middleware.Queue.Close(); err != nil {
-				errs = append(errs, fmt.Errorf("failed to close queue: %w", err))
-			}
-		}
-		if s.middleware.CircuitBreaker != nil {
-			if err := s.middleware.CircuitBreaker.Close(); err != nil {
-				errs = append(errs, fmt.Errorf("failed to close circuit breaker: %w", err))
-			}
-		}
+		closeComponent(s.middleware.RateLimiter, &errs, "rate limiter")
+		closeComponent(s.middleware.Queue, &errs, "queue")
+		closeComponent(s.middleware.CircuitBreaker, &errs, "circuit breaker")
 	}
 
 	if len(errs) > 0 {
@@ -261,7 +271,7 @@ func (s *Sender) Close() error {
 	return nil
 }
 
-// IsClosed returns true if the sender has been closed
+// IsClosed returns true if the sender has been closed.
 func (s *Sender) IsClosed() bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

@@ -1,3 +1,4 @@
+//nolint:depguard // intentional use of math/rand for compatibility or legacy reasons
 package sms
 
 import (
@@ -35,7 +36,7 @@ import (
 //   - 语音短信支持国内单发，支持验证码和通知类型，需开通语音服务。
 // 对于目前，使用语音发送短信时，当发送验证码时，会使用 TTS 接口，当发送通知时，会使用 Voice 接口。
 
-// init automatically registers the Aliyun transformer
+// init automatically registers the Aliyun transformer.
 func init() {
 	RegisterTransformer(string(SubProviderAliyun), &aliyunTransformer{})
 }
@@ -45,15 +46,10 @@ const (
 	aliyunDefaultVoiceEndpoint = "dyvmsapi.aliyuncs.com"
 )
 
-// aliyunTransformer implements HTTPTransformer[*core.Account] for Aliyun SMS
+// aliyunTransformer implements HTTPTransformer[*core.Account] for Aliyun SMS.
 type aliyunTransformer struct{}
 
-// newAliyunTransformer creates a new Aliyun transformer
-func newAliyunTransformer() core.HTTPTransformer[*core.Account] {
-	return &aliyunTransformer{}
-}
-
-// CanTransform checks if this transformer can handle the given message
+// CanTransform checks if this transformer can handle the given message.
 func (t *aliyunTransformer) CanTransform(msg core.Message) bool {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
@@ -62,8 +58,12 @@ func (t *aliyunTransformer) CanTransform(msg core.Message) bool {
 	return smsMsg.SubProvider == string(SubProviderAliyun)
 }
 
-// Transform converts an Aliyun SMS message to HTTP request specification
-func (t *aliyunTransformer) Transform(ctx context.Context, msg core.Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+// Transform converts an Aliyun SMS message to HTTP request specification.
+func (t *aliyunTransformer) Transform(
+	_ context.Context,
+	msg core.Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
 		return nil, nil, fmt.Errorf("unsupported message type for Aliyun: %T", msg)
@@ -76,17 +76,17 @@ func (t *aliyunTransformer) Transform(ctx context.Context, msg core.Message, acc
 
 	switch smsMsg.Type {
 	case SMSText:
-		return t.transformTextMessage(ctx, smsMsg, account)
+		return t.transformTextMessage(smsMsg, account)
 	case Voice:
-		return t.transformVoiceMessage(ctx, smsMsg, account)
+		return t.transformVoiceMessage(smsMsg, account)
 	case MMS:
-		return t.transformMMSMessage(ctx, smsMsg, account)
+		return t.transformMMSMessage(smsMsg, account)
 	default:
-		return nil, nil, fmt.Errorf("unsupported message type: %s", smsMsg.Type)
+		return nil, nil, fmt.Errorf("unsupported message type: %v", smsMsg.Type)
 	}
 }
 
-// validateMessage validates the message based on its type
+// validateMessage validates the message based on its type.
 func (t *aliyunTransformer) validateMessage(msg *Message) error {
 	switch msg.Type {
 	case SMSText:
@@ -100,7 +100,7 @@ func (t *aliyunTransformer) validateMessage(msg *Message) error {
 	}
 }
 
-// validateTextMessage validates text message options
+// validateTextMessage validates text message options.
 func (t *aliyunTransformer) validateTextMessage(msg *Message) error {
 	// Check for voice-only options
 	voiceOnlyOptions := []string{"Volume", "PlayTimes", "CalledShowNumber", "Speed", "OutId"}
@@ -112,18 +112,18 @@ func (t *aliyunTransformer) validateTextMessage(msg *Message) error {
 
 	// Validate template code format if provided
 	if msg.TemplateID != "" && !strings.HasPrefix(msg.TemplateID, "SMS_") {
-		return fmt.Errorf("aliyun template code must start with 'SMS_'")
+		return errors.New("aliyun template code must start with 'SMS_'")
 	}
 
 	// Check required fields for domestic SMS
 	if msg.SignName == "" && msg.IsDomestic() {
-		return fmt.Errorf("aliyun sign name is required for domestic SMS")
+		return errors.New("aliyun sign name is required for domestic SMS")
 	}
 
 	return nil
 }
 
-// validateVoiceMessage validates voice message options
+// validateVoiceMessage validates voice message options.
 func (t *aliyunTransformer) validateVoiceMessage(msg *Message) error {
 	// Check for text-only options
 	textOnlyOptions := []string{"SignName"}
@@ -135,13 +135,13 @@ func (t *aliyunTransformer) validateVoiceMessage(msg *Message) error {
 
 	// Validate template code format if provided
 	if msg.TemplateID != "" && !strings.HasPrefix(msg.TemplateID, "TTS_") {
-		return fmt.Errorf("Aliyun voice template code must start with 'TTS_'")
+		return errors.New("Aliyun voice template code must start with 'TTS_'")
 	}
 
 	return nil
 }
 
-// validateMMSMessage validates MMS message options
+// validateMMSMessage validates MMS message options.
 func (t *aliyunTransformer) validateMMSMessage(msg *Message) error {
 	// Check for voice-only options
 	voiceOnlyOptions := []string{"Volume", "PlayTimes", "CalledShowNumber", "Speed"}
@@ -161,12 +161,12 @@ func (t *aliyunTransformer) validateMMSMessage(msg *Message) error {
 
 	// Validate template code format if provided
 	if msg.TemplateID != "" && !strings.HasPrefix(msg.TemplateID, "CARD_") {
-		return fmt.Errorf("Aliyun MMS template code must start with 'CARD_'")
+		return errors.New("Aliyun MMS template code must start with 'CARD_'")
 	}
 
 	// Check required fields for MMS
 	if msg.SignName == "" {
-		return fmt.Errorf("sign name is required for Aliyun MMS messages")
+		return errors.New("sign name is required for Aliyun MMS messages")
 	}
 
 	// Validate fallback type if provided
@@ -190,19 +190,28 @@ func (t *aliyunTransformer) validateMMSMessage(msg *Message) error {
 	return nil
 }
 
-// transformTextMessage transforms text SMS message to HTTP request
-func (t *aliyunTransformer) transformTextMessage(ctx context.Context, msg *Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
-	return t.transformSMS(ctx, msg, account)
+// transformTextMessage transforms text SMS message to HTTP request.
+func (t *aliyunTransformer) transformTextMessage(
+	msg *Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+	return t.transformSMS(msg, account)
 }
 
-// transformVoiceMessage transforms voice message to HTTP request
-func (t *aliyunTransformer) transformVoiceMessage(ctx context.Context, msg *Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
-	return t.transformVoice(ctx, msg, account)
+// transformVoiceMessage transforms voice message to HTTP request.
+func (t *aliyunTransformer) transformVoiceMessage(
+	msg *Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+	return t.transformVoice(msg, account)
 }
 
-// transformMMSMessage transforms MMS message to HTTP request
-func (t *aliyunTransformer) transformMMSMessage(ctx context.Context, msg *Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
-	return t.transformCardSMS(ctx, msg, account)
+// transformMMSMessage transforms MMS message to HTTP request.
+func (t *aliyunTransformer) transformMMSMessage(
+	msg *Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+	return t.transformCardSMS(msg, account)
 }
 
 // https://help.aliyun.com/zh/sdk/product-overview/v3-request-structure-and-signature
@@ -222,8 +231,8 @@ type aliyunSignParams struct {
 // https://help.aliyun.com/zh/sdk/product-overview/v3-request-structure-and-signature
 func (t *aliyunTransformer) signAliyunRequest(params aliyunSignParams) map[string]string {
 	const algorithm = "ACS3-HMAC-SHA256"
-	// 生成通用请求头
-	xAcsSignatureNonce := fmt.Sprintf("%x", rand.New(rand.NewSource(time.Now().UnixNano())).Int63())
+	//nolint:gosec // Reason: not used for security, only for client nonce generation
+	xAcsSignatureNonce := fmt.Sprintf("%x", rand.Int63())
 	xAcsDate := time.Now().UTC().Format(time.RFC3339)
 	// 计算请求体哈希
 	var hashedRequestPayload string
@@ -293,7 +302,10 @@ func (t *aliyunTransformer) signAliyunRequest(params aliyunSignParams) map[strin
 // transformSMS transforms SMS message to HTTP request
 // SMS API(国内/国外/单发/群发): https://help.aliyun.com/zh/sms/developer-reference/api-dysmsapi-2017-05-25-sendsms
 // 短信模板即具体发送的短信内容，模板类型支持验证码、通知短信和推广短信。模板由模板变量和模板内容构成，您需要遵守模板内容规范和变量规范。
-func (t *aliyunTransformer) transformSMS(_ context.Context, msg *Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+func (t *aliyunTransformer) transformSMS(
+	msg *Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	endpoint := t.getEndpoint(msg.IsIntl(), account)
 	phones := make([]string, len(msg.Mobiles))
 	for i, mobile := range msg.Mobiles {
@@ -337,7 +349,6 @@ func (t *aliyunTransformer) transformSMS(_ context.Context, msg *Message, accoun
 		}),
 		QueryParams: params,
 		BodyType:    "raw",
-		Timeout:     30 * time.Second,
 	}
 
 	return reqSpec, t.handleAliyunResponse, nil
@@ -346,14 +357,20 @@ func (t *aliyunTransformer) transformSMS(_ context.Context, msg *Message, accoun
 // transformCardSMS transforms card SMS message to HTTP request
 //
 //   - 文档地址: https://help.aliyun.com/zh/sms/developer-reference/api-dysmsapi-2017-05-25-sendcardsms
-func (t *aliyunTransformer) transformCardSMS(ctx context.Context, msg *Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+func (t *aliyunTransformer) transformCardSMS(
+	_ *Message,
+	_ *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	return nil, nil, errors.New("not implemented")
 }
 
 // transformVoice transforms voice message to HTTP request
 //   - 语音验证码API: https://help.aliyun.com/zh/vms/developer-reference/api-dyvmsapi-2017-05-25-singlecallbytts
 //   - 语音通知API: https://help.aliyun.com/zh/vms/developer-reference/api-dyvmsapi-2017-05-25-singlecallbyvoice
-func (t *aliyunTransformer) transformVoice(_ context.Context, msg *Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+func (t *aliyunTransformer) transformVoice(
+	msg *Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	// 只支持国内
 	if msg.IsIntl() {
 		return nil, nil, NewUnsupportedInternationalError(string(ProviderTypeAliyun), "voice call")
@@ -418,22 +435,24 @@ func (t *aliyunTransformer) transformVoice(_ context.Context, msg *Message, acco
 		}),
 		QueryParams: params,
 		BodyType:    "raw",
-		Timeout:     30 * time.Second,
 	}
 
 	return reqSpec, t.handleAliyunResponse, nil
 }
 
-// getEndpoint returns the appropriate endpoint based on international flag and account
-func (t *aliyunTransformer) getEndpoint(isIntl bool, _ *core.Account) string {
+// getEndpoint returns the appropriate endpoint based on international flag and account.
+func (t *aliyunTransformer) getEndpoint(isIntl bool, account *core.Account) string {
 	// Use default endpoints
-	if isIntl {
-		return aliyunDefaultSmsEndpoint // Use same endpoint for international
+	if isIntl && account.IntlEndpoint != "" {
+		return account.IntlEndpoint
+	}
+	if account.Endpoint != "" {
+		return account.Endpoint
 	}
 	return aliyunDefaultSmsEndpoint
 }
 
-// handleAliyunResponse handles Aliyun API response
+// handleAliyunResponse handles Aliyun API response.
 func (t *aliyunTransformer) handleAliyunResponse(statusCode int, body []byte) error {
 	if statusCode < 200 || statusCode >= 300 {
 		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
@@ -449,13 +468,12 @@ func (t *aliyunTransformer) handleAliyunResponse(statusCode int, body []byte) er
 		if code == "OK" {
 			return nil
 		}
-		message := "unknown error"
-		if msg, ok := response["Message"].(string); ok {
-			message = msg
+		if msg, okMsg := response["Message"].(string); okMsg {
+			return errors.New(msg)
 		}
-		return &SMSError{
+		return &Error{
 			Code:     code,
-			Message:  message,
+			Message:  "unknown error",
 			Provider: string(SubProviderAliyun),
 		}
 	}
@@ -477,7 +495,7 @@ func (t *aliyunTransformer) formatPhoneNumber(mobile string, regionCode int) str
 	return fmt.Sprintf("%d%s", regionCode, mobile)
 }
 
-// percentCode encodes strings according to Aliyun's requirements
+// percentCode encodes strings according to Aliyun's requirements.
 func (t *aliyunTransformer) percentCode(str string) string {
 	// 阿里云要求: 空格->%20, *->%2A, ~不变, +->%20
 	encoded := url.QueryEscape(str)

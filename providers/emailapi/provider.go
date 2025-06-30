@@ -18,20 +18,24 @@ type Provider struct {
 
 var _ core.Provider = (*Provider)(nil)
 
-// transformerRegistry global transformer registry
-var (
-	transformerRegistry = make(map[string]core.HTTPTransformer[*core.Account])
-	registryMutex       sync.RWMutex
-)
+// transformerRegistry global transformer registry.
+//
+//nolint:gochecknoglobals // Reason: transformerRegistry is a global registry for emailapi transformers
+var transformerRegistry = make(map[string]core.HTTPTransformer[*core.Account])
 
-// RegisterTransformer registers transformer to global registry
+// registryMutex global mutex for transformerRegistry.
+//
+//nolint:gochecknoglobals // Reason: registryMutex is a global mutex for transformerRegistry
+var registryMutex sync.RWMutex
+
+// RegisterTransformer registers transformer to global registry.
 func RegisterTransformer(subProvider string, transformer core.HTTPTransformer[*core.Account]) {
 	registryMutex.Lock()
 	defer registryMutex.Unlock()
 	transformerRegistry[subProvider] = transformer
 }
 
-// GetTransformer gets transformer from registry
+// GetTransformer gets transformer from registry.
 func GetTransformer(subProvider string) (core.HTTPTransformer[*core.Account], bool) {
 	registryMutex.RLock()
 	defer registryMutex.RUnlock()
@@ -39,16 +43,20 @@ func GetTransformer(subProvider string) (core.HTTPTransformer[*core.Account], bo
 	return transformer, exists
 }
 
-// emailAPITransformer implements core.HTTPTransformer[*core.Account], selects specific transformer based on SubProvider
+// emailAPITransformer implements core.HTTPTransformer[*core.Account], selects specific transformer based on SubProvider.
 type emailAPITransformer struct{}
 
-// CanTransform checks if this is an EmailAPI message
+// CanTransform checks if this is an EmailAPI message.
 func (t *emailAPITransformer) CanTransform(msg core.Message) bool {
 	return msg.ProviderType() == core.ProviderTypeEmailAPI
 }
 
-// Transform gets specific transformer from registry based on SubProvider for conversion
-func (t *emailAPITransformer) Transform(ctx context.Context, msg core.Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+// Transform gets specific transformer from registry based on SubProvider for conversion.
+func (t *emailAPITransformer) Transform(
+	ctx context.Context,
+	msg core.Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	emailMsg, ok := msg.(*Message)
 	if !ok {
 		return nil, nil, fmt.Errorf("unsupported message type for emailapi transformer: %T", msg)
@@ -92,7 +100,7 @@ func New(config Config) (*Provider, error) {
 	}
 
 	// Create strategy
-	strategy := utils.GetStrategy(core.StrategyType(config.Strategy))
+	strategy := utils.GetStrategy(config.Strategy)
 
 	// Create generic provider
 	httpProvider := providers.NewHTTPProvider(

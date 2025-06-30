@@ -6,37 +6,38 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"strconv"
 	"strings"
 	"syscall"
 )
 
-// RetryableError interface for retryable errors
+// RetryableError interface for retryable errors.
 type RetryableError interface {
 	error
 	IsRetryable() bool
 }
 
-// ParamError represents a parameter error type
+// ParamError represents a parameter error type.
 type ParamError struct {
 	message string
 }
 
-// NewParamError creates a new ParamError
+// NewParamError creates a new ParamError.
 func NewParamError(message string) *ParamError {
 	return &ParamError{message: message}
 }
 
-// Error implements the Error method of the error interface
+// Error implements the Error method of the error interface.
 func (e *ParamError) Error() string {
 	return fmt.Sprintf("parameter error: %s", e.message)
 }
 
-// IsRetryable implements the RetryableError interface, parameter errors are not retryable
+// IsRetryable implements the RetryableError interface, parameter errors are not retryable.
 func (e *ParamError) IsRetryable() bool {
 	return false
 }
 
-// NetworkError represents a network error
+// NetworkError represents a network error.
 type NetworkError struct {
 	Err error
 }
@@ -45,11 +46,12 @@ func (e NetworkError) Error() string {
 	return fmt.Sprintf("network error: %v", e.Err)
 }
 
+// IsRetryable returns whether the network error is retryable.
 func (e NetworkError) IsRetryable() bool {
 	return true
 }
 
-// TimeoutError represents a timeout error
+// TimeoutError represents a timeout error.
 type TimeoutError struct {
 	Err error
 }
@@ -58,11 +60,12 @@ func (e TimeoutError) Error() string {
 	return fmt.Sprintf("timeout error: %v", e.Err)
 }
 
+// IsRetryable returns whether the timeout error is retryable.
 func (e TimeoutError) IsRetryable() bool {
 	return true
 }
 
-// ValidationError represents a validation error (non-retryable)
+// ValidationError represents a validation error (non-retryable).
 type ValidationError struct {
 	Err error
 }
@@ -71,11 +74,12 @@ func (e ValidationError) Error() string {
 	return fmt.Sprintf("validation error: %v", e.Err)
 }
 
+// IsRetryable returns whether the validation error is retryable.
 func (e ValidationError) IsRetryable() bool {
 	return false
 }
 
-// AuthenticationError represents an authentication error (non-retryable)
+// AuthenticationError represents an authentication error (non-retryable).
 type AuthenticationError struct {
 	Err error
 }
@@ -84,6 +88,7 @@ func (e AuthenticationError) Error() string {
 	return fmt.Sprintf("authentication error: %v", e.Err)
 }
 
+// IsRetryable returns whether the authentication error is retryable.
 func (e AuthenticationError) IsRetryable() bool {
 	return false
 }
@@ -107,7 +112,7 @@ func NewDefaultErrorClassifier() ErrorClassifier {
 	return &defaultErrorClassifier{}
 }
 
-// IsRetryableError determines if an error is retryable
+// IsRetryableError determines if an error is retryable.
 func (c *defaultErrorClassifier) IsRetryableError(err error) bool {
 	if err == nil {
 		return false
@@ -157,7 +162,7 @@ func (c *defaultErrorClassifier) IsRetryableError(err error) bool {
 	return false
 }
 
-// isNetworkError checks if the error is a network error
+// isNetworkError checks if the error is a network error.
 func (c *defaultErrorClassifier) isNetworkError(err error) bool {
 	var netErr net.Error
 	if errors.As(err, &netErr) {
@@ -201,7 +206,7 @@ func (c *defaultErrorClassifier) isNetworkError(err error) bool {
 	return false
 }
 
-// isTimeoutError checks if the error is a timeout error
+// isTimeoutError checks if the error is a timeout error.
 func (c *defaultErrorClassifier) isTimeoutError(err error) bool {
 	var netErr net.Error
 	if errors.As(err, &netErr) && netErr.Timeout() {
@@ -212,11 +217,12 @@ func (c *defaultErrorClassifier) isTimeoutError(err error) bool {
 	return strings.Contains(errMsg, "timeout") || strings.Contains(errMsg, "deadline exceeded")
 }
 
-// isSystemCallError checks if the error is a system call error
+// isSystemCallError checks if the error is a system call error.
 func (c *defaultErrorClassifier) isSystemCallError(err error) bool {
 	var syscallErr syscall.Errno
 	if errors.As(err, &syscallErr) {
 		// Retry only specific system call errors
+		//nolint:exhaustive // intentionally not all cases handled, default covers the rest
 		switch syscallErr {
 		case syscall.ECONNREFUSED, syscall.ECONNRESET, syscall.EHOSTUNREACH, syscall.ENETUNREACH:
 			return true
@@ -227,19 +233,19 @@ func (c *defaultErrorClassifier) isSystemCallError(err error) bool {
 	return false
 }
 
-// isHTTP5xxError checks if the error is an HTTP 5xx error
+// isHTTP5xxError checks if the error is an HTTP 5xx error.
 func (c *defaultErrorClassifier) isHTTP5xxError(err error) bool {
 	errMsg := err.Error()
 	// Check for 5xx status codes
 	for code := 500; code < 600; code++ {
-		if strings.Contains(errMsg, fmt.Sprintf("%d", code)) {
+		if strings.Contains(errMsg, strconv.Itoa(code)) {
 			return true
 		}
 	}
 	return false
 }
 
-// isTypeAssertionError checks if the error is a type assertion error
+// isTypeAssertionError checks if the error is a type assertion error.
 func (c *defaultErrorClassifier) isTypeAssertionError(err error) bool {
 	errMsg := strings.ToLower(err.Error())
 	typeAssertionKeywords := []string{
@@ -257,7 +263,7 @@ func (c *defaultErrorClassifier) isTypeAssertionError(err error) bool {
 	return false
 }
 
-// isJSONError checks if the error is a JSON error
+// isJSONError checks if the error is a JSON error.
 func (c *defaultErrorClassifier) isJSONError(err error) bool {
 	errMsg := strings.ToLower(err.Error())
 	jsonKeywords := []string{
@@ -276,90 +282,79 @@ func (c *defaultErrorClassifier) isJSONError(err error) bool {
 	return false
 }
 
-// ErrorCode represents a specific error code for sender errors
+// ErrorCode represents a specific error code for sender errors.
 type ErrorCode int
 
 const (
-	// Unknown error (0)
+	// ErrCodeUnknown represents unknown error (0).
 	ErrCodeUnknown ErrorCode = iota
 
-	// Configuration errors (1000-1999)
+	// ErrCodeInvalidConfig represents configuration errors (1000-1999).
 	ErrCodeInvalidConfig ErrorCode = 1000 + iota
 	ErrCodeProviderNotConfigured
 	ErrCodeMissingRequiredField
 	ErrCodeInvalidProviderType
 
-	// Provider errors (2000-2999)
+	// ErrCodeProviderUnavailable represents provider errors (2000-2999).
 	ErrCodeProviderUnavailable ErrorCode = 2000 + iota
 	ErrCodeProviderSendFailed
 	ErrCodeProviderTimeout
 	ErrCodeProviderRateLimited
 
-	// Queue errors (3000-3999)
+	// ErrCodeQueueFull represents queue errors (3000-3999).
 	ErrCodeQueueFull ErrorCode = 3000 + iota
 	ErrCodeQueueTimeout
 	ErrCodeQueueSerializationFailed
 	ErrCodeQueueDeserializationFailed
 
-	// Retry errors (4000-4999)
+	// ErrCodeMaxRetriesExceeded represents retry errors (4000-4999).
 	ErrCodeMaxRetriesExceeded ErrorCode = 4000 + iota
 	ErrCodeRetryPolicyInvalid
 	ErrCodeRetryFilterError
 
-	// Circuit breaker errors (5000-5999)
+	// ErrCodeCircuitBreakerOpen represents circuit breaker errors (5000-5999).
 	ErrCodeCircuitBreakerOpen ErrorCode = 5000 + iota
 	ErrCodeCircuitBreakerTimeout
 
-	// Rate limiter errors (6000-6999)
+	// ErrCodeRateLimitExceeded represents rate limiter errors (6000-6999).
 	ErrCodeRateLimitExceeded ErrorCode = 6000 + iota
 	ErrCodeRateLimiterInvalid
 
-	// Metrics errors (7000-7999)
+	// ErrCodeMetricsCollectionFailed represents metrics errors (7000-7999).
 	ErrCodeMetricsCollectionFailed ErrorCode = 7000 + iota
 
-	// General errors (9000-9999)
+	// ErrCodeInternal represents general errors (9000-9999).
 	ErrCodeInternal ErrorCode = 9000 + iota
 	ErrCodeContextCancelled
 	ErrCodeTimeout
 	ErrCodeValidationFailed
 )
 
-// ErrorCodeMap provides human-readable descriptions for error codes
-var ErrorCodeMap = map[ErrorCode]string{
-	ErrCodeUnknown:                    "unknown error",
-	ErrCodeInvalidConfig:              "invalid configuration",
-	ErrCodeProviderNotConfigured:      "provider not configured",
-	ErrCodeMissingRequiredField:       "missing required field",
-	ErrCodeInvalidProviderType:        "invalid provider type",
-	ErrCodeProviderUnavailable:        "provider unavailable",
-	ErrCodeProviderSendFailed:         "provider send failed",
-	ErrCodeProviderTimeout:            "provider timeout",
-	ErrCodeProviderRateLimited:        "provider rate limited",
-	ErrCodeQueueFull:                  "queue is full",
-	ErrCodeQueueTimeout:               "queue timeout",
-	ErrCodeQueueSerializationFailed:   "queue serialization failed",
-	ErrCodeQueueDeserializationFailed: "queue deserialization failed",
-	ErrCodeMaxRetriesExceeded:         "max retries exceeded",
-	ErrCodeRetryPolicyInvalid:         "retry policy invalid",
-	ErrCodeRetryFilterError:           "retry filter error",
-	ErrCodeCircuitBreakerOpen:         "circuit breaker open",
-	ErrCodeCircuitBreakerTimeout:      "circuit breaker timeout",
-	ErrCodeRateLimitExceeded:          "rate limit exceeded",
-	ErrCodeRateLimiterInvalid:         "rate limiter invalid",
-	ErrCodeMetricsCollectionFailed:    "metrics collection failed",
-	ErrCodeInternal:                   "internal error",
-	ErrCodeContextCancelled:           "context cancelled",
-	ErrCodeTimeout:                    "timeout",
-	ErrCodeValidationFailed:           "validation failed",
-}
-
-// SenderError represents a structured error with code, message, and cause
+// SenderError represents a structured error with code, message, and cause.
 type SenderError struct {
 	Code    ErrorCode `json:"code"`
 	Message string    `json:"message"`
 	Cause   error     `json:"cause,omitempty"`
 }
 
+// NewSenderError creates a new SenderError with the given code, message, and cause.
+func NewSenderError(code ErrorCode, message string, cause error) *SenderError {
+	return &SenderError{
+		Code:    code,
+		Message: message,
+		Cause:   cause,
+	}
+}
+
+// NewSenderErrorf creates a new SenderError with the given code and formatted message.
+func NewSenderErrorf(code ErrorCode, format string, args ...interface{}) *SenderError {
+	return &SenderError{
+		Code:    code,
+		Message: fmt.Sprintf(format, args...),
+	}
+}
+
+// Error returns the error message.
 func (e *SenderError) Error() string {
 	if e.Cause != nil {
 		return fmt.Sprintf("[%d] %s: %v", e.Code, e.Message, e.Cause)
@@ -371,6 +366,7 @@ func (e *SenderError) Unwrap() error {
 	return e.Cause
 }
 
+// Is checks if the error matches the target error.
 func (e *SenderError) Is(target error) bool {
 	if targetErr, ok := target.(*SenderError); ok {
 		return e.Code == targetErr.Code
@@ -378,32 +374,17 @@ func (e *SenderError) Is(target error) bool {
 	return false
 }
 
-// NewSenderError creates a new SenderError
-func NewSenderError(code ErrorCode, message string, cause error) *SenderError {
-	return &SenderError{
-		Code:    code,
-		Message: message,
-		Cause:   cause,
-	}
-}
-
-// NewSenderErrorf creates a new SenderError with formatted message
-func NewSenderErrorf(code ErrorCode, format string, args ...interface{}) *SenderError {
-	return &SenderError{
-		Code:    code,
-		Message: fmt.Sprintf(format, args...),
-	}
-}
-
-// IsSenderError checks if an error is a SenderError
+// IsSenderError checks if an error is a SenderError.
 func IsSenderError(err error) bool {
-	_, ok := err.(*SenderError)
+	senderError := &SenderError{}
+	ok := errors.As(err, &senderError)
 	return ok
 }
 
-// GetSenderErrorCode returns the error code if the error is a SenderError
+// GetSenderErrorCode returns the error code if the error is a SenderError.
 func GetSenderErrorCode(err error) ErrorCode {
-	if senderErr, ok := err.(*SenderError); ok {
+	senderErr := &SenderError{}
+	if errors.As(err, &senderErr) {
 		return senderErr.Code
 	}
 	return ErrCodeUnknown

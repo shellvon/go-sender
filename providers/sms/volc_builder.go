@@ -17,8 +17,8 @@ package sms
 //	         []string{"***REMOVED***"},
 //	         "您的验证码是1234",
 //	         "签名",
-//	         WithVolcExtendCode("12345"),
-//	         WithVolcCallbackUrl("https://callback.example.com"),
+//	         WithExtend("12345"),
+//	         WithCallbackURL("https://callback.example.com"),
 //	      )
 func NewVolcTextMessage(mobiles []string, content, sign string, opts ...MessageOption) *Message {
 	baseOpts := []MessageOption{
@@ -28,16 +28,6 @@ func NewVolcTextMessage(mobiles []string, content, sign string, opts ...MessageO
 		WithContent(content),
 		WithSignName(sign),
 	}
-	allOpts := append(baseOpts, opts...)
-	return NewMessageWithOptions(allOpts...)
-}
-
-// WithVolcExtendCode 设置扩展码
-func WithVolcExtendCode(extend string) MessageOption {
-	return WithExtra("extend", extend)
-}
-
-// WithVolcCallbackUrl 设置回调地址
-func WithVolcCallbackUrl(url string) MessageOption {
-	return WithExtra("callbackUrl", url)
+	baseOpts = append(baseOpts, opts...)
+	return NewMessageWithOptions(baseOpts...)
 }

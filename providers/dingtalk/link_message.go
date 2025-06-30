@@ -20,7 +20,26 @@ type Link struct {
 // Reference: https://open.dingtalk.com/document/robots/custom-robot-access
 type LinkMessage struct {
 	BaseMessage
+
 	Link Link `json:"link"`
+}
+
+// NewLinkMessage creates a new LinkMessage with required content and applies optional configurations.
+func NewLinkMessage(title, text, messageURL string, opts ...LinkMessageOption) *LinkMessage {
+	msg := &LinkMessage{
+		BaseMessage: BaseMessage{
+			MsgType: TypeLink,
+		},
+		Link: Link{
+			Title:      title,
+			Text:       text,
+			MessageURL: messageURL,
+		},
+	}
+	for _, opt := range opts {
+		opt(msg)
+	}
+	return msg
 }
 
 // Validate validates the LinkMessage to ensure it meets DingTalk API requirements.
@@ -46,22 +65,4 @@ func WithLinkPicURL(picURL string) LinkMessageOption {
 	return func(m *LinkMessage) {
 		m.Link.PicURL = picURL
 	}
-}
-
-// NewLinkMessage creates a new LinkMessage with required content and applies optional configurations.
-func NewLinkMessage(title, text, messageURL string, opts ...LinkMessageOption) *LinkMessage {
-	msg := &LinkMessage{
-		BaseMessage: BaseMessage{
-			MsgType: TypeLink,
-		},
-		Link: Link{
-			Title:      title,
-			Text:       text,
-			MessageURL: messageURL,
-		},
-	}
-	for _, opt := range opts {
-		opt(msg)
-	}
-	return msg
 }

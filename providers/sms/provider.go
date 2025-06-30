@@ -17,20 +17,24 @@ type Provider struct {
 
 var _ core.Provider = (*Provider)(nil)
 
-// transformerRegistry 全局transformer注册表
-var (
-	transformerRegistry = make(map[string]core.HTTPTransformer[*core.Account])
-	registryMutex       sync.RWMutex
-)
+// transformerRegistry global transformer registry.
+//
+//nolint:gochecknoglobals // Reason: transformerRegistry is a global registry for sms transformers
+var transformerRegistry = make(map[string]core.HTTPTransformer[*core.Account])
 
-// RegisterTransformer 注册transformer到全局注册表
+// registryMutex global mutex for transformerRegistry.
+//
+//nolint:gochecknoglobals // Reason: registryMutex is a global mutex for transformerRegistry
+var registryMutex sync.RWMutex
+
+// RegisterTransformer 注册transformer到全局注册表.
 func RegisterTransformer(subProvider string, transformer core.HTTPTransformer[*core.Account]) {
 	registryMutex.Lock()
 	defer registryMutex.Unlock()
 	transformerRegistry[subProvider] = transformer
 }
 
-// GetTransformer 从注册表获取transformer
+// GetTransformer 从注册表获取transformer.
 func GetTransformer(subProvider string) (core.HTTPTransformer[*core.Account], bool) {
 	registryMutex.RLock()
 	defer registryMutex.RUnlock()
@@ -38,16 +42,20 @@ func GetTransformer(subProvider string) (core.HTTPTransformer[*core.Account], bo
 	return transformer, exists
 }
 
-// smsTransformer 实现 core.HTTPTransformer[*core.Account]，根据SubProvider选择具体的transformer
+// smsTransformer 实现 core.HTTPTransformer[*core.Account]，根据SubProvider选择具体的transformer.
 type smsTransformer struct{}
 
-// CanTransform 判断是否为 SMS 消息
+// CanTransform 判断是否为 SMS 消息.
 func (t *smsTransformer) CanTransform(msg core.Message) bool {
 	return msg.ProviderType() == core.ProviderTypeSMS
 }
 
-// Transform 根据SubProvider从注册表获取具体的transformer进行转换
-func (t *smsTransformer) Transform(ctx context.Context, msg core.Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+// Transform 根据SubProvider从注册表获取具体的transformer进行转换.
+func (t *smsTransformer) Transform(
+	ctx context.Context,
+	msg core.Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
 		return nil, nil, fmt.Errorf("unsupported message type for sms transformer: %T", msg)
@@ -62,7 +70,7 @@ func (t *smsTransformer) Transform(ctx context.Context, msg core.Message, accoun
 	return transformer.Transform(ctx, msg, account)
 }
 
-// New creates a new SMS provider instance
+// New creates a new SMS provider instance.
 func New(config Config) (*Provider, error) {
 	if !config.IsConfigured() {
 		return nil, errors.New("SMS provider is not configured or is disabled")
@@ -80,7 +88,7 @@ func New(config Config) (*Provider, error) {
 			Secret:       p.AppSecret,
 			From:         p.Channel,  // 通道号/签名
 			Webhook:      p.Callback, // 回调地址
-			Type:         string(p.Type),
+			Type:         p.Type,
 		}
 	}
 

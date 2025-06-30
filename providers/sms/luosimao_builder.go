@@ -16,7 +16,8 @@ package sms
 //	msg := NewLuosimaoTextMessage(
 //	         []string{"***REMOVED***"},
 //	         "您的验证码是1234",
-//	         WithLuosimaoCallbackUrl("https://callback.example.com"),
+//	         WithSignName("您的品牌"),
+//	         WithCallbackURL("https://callback.example.com"),
 //	      )
 func NewLuosimaoTextMessage(mobiles []string, content string, opts ...MessageOption) *Message {
 	baseOpts := []MessageOption{
@@ -25,8 +26,8 @@ func NewLuosimaoTextMessage(mobiles []string, content string, opts ...MessageOpt
 		WithMobiles(mobiles),
 		WithContent(content),
 	}
-	allOpts := append(baseOpts, opts...)
-	return NewMessageWithOptions(allOpts...)
+	baseOpts = append(baseOpts, opts...)
+	return NewMessageWithOptions(baseOpts...)
 }
 
 // NewLuosimaoVoiceMessage 创建螺丝帽语音验证码消息
@@ -47,26 +48,6 @@ func NewLuosimaoVoiceMessage(mobile string, code string, opts ...MessageOption) 
 		WithMobiles([]string{mobile}),
 		WithContent(code),
 	}
-	allOpts := append(baseOpts, opts...)
-	return NewMessageWithOptions(allOpts...)
-}
-
-// WithLuosimaoSignName 设置短信签名（仅文本短信有效，语音短信不支持签名）
-//
-// 螺丝帽短信签名需放在内容前部，如：【签名】内容，亦可以直接通过指定Content字段，如：【签名】内容，然后signName字段为空
-// 示例：WithLuosimaoSignName("您的品牌")
-func WithLuosimaoSignName(sign string) MessageOption {
-	return func(m *Message) {
-		m.SignName = sign
-	}
-}
-
-// WithLuosimaoSendTime 设置批量短信定时发送时间（仅收件人>1时有效）
-//
-// 格式：2025-06-27 10:00:00
-// 批量短信API文档: https://luosimao.com/docs/api#send_batch
-//
-// 示例：WithLuosimaoSendTime("2025-06-27 10:00:00")
-func WithLuosimaoSendTime(sendTime string) MessageOption {
-	return WithExtra("time", sendTime)
+	baseOpts = append(baseOpts, opts...)
+	return NewMessageWithOptions(baseOpts...)
 }

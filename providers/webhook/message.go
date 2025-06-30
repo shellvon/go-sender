@@ -8,9 +8,10 @@ import (
 	"github.com/shellvon/go-sender/core"
 )
 
-// Message represents a webhook message
+// Message represents a webhook message.
 type Message struct {
 	core.DefaultMessage
+
 	Body        []byte            `json:"body"`                   // Request body
 	Headers     map[string]string `json:"headers,omitempty"`      // Additional headers to send with the request
 	Method      string            `json:"method,omitempty"`       // HTTP method (overrides endpoint method)
@@ -18,7 +19,7 @@ type Message struct {
 	QueryParams map[string]string `json:"query_params,omitempty"` // Query parameters to add to URL
 }
 
-// NewMessage creates a new webhook message
+// NewMessage creates a new webhook message.
 func NewMessage(body []byte, opts ...MessageOption) *Message {
 	msg := &Message{
 		Body: body,
@@ -29,10 +30,10 @@ func NewMessage(body []byte, opts ...MessageOption) *Message {
 	return msg
 }
 
-// MessageOption is a function option for webhook messages
+// MessageOption is a function option for webhook messages.
 type MessageOption func(*Message)
 
-// WithHeaders adds headers to the webhook message
+// WithHeaders adds headers to the webhook message.
 func WithHeaders(headers map[string]string) MessageOption {
 	return func(m *Message) {
 		if m.Headers == nil {
@@ -44,14 +45,14 @@ func WithHeaders(headers map[string]string) MessageOption {
 	}
 }
 
-// WithMethod sets the HTTP method for this message
+// WithMethod sets the HTTP method for this message.
 func WithMethod(method string) MessageOption {
 	return func(m *Message) {
 		m.Method = method
 	}
 }
 
-// WithPathParams sets path parameters for URL template replacement
+// WithPathParams sets path parameters for URL template replacement.
 func WithPathParams(params map[string]string) MessageOption {
 	return func(m *Message) {
 		if m.PathParams == nil {
@@ -63,7 +64,7 @@ func WithPathParams(params map[string]string) MessageOption {
 	}
 }
 
-// WithQueryParams sets query parameters for the request
+// WithQueryParams sets query parameters for the request.
 func WithQueryParams(params map[string]string) MessageOption {
 	return func(m *Message) {
 		if m.QueryParams == nil {
@@ -75,7 +76,7 @@ func WithQueryParams(params map[string]string) MessageOption {
 	}
 }
 
-// buildURL constructs the final URL by replacing path variables and adding query parameters
+// buildURL constructs the final URL by replacing path variables and adding query parameters.
 func (m *Message) buildURL(baseURL string) (string, error) {
 	// Replace path variables in the URL
 	urlStr := baseURL
@@ -103,12 +104,12 @@ func (m *Message) buildURL(baseURL string) (string, error) {
 	return parsedURL.String(), nil
 }
 
-// Validate validates the webhook message
+// Validate validates the webhook message.
 func (m *Message) Validate() error {
 	return nil
 }
 
-// ProviderType returns the provider type for webhook messages
+// ProviderType returns the provider type for webhook messages.
 func (m *Message) ProviderType() core.ProviderType {
 	return core.ProviderTypeWebhook
 }

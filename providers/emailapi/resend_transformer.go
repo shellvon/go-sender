@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/shellvon/go-sender/core"
 )
@@ -19,7 +18,7 @@ import (
 //
 // This provider supports batch sending (up to 50 emails per request).
 
-// init automatically registers the Resend transformer
+// init automatically registers the Resend transformer.
 func init() {
 	RegisterTransformer(string(SubProviderResend), newResendTransformer())
 }
@@ -27,17 +26,18 @@ func init() {
 const (
 	resendDefaultEndpoint = "api.resend.com"
 	resendDefaultPath     = "/emails"
+	maxRecipientsPerBatch = 50
 )
 
-// resendTransformer implements HTTPRequestTransformer for Resend
+// resendTransformer implements HTTPRequestTransformer for Resend.
 type resendTransformer struct{}
 
-// newResendTransformer creates a new Resend transformer
+// newResendTransformer creates a new Resend transformer.
 func newResendTransformer() core.HTTPTransformer[*core.Account] {
 	return &resendTransformer{}
 }
 
-// CanTransform checks if this transformer can handle the given message
+// CanTransform checks if this transformer can handle the given message.
 func (t *resendTransformer) CanTransform(msg core.Message) bool {
 	emailMsg, ok := msg.(*Message)
 	if !ok {
@@ -46,8 +46,12 @@ func (t *resendTransformer) CanTransform(msg core.Message) bool {
 	return emailMsg.SubProvider == string(SubProviderResend)
 }
 
-// Transform converts a Resend message to HTTP request specification
-func (t *resendTransformer) Transform(ctx context.Context, msg core.Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+// Transform converts a Resend message to HTTP request specification.
+func (t *resendTransformer) Transform(
+	ctx context.Context,
+	msg core.Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	emailMsg, ok := msg.(*Message)
 	if !ok {
 		return nil, nil, fmt.Errorf("unsupported message type for Resend: %T", msg)
@@ -60,12 +64,12 @@ func (t *resendTransformer) Transform(ctx context.Context, msg core.Message, acc
 	return t.transformEmail(ctx, emailMsg, account)
 }
 
-// validateMessage validates the message for Resend
+// validateMessage validates the message for Resend.
 func (t *resendTransformer) validateMessage(msg *Message) error {
 	if len(msg.To) == 0 {
 		return errors.New("to recipients cannot be empty")
 	}
-	if len(msg.To) > 50 {
+	if len(msg.To) > maxRecipientsPerBatch {
 		return errors.New("to recipients are limited to 50 recipients")
 	}
 	if msg.From == "" {
@@ -80,8 +84,12 @@ func (t *resendTransformer) validateMessage(msg *Message) error {
 	return nil
 }
 
-// transformEmail transforms email message to HTTP request
-func (t *resendTransformer) transformEmail(_ context.Context, msg *Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+// transformEmail transforms email message to HTTP request.
+func (t *resendTransformer) transformEmail(
+	_ context.Context,
+	msg *Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	// Build request parameters
 	params := map[string]interface{}{
 		"from":    msg.From,
@@ -138,25 +146,23 @@ func (t *resendTransformer) transformEmail(_ context.Context, msg *Message, acco
 		Headers:  headers,
 		Body:     bodyData,
 		BodyType: "json",
-		Timeout:  30 * time.Second,
 	}, t.handleResendResponse, nil
 }
 
-// getEndpoint returns the appropriate endpoint URL
+// getEndpoint returns the appropriate endpoint URL.
 func (t *resendTransformer) getEndpoint(account *core.Account) string {
 	// Priority: account.Endpoint → account.IntlEndpoint → default
-	var host string
-	if account.Endpoint != "" {
-		host = account.Endpoint
-	} else if account.IntlEndpoint != "" {
-		host = account.IntlEndpoint
-	} else {
-		host = resendDefaultEndpoint
+	switch {
+	case account.Endpoint != "":
+		return account.Endpoint
+	case account.IntlEndpoint != "":
+		return account.IntlEndpoint
+	default:
+		return resendDefaultEndpoint
 	}
-	return "https://" + host + resendDefaultPath
 }
 
-// handleResendResponse handles Resend API response
+// handleResendResponse handles Resend API response.
 func (t *resendTransformer) handleResendResponse(statusCode int, body []byte) error {
 	if statusCode < 200 || statusCode >= 300 {
 		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
@@ -172,7 +178,7 @@ func (t *resendTransformer) handleResendResponse(statusCode int, body []byte) er
 
 	// Check if data field exists and is not empty
 	if len(resp.Data) == 0 {
-		return fmt.Errorf("Resend response contains no data")
+		return errors.New("resend response contains no data")
 	}
 
 	return nil

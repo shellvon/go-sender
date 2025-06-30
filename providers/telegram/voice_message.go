@@ -1,3 +1,4 @@
+//nolint:dupl // intentional duplication for explicit message type separation
 package telegram
 
 import "github.com/shellvon/go-sender/core"
@@ -10,11 +11,16 @@ type VoiceMessage struct {
 
 	// Audio file to send. Pass a file_id as String to send a file that exists on the Telegram servers (recommended),
 	// pass an HTTP URL as a String for Telegram to get a file from the Internet, or upload a new one using multipart/form-data.
-	// The audio must be at most 50 MB in size.
+	// The audio must be at most maxVoiceSizeMB MB in size.
 	Voice string `json:"voice"`
 
 	// Duration of the voice message in seconds
 	Duration int `json:"duration,omitempty"`
+}
+
+// NewVoiceMessage creates a new VoiceMessage instance.
+func NewVoiceMessage(chatID string, voice string, opts ...interface{}) *VoiceMessage {
+	return NewVoiceMessageWithBuilder(chatID, voice, opts...)
 }
 
 func (m *VoiceMessage) GetBase() *BaseMessage {
@@ -38,28 +44,7 @@ func (m *VoiceMessage) Validate() error {
 type VoiceMessageOption func(*VoiceMessage)
 
 // WithVoiceDuration sets the duration of the voice message in seconds
-// This is optional and can be used to provide metadata about the voice message
+// This is optional and can be used to provide metadata about the voice message.
 func WithVoiceDuration(duration int) VoiceMessageOption {
 	return func(m *VoiceMessage) { m.Duration = duration }
-}
-
-func NewVoiceMessage(chatID string, voice string, opts ...interface{}) *VoiceMessage {
-	msg := &VoiceMessage{
-		MediaMessage: MediaMessage{
-			BaseMessage: BaseMessage{
-				MsgType: TypeVoice,
-				ChatID:  chatID,
-			},
-		},
-		Voice: voice,
-	}
-	for _, opt := range opts {
-		switch o := opt.(type) {
-		case VoiceMessageOption:
-			o(msg)
-		case MessageOption:
-			o(msg)
-		}
-	}
-	return msg
 }

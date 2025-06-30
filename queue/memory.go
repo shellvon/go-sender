@@ -16,6 +16,8 @@ var (
 	ErrQueueFull   = errors.New("queue is full")
 )
 
+const notifyTimeout = 100 * time.Millisecond
+
 // MemoryQueue is a generic in-memory queue implementation.
 type MemoryQueue[T core.Comparable[T]] struct {
 	items      *PriorityQueue[T]
@@ -38,7 +40,7 @@ func NewMemoryQueue[T core.Comparable[T]](maxSize int) *MemoryQueue[T] {
 	}
 }
 
-func (mq *MemoryQueue[T]) Enqueue(ctx context.Context, item T) error {
+func (mq *MemoryQueue[T]) Enqueue(_ context.Context, item T) error {
 	if atomic.LoadInt32(&mq.closed) == 1 {
 		return ErrQueueClosed
 	}
@@ -118,7 +120,10 @@ func (mq *MemoryQueue[T]) Dequeue(ctx context.Context) (T, error) {
 			// Check if the top element is ready
 			top := (*mq.items)[0]
 			if mq.isReady(top) {
-				item := heap.Pop(mq.items).(T)
+				item, ok := heap.Pop(mq.items).(T)
+				if !ok {
+					return zero, errors.New("heap pop failed")
+				}
 				mq.mu.Unlock()
 				return item, nil
 			}
@@ -131,7 +136,7 @@ func (mq *MemoryQueue[T]) Dequeue(ctx context.Context) (T, error) {
 			return zero, ctx.Err()
 		case <-mq.notifyChan:
 			// Continue checking
-		case <-time.After(100 * time.Millisecond):
+		case <-time.After(notifyTimeout):
 			// Periodically check delayed items
 		}
 	}
@@ -171,7 +176,9 @@ func (pq PriorityQueue[T]) Swap(i, j int) {
 }
 
 func (pq *PriorityQueue[T]) Push(x interface{}) {
-	*pq = append(*pq, x.(T))
+	if xT, ok := x.(T); ok {
+		*pq = append(*pq, xT)
+	}
 }
 
 func (pq *PriorityQueue[T]) Pop() interface{} {

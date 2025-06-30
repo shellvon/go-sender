@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
-	"time"
 
 	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/utils"
@@ -29,6 +29,7 @@ import (
 
 const (
 	smsbaoDefaultEndpoint = "api.smsbao.com"
+	maxMobilesPerRequest  = 99
 )
 
 // smsbaoTransformer implements HTTPRequestTransformer for Smsbao
@@ -36,27 +37,26 @@ const (
 
 type smsbaoTransformer struct{}
 
-// newSMSBaoTransformer creates a new Smsbao transformer
-func newSMSBaoTransformer() core.HTTPTransformer[*core.Account] {
-	return &smsbaoTransformer{}
-}
-
-// init 自动注册 Smsbao transformer
+// init 自动注册 Smsbao transformer.
 func init() {
 	RegisterTransformer(string(SubProviderSmsbao), &smsbaoTransformer{})
 }
 
-// CanTransform 判断是否为短信宝消息
+// CanTransform 判断是否为短信宝消息.
 func (t *smsbaoTransformer) CanTransform(msg core.Message) bool {
 	smsMsg, ok := msg.(*Message)
 	return ok && smsMsg.SubProvider == string(SubProviderSmsbao)
 }
 
-// Transform 构造短信宝 HTTPRequestSpec
-func (t *smsbaoTransformer) Transform(ctx context.Context, msg core.Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+// Transform 构造短信宝 HTTPRequestSpec.
+func (t *smsbaoTransformer) Transform(
+	ctx context.Context,
+	msg core.Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
-		return nil, nil, fmt.Errorf("unsupported message type for smsbao: %T", msg)
+		return nil, nil, errors.New("invalid message type for smsbaoTransformer")
 	}
 	if err := t.validateMessage(smsMsg); err != nil {
 		return nil, nil, err
@@ -66,6 +66,8 @@ func (t *smsbaoTransformer) Transform(ctx context.Context, msg core.Message, acc
 		return t.transformTextSMS(ctx, smsMsg, account)
 	case Voice:
 		return t.transformVoiceSMS(ctx, smsMsg, account)
+	case MMS:
+		fallthrough
 	default:
 		return nil, nil, fmt.Errorf("unsupported smsbao message type: %s", smsMsg.Type)
 	}
@@ -82,8 +84,8 @@ func (t *smsbaoTransformer) validateMessage(msg *Message) error {
 	if msg.Content == "" {
 		return errors.New("content is required")
 	}
-	if len(msg.Mobiles) > 99 {
-		return errors.New("smsbao: at most 99 mobiles per request")
+	if len(msg.Mobiles) > maxMobilesPerRequest {
+		return errors.New("too many mobiles, max 99 allowed")
 	}
 	if msg.Type == Voice {
 		if msg.IsIntl() {
@@ -99,7 +101,7 @@ func (t *smsbaoTransformer) validateMessage(msg *Message) error {
 	return nil
 }
 
-// getBaseDomain 获取基础域名，优先使用account配置的endpoint
+// getBaseDomain 获取基础域名，优先使用account配置的endpoint.
 func (t *smsbaoTransformer) getBaseDomain(account *core.Account, isIntl bool) string {
 	if isIntl && account.IntlEndpoint != "" {
 		return account.IntlEndpoint
@@ -114,7 +116,11 @@ func (t *smsbaoTransformer) getBaseDomain(account *core.Account, isIntl bool) st
 //   - 国内短信: https://www.smsbao.com/openapi/213.html
 //   - 国际短信: https://www.smsbao.com/openapi/299.html
 //   - 语音验证码: https://www.smsbao.com/openapi/214.html
-func (t *smsbaoTransformer) transformTextSMS(ctx context.Context, msg *Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+func (t *smsbaoTransformer) transformTextSMS(
+	_ context.Context,
+	msg *Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	if account == nil || account.Key == "" || account.Secret == "" {
 		return nil, nil, errors.New("smsbao account Key(username) and Secret(password) are required")
 	}
@@ -155,7 +161,6 @@ func (t *smsbaoTransformer) transformTextSMS(ctx context.Context, msg *Message, 
 		Method:      "GET",
 		URL:         "https://" + baseDomain + apiPath,
 		QueryParams: queryParams,
-		Timeout:     10 * time.Second,
 	}, handleSMSBaoResponse, nil
 }
 
@@ -164,7 +169,11 @@ func (t *smsbaoTransformer) transformTextSMS(ctx context.Context, msg *Message, 
 //
 // 能力说明:
 //   - 语音验证码：仅支持国内、仅验证码类型、仅单号码。
-func (t *smsbaoTransformer) transformVoiceSMS(ctx context.Context, msg *Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+func (t *smsbaoTransformer) transformVoiceSMS(
+	_ context.Context,
+	msg *Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	if account == nil || account.Key == "" || account.Secret == "" {
 		return nil, nil, errors.New("smsbao account Key(username) and Secret(password) are required")
 	}
@@ -182,13 +191,12 @@ func (t *smsbaoTransformer) transformVoiceSMS(ctx context.Context, msg *Message,
 		Method:      "GET",
 		URL:         "http://" + baseDomain + "/voice",
 		QueryParams: queryParams,
-		Timeout:     10 * time.Second,
 	}, handleSMSBaoResponse, nil
 }
 
-// handleSMSBaoResponse 处理短信宝 API 响应
+// handleSMSBaoResponse 处理短信宝 API 响应.
 func handleSMSBaoResponse(statusCode int, body []byte) error {
-	if statusCode != 200 {
+	if statusCode != http.StatusOK {
 		return fmt.Errorf("smsbao API returned non-OK status: %d", statusCode)
 	}
 
@@ -213,7 +221,7 @@ func handleSMSBaoResponse(statusCode int, body []byte) error {
 		message = fmt.Sprintf("smsbao unknown error: %s", resp)
 	}
 
-	return &SMSError{
+	return &Error{
 		Code:     resp,
 		Message:  message,
 		Provider: string(SubProviderSmsbao),

@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"net/url"
 	"sort"
+	"strconv"
 	"strings"
-	"time"
 
 	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/utils"
@@ -27,10 +27,6 @@ import (
 
 type yunpianTransformer struct{}
 
-func newYunpianTransformer() core.HTTPTransformer[*core.Account] {
-	return &yunpianTransformer{}
-}
-
 func init() {
 	RegisterTransformer(string(SubProviderYunpian), &yunpianTransformer{})
 }
@@ -40,10 +36,14 @@ func (t *yunpianTransformer) CanTransform(msg core.Message) bool {
 	return ok && smsMsg.SubProvider == string(SubProviderYunpian)
 }
 
-func (t *yunpianTransformer) Transform(ctx context.Context, msg core.Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+func (t *yunpianTransformer) Transform(
+	ctx context.Context,
+	msg core.Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
-		return nil, nil, fmt.Errorf("unsupported message type for yunpian: %T", msg)
+		return nil, nil, errors.New("invalid message type for yunpianTransformer")
 	}
 	if err := t.validateMessage(smsMsg); err != nil {
 		return nil, nil, err
@@ -56,7 +56,7 @@ func (t *yunpianTransformer) Transform(ctx context.Context, msg core.Message, ac
 	case MMS:
 		return t.transformMMSSMS(ctx, smsMsg, account)
 	default:
-		return nil, nil, fmt.Errorf("unsupported yunpian message type: %s", smsMsg.Type)
+		return nil, nil, fmt.Errorf("unsupported yunpian message type: %v", smsMsg.Type)
 	}
 }
 
@@ -76,7 +76,11 @@ func (t *yunpianTransformer) validateMessage(msg *Message) error {
 	return nil
 }
 
-func (t *yunpianTransformer) transformTextSMS(ctx context.Context, msg *Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+func (t *yunpianTransformer) transformTextSMS(
+	ctx context.Context,
+	msg *Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	// 国际短信
 	if msg.IsIntl() {
 		if len(msg.Mobiles) > 1 {
@@ -94,15 +98,18 @@ func (t *yunpianTransformer) transformTextSMS(ctx context.Context, msg *Message,
 			return t.transformTplBatchSMS(ctx, msg, account)
 		}
 		return t.transformTplSMS(ctx, msg, account)
-	} else {
-		if len(msg.Mobiles) > 1 {
-			return t.transformBatchSMS(ctx, msg, account)
-		}
-		return t.transformSingleSMS(ctx, msg, account)
 	}
+	if len(msg.Mobiles) > 1 {
+		return t.transformBatchSMS(ctx, msg, account)
+	}
+	return t.transformSingleSMS(ctx, msg, account)
 }
 
-func (t *yunpianTransformer) transformSingleSMS(ctx context.Context, msg *Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+func (t *yunpianTransformer) transformSingleSMS(
+	_ context.Context,
+	msg *Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	endpoint := t.yunpianEndpoint("sms", "/v2/sms/single_send.json", account.Endpoint)
 	params := map[string]string{
 		"apikey": account.Secret,
@@ -127,16 +134,20 @@ func (t *yunpianTransformer) transformSingleSMS(ctx context.Context, msg *Messag
 		params["callback_url"] = cb
 	}
 	if reg, ok := msg.GetExtraBool("register"); ok {
-		params["register"] = fmt.Sprintf("%v", reg)
+		params["register"] = strconv.FormatBool(reg)
 	}
 	if stat, ok := msg.GetExtraBool("mobile_stat"); ok {
-		params["mobile_stat"] = fmt.Sprintf("%v", stat)
+		params["mobile_stat"] = strconv.FormatBool(stat)
 	}
 
 	return t.buildRequest(endpoint, params)
 }
 
-func (t *yunpianTransformer) transformBatchSMS(ctx context.Context, msg *Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+func (t *yunpianTransformer) transformBatchSMS(
+	_ context.Context,
+	msg *Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	endpoint := t.yunpianEndpoint("sms", "/v2/sms/batch_send.json", account.Endpoint)
 	params := map[string]string{
 		"apikey": account.Secret,
@@ -153,13 +164,17 @@ func (t *yunpianTransformer) transformBatchSMS(ctx context.Context, msg *Message
 		params["callback_url"] = cb
 	}
 	if stat, ok := msg.GetExtraBool("mobile_stat"); ok {
-		params["mobile_stat"] = fmt.Sprintf("%v", stat)
+		params["mobile_stat"] = strconv.FormatBool(stat)
 	}
 
 	return t.buildRequest(endpoint, params)
 }
 
-func (t *yunpianTransformer) transformTplSMS(ctx context.Context, msg *Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+func (t *yunpianTransformer) transformTplSMS(
+	_ context.Context,
+	msg *Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	endpoint := t.yunpianEndpoint("sms", "/v2/sms/tpl_single_send.json", account.Endpoint)
 	params := map[string]string{
 		"apikey":    account.Secret,
@@ -180,7 +195,11 @@ func (t *yunpianTransformer) transformTplSMS(ctx context.Context, msg *Message, 
 	return t.buildRequest(endpoint, params)
 }
 
-func (t *yunpianTransformer) transformTplBatchSMS(ctx context.Context, msg *Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+func (t *yunpianTransformer) transformTplBatchSMS(
+	_ context.Context,
+	msg *Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	endpoint := t.yunpianEndpoint("sms", "/v2/sms/tpl_batch_send.json", account.Endpoint)
 	params := map[string]string{
 		"apikey":    account.Secret,
@@ -201,7 +220,11 @@ func (t *yunpianTransformer) transformTplBatchSMS(ctx context.Context, msg *Mess
 	return t.buildRequest(endpoint, params)
 }
 
-func (t *yunpianTransformer) transformIntlSMS(ctx context.Context, msg *Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+func (t *yunpianTransformer) transformIntlSMS(
+	_ context.Context,
+	msg *Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	endpoint := t.yunpianEndpoint("sms", "/v2/sms/single_send.json", account.IntlEndpoint)
 	params := map[string]string{
 		"apikey": account.Secret,
@@ -221,7 +244,11 @@ func (t *yunpianTransformer) transformIntlSMS(ctx context.Context, msg *Message,
 	return t.buildRequest(endpoint, params)
 }
 
-func (t *yunpianTransformer) transformVoiceSMS(ctx context.Context, msg *Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+func (t *yunpianTransformer) transformVoiceSMS(
+	_ context.Context,
+	msg *Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	endpoint := t.yunpianEndpoint("voice", "/v2/voice/send.json", account.Endpoint)
 	params := map[string]string{
 		"apikey": account.Secret,
@@ -241,7 +268,11 @@ func (t *yunpianTransformer) transformVoiceSMS(ctx context.Context, msg *Message
 	return t.buildRequest(endpoint, params)
 }
 
-func (t *yunpianTransformer) transformMMSSMS(ctx context.Context, msg *Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+func (t *yunpianTransformer) transformMMSSMS(
+	_ context.Context,
+	msg *Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	endpoint := t.yunpianEndpoint("vsms", "/v2/vsms/tpl_batch_send.json", account.Endpoint)
 	params := map[string]string{
 		"apikey":    account.Secret,
@@ -262,7 +293,7 @@ func (t *yunpianTransformer) transformMMSSMS(ctx context.Context, msg *Message, 
 	return t.buildRequest(endpoint, params)
 }
 
-// yunpianEndpoint 统一生成云片 API endpoint，支持可选自定义域名
+// yunpianEndpoint 统一生成云片 API endpoint，支持可选自定义域名.
 func (t *yunpianTransformer) yunpianEndpoint(service, path string, domainOverride string) string {
 	domain := fmt.Sprintf("%s.yunpian.com", service)
 	if domainOverride != "" {
@@ -271,8 +302,11 @@ func (t *yunpianTransformer) yunpianEndpoint(service, path string, domainOverrid
 	return fmt.Sprintf("https://%s%s", domain, path)
 }
 
-// buildRequest 构建HTTP请求
-func (t *yunpianTransformer) buildRequest(endpoint string, params map[string]string) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+// buildRequest 构建HTTP请求.
+func (t *yunpianTransformer) buildRequest(
+	endpoint string,
+	params map[string]string,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	values := url.Values{}
 	for k, v := range params {
 		values.Set(k, v)
@@ -285,11 +319,10 @@ func (t *yunpianTransformer) buildRequest(endpoint string, params map[string]str
 		Headers:  map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
 		Body:     body,
 		BodyType: "form",
-		Timeout:  30 * time.Second,
 	}, t.handleYunpianResponse, nil
 }
 
-// buildTemplateValue 构建模板参数值
+// buildTemplateValue 构建模板参数值.
 func (t *yunpianTransformer) buildTemplateValue(params map[string]string) string {
 	if len(params) == 0 {
 		return ""
@@ -305,7 +338,7 @@ func (t *yunpianTransformer) buildTemplateValue(params map[string]string) string
 	return strings.Join(pairs, "&")
 }
 
-// handleYunpianResponse 处理云片API响应
+// handleYunpianResponse 处理云片API响应.
 func (t *yunpianTransformer) handleYunpianResponse(statusCode int, body []byte) error {
 	if statusCode < 200 || statusCode >= 300 {
 		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
@@ -319,8 +352,8 @@ func (t *yunpianTransformer) handleYunpianResponse(statusCode int, body []byte) 
 		return fmt.Errorf("failed to parse yunpian response: %w", err)
 	}
 	if result.Code != 0 {
-		return &SMSError{
-			Code:     fmt.Sprintf("%d", result.Code),
+		return &Error{
+			Code:     strconv.Itoa(result.Code),
 			Message:  result.Msg,
 			Provider: string(SubProviderYunpian),
 		}

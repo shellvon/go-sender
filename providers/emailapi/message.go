@@ -4,16 +4,16 @@ import (
 	"github.com/shellvon/go-sender/core"
 )
 
-// SubProviderType represents the type of EmailAPI sub-provider
+// SubProviderType represents the type of EmailAPI sub-provider.
 type SubProviderType string
 
 const (
 	SubProviderEmailJS SubProviderType = "emailjs"
 	SubProviderResend  SubProviderType = "resend"
-	// 可以继续添加其他 EmailAPI 提供商
+	// 可以继续添加其他 EmailAPI 提供商.
 )
 
-// Message represents a unified email message for API-based providers
+// Message represents a unified email message for API-based providers.
 type Message struct {
 	core.DefaultMessage
 
@@ -47,7 +47,7 @@ type Message struct {
 	Extras map[string]interface{} `json:"extras"` // 扩展字段（平台特定参数）
 }
 
-// Attachment represents an email attachment
+// Attachment represents an email attachment.
 type Attachment struct {
 	Filename    string `json:"filename"`
 	ContentType string `json:"content_type"`
@@ -58,12 +58,12 @@ var (
 	_ core.Message = (*Message)(nil)
 )
 
-// ProviderType returns the provider type for this message
+// ProviderType returns the provider type for this message.
 func (m *Message) ProviderType() core.ProviderType {
 	return core.ProviderTypeEmailAPI
 }
 
-// Validate checks if the Message is valid
+// Validate checks if the Message is valid.
 func (m *Message) Validate() error {
 	if len(m.To) == 0 {
 		return core.NewParamError("to recipients cannot be empty")
@@ -81,7 +81,7 @@ func (m *Message) MsgID() string {
 	return m.DefaultMessage.MsgID()
 }
 
-// GetSubProvider 实现 SubProviderMessage 接口
+// GetSubProvider 实现 SubProviderMessage 接口.
 func (m *Message) GetSubProvider() string {
 	return m.SubProvider
 }

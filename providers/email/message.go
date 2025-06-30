@@ -10,9 +10,10 @@ import (
 // Message represents an email message structure
 // Retains the From field, supports multiple recipients, CC, BCC, subject, body, HTML flag, and attachments
 // ProviderType method is used for Sender routing
-// Validate method is used for parameter validation
+// Validate method is used for parameter validation.
 type Message struct {
 	core.DefaultMessage
+
 	From        string   // Sender's email address (supports "Name <address>" format)
 	To          []string // List of recipient email addresses (supports "Name <address>" format)
 	Cc          []string // List of CC email addresses (supports "Name <address>" format)
@@ -24,19 +25,34 @@ type Message struct {
 	Attachments []string // List of attachment file paths
 }
 
-// MessageOption is a function that configures a Message
+// MessageOption is a function that configures a Message.
 type MessageOption func(*Message)
 
 var (
 	_ core.Message = (*Message)(nil)
 )
 
+// NewMessage creates a new email message with required to and body, plus optional configurations.
+func NewMessage(to []string, body string, opts ...MessageOption) *Message {
+	msg := &Message{
+		To:   to,
+		Body: body,
+	}
+	// Apply optional configurations
+	for _, opt := range opts {
+		if opt != nil {
+			opt(msg)
+		}
+	}
+	return msg
+}
+
 // ProviderType returns the provider type for this message.
 func (m *Message) ProviderType() core.ProviderType {
 	return core.ProviderTypeEmail
 }
 
-// Validate checks the validity of the Message fields
+// Validate checks the validity of the Message fields.
 func (m *Message) Validate() error {
 	if len(m.To) == 0 {
 		return core.NewParamError("recipient list cannot be empty")
@@ -63,7 +79,7 @@ func (m *Message) Validate() error {
 	return nil
 }
 
-// validateEmail checks if an email address is valid
+// validateEmail checks if an email address is valid.
 func validateEmail(email string) error {
 	if email == "" {
 		return errors.New("email address cannot be empty")
@@ -75,66 +91,51 @@ func validateEmail(email string) error {
 	return nil
 }
 
-// NewMessage creates a new email message with required to and body, plus optional configurations
-func NewMessage(to []string, body string, opts ...MessageOption) *Message {
-	msg := &Message{
-		To:   to,
-		Body: body,
-	}
-	// Apply optional configurations
-	for _, opt := range opts {
-		if opt != nil {
-			opt(msg)
-		}
-	}
-	return msg
-}
-
 // MessageOption functions
 
-// WithFrom sets the sender email address
+// WithFrom sets the sender email address.
 func WithFrom(from string) MessageOption {
 	return func(m *Message) {
 		m.From = from
 	}
 }
 
-// WithSubject sets the email subject
+// WithSubject sets the email subject.
 func WithSubject(subject string) MessageOption {
 	return func(m *Message) {
 		m.Subject = subject
 	}
 }
 
-// WithCc sets the CC email addresses
+// WithCc sets the CC email addresses.
 func WithCc(cc ...string) MessageOption {
 	return func(m *Message) {
 		m.Cc = cc
 	}
 }
 
-// WithBcc sets the BCC email addresses
+// WithBcc sets the BCC email addresses.
 func WithBcc(bcc ...string) MessageOption {
 	return func(m *Message) {
 		m.Bcc = bcc
 	}
 }
 
-// WithReplyTo sets the Reply-To email address
+// WithReplyTo sets the Reply-To email address.
 func WithReplyTo(replyTo string) MessageOption {
 	return func(m *Message) {
 		m.ReplyTo = replyTo
 	}
 }
 
-// WithHTML marks the email as HTML content
+// WithHTML marks the email as HTML content.
 func WithHTML() MessageOption {
 	return func(m *Message) {
 		m.IsHTML = true
 	}
 }
 
-// WithAttachments sets the attachment file paths
+// WithAttachments sets the attachment file paths.
 func WithAttachments(attachments ...string) MessageOption {
 	return func(m *Message) {
 		m.Attachments = attachments

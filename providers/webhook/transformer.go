@@ -5,25 +5,27 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
-	"time"
 
 	"github.com/shellvon/go-sender/core"
 )
 
-// WebhookRequestTransformer 负责 Webhook 消息的请求组装与响应解析
-// 详见各自 Webhook 服务 API 文档
-type WebhookRequestTransformer interface {
-	Transform(ctx context.Context, msg core.Message, endpoint *Endpoint) (*core.HTTPRequestSpec, core.ResponseHandler, error)
+// RequestTransformer defines the interface for transforming webhook messages to HTTP requests.
+type RequestTransformer interface {
+	Transform(
+		ctx context.Context,
+		msg core.Message,
+		endpoint *Endpoint,
+	) (*core.HTTPRequestSpec, core.ResponseHandler, error)
 	CanTransform(msg core.Message) bool
 }
 
-// webhookTransformer 实现 core.HTTPTransformer[*Endpoint]
+// webhookTransformer 实现 core.HTTPTransformer[*Endpoint].
 type webhookTransformer struct{}
 
-// 确保 webhookTransformer 实现了 core.HTTPTransformer[*Endpoint]
+// 确保 webhookTransformer 实现了 core.HTTPTransformer[*Endpoint].
 var _ core.HTTPTransformer[*Endpoint] = (*webhookTransformer)(nil)
 
-// CanTransform 判断是否为 Webhook 消息
+// CanTransform 判断是否为 Webhook 消息.
 func (t *webhookTransformer) CanTransform(msg core.Message) bool {
 	return msg.ProviderType() == core.ProviderTypeWebhook
 }
@@ -38,7 +40,11 @@ func (t *webhookTransformer) CanTransform(msg core.Message) bool {
 //   - HTTPRequestSpec: HTTP 请求规范
 //   - ResponseHandler: 响应处理器
 //   - error: 错误信息
-func (t *webhookTransformer) Transform(ctx context.Context, msg core.Message, endpoint *Endpoint) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+func (t *webhookTransformer) Transform(
+	_ context.Context,
+	msg core.Message,
+	endpoint *Endpoint,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	whMsg, ok := msg.(*Message)
 	if !ok {
 		return nil, nil, fmt.Errorf("unsupported message type for webhook transformer: %T", msg)
@@ -77,70 +83,78 @@ func (t *webhookTransformer) Transform(ctx context.Context, msg core.Message, en
 		URL:      url,
 		Headers:  headers,
 		Body:     whMsg.Body,
-		BodyType: "raw",
-		Timeout:  30 * time.Second,
+		BodyType: "json",
 	}
 	return reqSpec, t.buildResponseHandler(endpoint), nil
 }
 
-// buildResponseHandler 构造响应处理器，支持多种响应校验方式
+// buildResponseHandler 构造响应处理器，支持多种响应校验方式.
 func (t *webhookTransformer) buildResponseHandler(endpoint *Endpoint) core.ResponseHandler {
 	return func(statusCode int, body []byte) error {
 		cfg := endpoint.ResponseConfig
 		if cfg == nil || !cfg.ValidateResponse {
-			if statusCode < 200 || statusCode >= 300 {
-				return fmt.Errorf("webhook API returned non-2xx status: %d", statusCode)
-			}
-			return nil
+			return t.handleDefaultResponse(statusCode, body)
 		}
 		switch cfg.ResponseType {
 		case "json":
-			var resp map[string]interface{}
-			if err := json.Unmarshal(body, &resp); err != nil {
-				return fmt.Errorf("failed to parse webhook response: %w", err)
-			}
-			if cfg.SuccessField != "" {
-				if v, ok := resp[cfg.SuccessField]; ok {
-					if fmt.Sprintf("%v", v) != cfg.SuccessValue {
-						errMsg := t.extractErrorMessage(cfg, resp)
-						return fmt.Errorf("webhook returned failure: %s", errMsg)
-					}
-				}
-			}
+			return t.handleJSONResponse(cfg, statusCode, body)
 		case "text":
-			respText := string(body)
-			if cfg.ErrorPattern != "" {
-				matched, err := regexp.MatchString(cfg.ErrorPattern, respText)
-				if err != nil {
-					return fmt.Errorf("invalid error pattern: %w", err)
-				}
-				if matched {
-					return fmt.Errorf("webhook returned error response: %s", respText)
-				}
-			}
-			if cfg.SuccessPattern != "" {
-				matched, err := regexp.MatchString(cfg.SuccessPattern, respText)
-				if err != nil {
-					return fmt.Errorf("invalid success pattern: %w", err)
-				}
-				if !matched {
-					return fmt.Errorf("webhook response does not match success pattern: %s", respText)
-				}
-			}
+			return t.handleTextResponse(cfg, statusCode, body)
 		case "none":
-			// 不校验响应体
 			return nil
 		default:
-			// 默认只校验状态码
-			if statusCode < 200 || statusCode >= 300 {
-				return fmt.Errorf("webhook API returned non-2xx status: %d", statusCode)
-			}
+			return t.handleDefaultResponse(statusCode, body)
 		}
-		return nil
 	}
 }
 
-// extractErrorMessage 从 JSON 响应中提取错误信息
+func (t *webhookTransformer) handleJSONResponse(cfg *ResponseConfig, _ int, body []byte) error {
+	var resp map[string]interface{}
+	if err := json.Unmarshal(body, &resp); err != nil {
+		return fmt.Errorf("failed to parse webhook response: %w", err)
+	}
+	if cfg.SuccessField != "" {
+		if v, ok := resp[cfg.SuccessField]; ok {
+			if fmt.Sprintf("%v", v) != cfg.SuccessValue {
+				errMsg := t.extractErrorMessage(cfg, resp)
+				return fmt.Errorf("webhook returned failure: %s", errMsg)
+			}
+		}
+	}
+	return nil
+}
+
+func (t *webhookTransformer) handleTextResponse(cfg *ResponseConfig, _ int, body []byte) error {
+	respText := string(body)
+	if cfg.ErrorPattern != "" {
+		matched, err := regexp.MatchString(cfg.ErrorPattern, respText)
+		if err != nil {
+			return fmt.Errorf("invalid error pattern: %w", err)
+		}
+		if matched {
+			return fmt.Errorf("webhook returned error response: %s", respText)
+		}
+	}
+	if cfg.SuccessPattern != "" {
+		matched, err := regexp.MatchString(cfg.SuccessPattern, respText)
+		if err != nil {
+			return fmt.Errorf("invalid success pattern: %w", err)
+		}
+		if !matched {
+			return fmt.Errorf("webhook response does not match success pattern: %s", respText)
+		}
+	}
+	return nil
+}
+
+func (t *webhookTransformer) handleDefaultResponse(statusCode int, _ []byte) error {
+	if statusCode < 200 || statusCode >= 300 {
+		return fmt.Errorf("webhook API returned non-2xx status: %d", statusCode)
+	}
+	return nil
+}
+
+// extractErrorMessage 从 JSON 响应中提取错误信息.
 func (t *webhookTransformer) extractErrorMessage(cfg *ResponseConfig, resp map[string]interface{}) string {
 	if cfg.ErrorField != "" {
 		if v, ok := resp[cfg.ErrorField]; ok {

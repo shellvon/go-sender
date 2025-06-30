@@ -2,7 +2,7 @@ package core
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"strings"
 )
 
@@ -21,10 +21,11 @@ const (
 	LevelWarn
 	// LevelError is logger error level.
 	LevelError
-	// LevelFatal is logger fatal level
+	// LevelFatal is logger fatal level.
 	LevelFatal
 )
 
+// Key returns the string representation of the log level.
 func (l Level) Key() string {
 	return LevelKey
 }
@@ -52,16 +53,17 @@ type Logger interface {
 	With(keyvals ...any) Logger
 }
 
-// StdLogger is a standard logger implementation
+// StdLogger is a standard logger implementation.
 type StdLogger struct {
-	logger *log.Logger
+	logger *slog.Logger
 }
 
-// NewStdLogger creates a new standard logger
-func NewStdLogger(writer *log.Logger) Logger {
+// NewStdLogger creates a new standard logger.
+func NewStdLogger(writer *slog.Logger) Logger {
 	return &StdLogger{logger: writer}
 }
 
+// Log logs a message with the given level and key-value pairs.
 func (s *StdLogger) Log(level Level, keyvals ...any) error {
 	// Simple implementation for now
 	if len(keyvals) == 0 {
@@ -82,10 +84,11 @@ func (s *StdLogger) Log(level Level, keyvals ...any) error {
 		}
 	}
 
-	s.logger.Println(msg.String())
+	s.logger.Info(msg.String())
 	return nil
 }
 
+// With returns a new logger with the given key-value pairs.
 func (s *StdLogger) With(keyvals ...any) Logger {
 	return &logger{
 		logger: s,
@@ -115,13 +118,15 @@ func (c *logger) With(keyvals ...any) Logger {
 	}
 }
 
-// NoOpLogger is a no-operation logger that does nothing
+// NoOpLogger is a no-operation logger that does nothing.
 type NoOpLogger struct{}
 
-func (n *NoOpLogger) Log(level Level, keyvals ...any) error {
+// Log logs a message with the given level and key-value pairs (no-op implementation).
+func (n *NoOpLogger) Log(_ Level, _ ...any) error {
 	return nil
 }
 
-func (n *NoOpLogger) With(keyvals ...any) Logger {
+// With returns a new logger with the given key-value pairs (no-op implementation).
+func (n *NoOpLogger) With(_ ...any) Logger {
 	return n
 }

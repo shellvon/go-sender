@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/url"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -28,40 +29,37 @@ import (
 //
 // transformer 支持 text（国内/国际，模板/非模板，单发/群发）、voice（语音）、mms（彩信）类型。
 
-// API endpoint paths
+// API endpoint paths.
 const (
-	// 国际短信-模版单发
+	// 国际短信-模版单发.
 	intlTemplateSingle = "/internationalsms/xsend" // https://www.mysubmail.com/documents/87QTB2
-	// 国际短信-批量群发
+	// 国际短信-批量群发.
 	intlBatch = "internationalsms/batchsend" // https://www.mysubmail.com/documents/yD46O
-	// 国际短信-单发
+	// 国际短信-单发.
 	intlSingle = "/internationalsms/send" // https://www.mysubmail.com/documents/3UQA3
-	// 国际短信-模版一对多(没有找到批量的API)
+	// 国际短信-模版一对多(没有找到批量的API).
 	intlTemplateBatch = "internationalsms/multixsend" // https://www.mysubmail.com/documents/B70hy
-	// 国内短信-模版单发
+	// 国内短信-模版单发.
 	domesticTemplateSingle = "/sms/xsend" // https://www.mysubmail.com/documents/OOVyh
-	// 国内短信-模版-群发
+	// 国内短信-模版-群发.
 	domesticTemplateBatch = "/sms/multixsend" // https://www.mysubmail.com/documents/G5KBR
-	// 国内短信-单发
+	// 国内短信-单发.
 	domesticSingle = "/sms/send" // https://www.mysubmail.com/documents/FppOR3
-	// 国内短信-群发
+	// 国内短信-群发.
 	domesticBatch = "/sms/multisend" // https://www.mysubmail.com/documents/AzD4Z4
-	// 彩信-单发
+	// 彩信-单发.
 	mmsSingle = "/mms/send" // https://www.mysubmail.com/documents/N6ktR
-	// 语音-单发
+	// 语音-单发.
 	voiceSingle = "/voice/send" // https://www.mysubmail.com/documents/meE3C1
-	// 语音-模版单发
+	// 语音-模版单发.
 	voiceTemplateSingle = "/voice/xsend" // https://www.mysubmail.com/documents/KbG03
-	// 语音-模版群发
+	// 语音-模版群发.
 	voiceTemplateBatch   = "/voice/multixsend" // https://www.mysubmail.com/documents/FkgkM2
 	submailDefaultDomain = "api-v4.mysubmail.com"
+	submailTimeout       = 30 * time.Second
 )
 
 type submailTransformer struct{}
-
-func newSubmailTransformer() core.HTTPTransformer[*core.Account] {
-	return &submailTransformer{}
-}
 
 func init() {
 	RegisterTransformer(string(SubProviderSubmail), &submailTransformer{})
@@ -72,7 +70,11 @@ func (t *submailTransformer) CanTransform(msg core.Message) bool {
 	return ok && smsMsg.SubProvider == string(SubProviderSubmail)
 }
 
-func (t *submailTransformer) Transform(ctx context.Context, msg core.Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+func (t *submailTransformer) Transform(
+	_ context.Context,
+	msg core.Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
 		return nil, nil, fmt.Errorf("unsupported message type for submail: %T", msg)
@@ -91,7 +93,6 @@ func (t *submailTransformer) Transform(ctx context.Context, msg core.Message, ac
 		Headers:  map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
 		Body:     body,
 		BodyType: "form",
-		Timeout:  30 * time.Second,
 	}, t.handleSubmailResponse, nil
 }
 
@@ -142,6 +143,8 @@ func (t *submailTransformer) buildEndpoint(msg *Message, account *core.Account) 
 		apiPath = t.getVoicePath(msg)
 	case MMS:
 		apiPath = mmsSingle
+	default:
+		apiPath = "" // 或 panic/return error
 	}
 
 	return fmt.Sprintf("https://%s%s", baseDomain, apiPath)
@@ -245,27 +248,9 @@ func (t *submailTransformer) addMultiRecipients(params map[string]string, msg *M
 }
 
 func (t *submailTransformer) addContentOrTemplate(params map[string]string, msg *Message) {
-	if msg.TemplateID != "" {
-		params["project"] = msg.TemplateID
-		// 非国际批量模板发送时添加模板参数
-		if !(msg.IsIntl() && msg.Type == SMSText && len(msg.Mobiles) > 1) {
-			if len(msg.TemplateParams) > 0 {
-				params["vars"] = utils.ToJSONString(msg.TemplateParams)
-			}
-		}
-	} else {
-		// 非模板消息
-		content := msg.Content
-		if msg.SignName != "" && !strings.Contains(content, msg.SignName) {
-			content = "【" + msg.SignName + "】" + content
-		}
-		params["content"] = content
-	}
-
-	// 国际短信可选的sender字段
-	if msg.IsIntl() && msg.SignName != "" {
-		params["sender"] = msg.SignName
-	}
+	params["project"] = msg.TemplateID
+	params["vars"] = utils.ToJSONString(msg.TemplateParams)
+	params["content"] = utils.AddSignature(msg.Content, msg.SignName)
 	// 或者使用extras中的sender
 	if sender := msg.GetExtraStringOrDefault("sender", ""); sender != "" {
 		params["sender"] = sender
@@ -279,7 +264,7 @@ func (t *submailTransformer) addCommonParams(params map[string]string, msg *Mess
 	}
 
 	// 添加时间戳
-	timestamp := fmt.Sprintf("%d", time.Now().Unix())
+	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
 	params["timestamp"] = timestamp
 
 	// 添加签名
@@ -349,7 +334,7 @@ func (t *submailTransformer) handleSubmailResponse(statusCode int, body []byte) 
 	}
 
 	if result.Status != "success" {
-		return &SMSError{
+		return &Error{
 			Code:     result.Code,
 			Message:  result.Msg,
 			Provider: string(SubProviderSubmail),

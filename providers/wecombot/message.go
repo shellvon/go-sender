@@ -6,35 +6,36 @@ import "github.com/shellvon/go-sender/core"
 // The robot is based on group chats with simpler and more simple parameters:
 // https://developer.work.weixin.qq.com/document/path/91770
 
-// MessageType defines the message types supported by WeCom
+// MessageType defines the message types supported by WeCom.
 type MessageType string
 
 const (
-	// Text message type
-	TypeText MessageType = "text"
-	// Markdown message type
-	TypeMarkdown MessageType = "markdown"
-	// Image message type
-	TypeImage MessageType = "image"
-	// News message type
-	TypeNews MessageType = "news"
-	// Template card message type
-	TypeTemplateCard MessageType = "template_card"
+	// TypeText represents text message type.
+	TypeText = "text"
+	// TypeMarkdown represents markdown message type.
+	TypeMarkdown = "markdown"
+	// TypeImage represents image message type.
+	TypeImage = "image"
+	// TypeNews represents news message type.
+	TypeNews = "news"
+	// TypeTemplateCard represents template card message type.
+	TypeTemplateCard = "template_card"
 )
 
-// Message interface definition
+// Message interface definition.
 type Message interface {
 	core.Message
 	GetMsgType() MessageType
 }
 
-// BaseMessage is the base message structure
+// BaseMessage is the base message structure.
 type BaseMessage struct {
 	core.DefaultMessage
+
 	MsgType MessageType `json:"msgtype"`
 }
 
-// GetMsgType implements the Message interface
+// GetMsgType implements the Message interface.
 func (m *BaseMessage) GetMsgType() MessageType {
 	return m.MsgType
 }

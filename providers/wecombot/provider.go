@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"mime/multipart"
+	"net/http"
 	"path/filepath"
 
 	"github.com/shellvon/go-sender/core"
@@ -15,14 +16,14 @@ import (
 	"github.com/shellvon/go-sender/utils"
 )
 
-// Provider implements the WeCom Bot provider
+// Provider implements the WeCom Bot provider.
 type Provider struct {
 	*providers.HTTPProvider[*core.Account]
 }
 
 var _ core.Provider = (*Provider)(nil)
 
-// New creates a new WeCom Bot provider instance
+// New creates a new WeCom Bot provider instance.
 func New(config Config) (*Provider, error) {
 	if !config.IsConfigured() {
 		return nil, errors.New("wecombot provider is not configured or is disabled")
@@ -40,7 +41,7 @@ func New(config Config) (*Provider, error) {
 		return nil, errors.New("no enabled wecombot accounts found")
 	}
 
-	strategy := utils.GetStrategy(core.StrategyType(config.Strategy))
+	strategy := utils.GetStrategy(config.Strategy)
 
 	// Create generic provider
 	httpProvider := providers.NewHTTPProvider(
@@ -56,15 +57,22 @@ func New(config Config) (*Provider, error) {
 }
 
 // UploadMedia uploads a media file and returns the media_id
-// This method can be used to upload images, files, etc. before sending them
-func (p *Provider) UploadMedia(ctx context.Context, filePath string, bodyReader io.Reader) (mediaId string, account *core.Account, err error) {
+// This method can be used to upload images, files, etc. before sending them.
+func (p *Provider) UploadMedia(
+	ctx context.Context,
+	filePath string,
+	bodyReader io.Reader,
+) (string, *core.Account, error) {
 	selectedAccount := p.SelectConfig(ctx)
 	if selectedAccount == nil {
 		return "", nil, errors.New("no available account")
 	}
 
 	// Build upload URL
-	uploadURL := fmt.Sprintf("https://qyapi.weixin.qq.com/cgi-bin/webhook/upload_media?key=%s&type=file", selectedAccount.Key)
+	uploadURL := fmt.Sprintf(
+		"https://qyapi.weixin.qq.com/cgi-bin/webhook/upload_media?key=%s&type=file",
+		selectedAccount.Key,
+	)
 
 	// Create multipart form with custom reader
 	body := &bytes.Buffer{}
@@ -77,13 +85,13 @@ func (p *Provider) UploadMedia(ctx context.Context, filePath string, bodyReader 
 	}
 
 	// Copy file content
-	if _, err := io.Copy(part, bodyReader); err != nil {
-		return "", nil, fmt.Errorf("failed to copy file content: %w", err)
+	if _, errCopy := io.Copy(part, bodyReader); errCopy != nil {
+		return "", nil, fmt.Errorf("failed to copy file content: %w", errCopy)
 	}
 
 	// Close writer
-	if err := writer.Close(); err != nil {
-		return "", nil, fmt.Errorf("failed to close writer: %w", err)
+	if errClose := writer.Close(); errClose != nil {
+		return "", nil, fmt.Errorf("failed to close writer: %w", errClose)
 	}
 
 	respBody, statusCode, err := utils.DoRequest(ctx, uploadURL, utils.HTTPRequestOptions{
@@ -98,7 +106,7 @@ func (p *Provider) UploadMedia(ctx context.Context, filePath string, bodyReader 
 	}
 
 	// Check response
-	if statusCode != 200 {
+	if statusCode != http.StatusOK {
 		return "", nil, fmt.Errorf("upload API returned non-OK status: %d", statusCode)
 	}
 
@@ -106,20 +114,20 @@ func (p *Provider) UploadMedia(ctx context.Context, filePath string, bodyReader 
 	var result struct {
 		ErrCode   int    `json:"errcode"`
 		ErrMsg    string `json:"errmsg"`
-		MediaId   string `json:"media_id"`
+		MediaID   string `json:"media_id"`
 		Type      string `json:"type"`
 		CreatedAt int64  `json:"created_at"`
 	}
 
-	if err := json.Unmarshal(respBody, &result); err != nil {
-		return "", nil, fmt.Errorf("failed to parse upload response: %w", err)
+	if errUnmarshal := json.Unmarshal(respBody, &result); errUnmarshal != nil {
+		return "", nil, fmt.Errorf("failed to parse upload response: %w", errUnmarshal)
 	}
 
 	if result.ErrCode != 0 {
 		return "", nil, fmt.Errorf("upload error: code=%d, msg=%s", result.ErrCode, result.ErrMsg)
 	}
 
-	return result.MediaId, selectedAccount, nil
+	return result.MediaID, selectedAccount, nil
 }
 
 func (p *Provider) Name() string {

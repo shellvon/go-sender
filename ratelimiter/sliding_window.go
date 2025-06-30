@@ -1,3 +1,4 @@
+// Package ratelimiter provides rate limiting functionality for the go-sender library.
 package ratelimiter
 
 import (
@@ -8,12 +9,16 @@ import (
 	"time"
 )
 
+// ErrRateLimitExceeded is returned when the rate limit is exceeded.
+var ErrRateLimitExceeded = errors.New("rate limit exceeded")
+
 var (
-	ErrRateLimitExceeded = errors.New("rate limit exceeded")
 	ErrInvalidParameters = errors.New("invalid parameters")
 )
 
-// SlidingWindowRateLimiter is a rate limiter based on a sliding window
+const cleanupIntervalDivisor = 10
+
+// SlidingWindowRateLimiter is a rate limiter based on a sliding window.
 type SlidingWindowRateLimiter struct {
 	mutex           sync.RWMutex
 	windowSize      time.Duration
@@ -23,7 +28,7 @@ type SlidingWindowRateLimiter struct {
 	cleanupInterval time.Duration
 }
 
-// NewSlidingWindowRateLimiter creates a new sliding window rate limiter
+// NewSlidingWindowRateLimiter creates a new sliding window rate limiter.
 func NewSlidingWindowRateLimiter(windowSize time.Duration, maxRequests int) (*SlidingWindowRateLimiter, error) {
 	if windowSize <= 0 {
 		return nil, fmt.Errorf("%w: windowSize must be positive", ErrInvalidParameters)
@@ -37,11 +42,11 @@ func NewSlidingWindowRateLimiter(windowSize time.Duration, maxRequests int) (*Sl
 		maxRequests:     maxRequests,
 		requests:        make([]time.Time, 0, maxRequests), // Pre-allocate capacity
 		lastCleanup:     time.Now(),
-		cleanupInterval: windowSize / 10, // Periodic cleanup interval
+		cleanupInterval: windowSize / cleanupIntervalDivisor, // Periodic cleanup interval
 	}, nil
 }
 
-// Allow checks if a request is allowed to pass
+// Allow checks if a request is allowed to pass.
 func (r *SlidingWindowRateLimiter) Allow(ctx context.Context) error {
 	select {
 	case <-ctx.Done():
@@ -67,7 +72,7 @@ func (r *SlidingWindowRateLimiter) Allow(ctx context.Context) error {
 	return nil
 }
 
-// Wait waits until a request can be made or context is cancelled
+// Wait waits until a request can be made or context is cancelled.
 func (r *SlidingWindowRateLimiter) Wait(ctx context.Context) error {
 	for {
 		if err := r.Allow(ctx); err == nil {
@@ -92,8 +97,8 @@ func (r *SlidingWindowRateLimiter) Wait(ctx context.Context) error {
 	}
 }
 
-// GetStats returns current statistics
-func (r *SlidingWindowRateLimiter) GetStats() (currentRequests int, maxRequests int, windowSize time.Duration) {
+// GetStats returns current statistics.
+func (r *SlidingWindowRateLimiter) GetStats() (int, int, time.Duration) {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 
@@ -111,7 +116,7 @@ func (r *SlidingWindowRateLimiter) GetStats() (currentRequests int, maxRequests 
 	return count, r.maxRequests, r.windowSize
 }
 
-// Reset clears all request history
+// Reset clears all request history.
 func (r *SlidingWindowRateLimiter) Reset() {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
@@ -120,7 +125,7 @@ func (r *SlidingWindowRateLimiter) Reset() {
 	r.lastCleanup = time.Now()
 }
 
-// cleanup removes expired requests from the sliding window
+// cleanup removes expired requests from the sliding window.
 func (r *SlidingWindowRateLimiter) cleanup(now time.Time) {
 	// Only clean up when necessary to avoid frequent cleanup
 	if now.Sub(r.lastCleanup) < r.cleanupInterval && len(r.requests) < r.maxRequests*2 {
@@ -155,7 +160,7 @@ func (r *SlidingWindowRateLimiter) cleanup(now time.Time) {
 	r.lastCleanup = now
 }
 
-// calculateWaitTime calculates how long to wait before the next request can be made
+// calculateWaitTime calculates how long to wait before the next request can be made.
 func (r *SlidingWindowRateLimiter) calculateWaitTime() time.Duration {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()

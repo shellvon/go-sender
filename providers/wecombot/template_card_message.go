@@ -13,7 +13,24 @@ const (
 	// CardTypeTextNotice represents a text notice template card.
 	CardTypeTextNotice TemplateCardType = "text_notice"
 	// CardTypeNewsNotice represents a news notice template card.
-	CardTypeNewsNotice TemplateCardType = "news_notice"
+	CardTypeNewsNotice       = "news_notice"
+	maxSubTitleTextLength    = 4096
+	maxJumpTitleLength       = 128
+	maxMainTitleDescLen      = 30
+	maxSourceDescLen         = 13
+	maxEmphasisTitleLen      = 10
+	maxEmphasisDescLen       = 15
+	maxHorizontalKeyLen      = 5
+	maxHorizontalValueLen    = 26
+	maxHorizontalContentList = 6
+	maxJumpList              = 5
+	typeValue2               = 2
+	typeValue3               = 3
+	maxMainTitleTitleLen     = 26
+	HorizontalTypeURL        = 1
+	HorizontalTypeMedia      = 2
+	HorizontalTypeDefault    = 0
+	HorizontalTypeMember     = 3
 )
 
 // Source represents the source section of a template card.
@@ -156,81 +173,160 @@ type TemplateCard struct {
 // https://developer.work.weixin.qq.com/document/path/91770#%E6%A8%A1%E7%89%88%E5%8D%A1%E7%89%87%E7%B1%BB%E5%9E%8B
 type TemplateCardMessage struct {
 	BaseMessage
+
 	TemplateCard TemplateCard `json:"template_card"`
+}
+
+// NewTemplateCardMessage creates a new TemplateCardMessage with required fields and applies optional configurations.
+func NewTemplateCardMessage(
+	cardType TemplateCardType,
+	mainTitle MainTitle,
+	cardAction CardAction,
+	opts ...TemplateCardMessageOption,
+) *TemplateCardMessage {
+	msg := &TemplateCardMessage{
+		BaseMessage: BaseMessage{
+			MsgType: TypeTemplateCard,
+		},
+		TemplateCard: TemplateCard{
+			CardType:   cardType,
+			MainTitle:  mainTitle,
+			CardAction: cardAction,
+		},
+	}
+	for _, opt := range opts {
+		opt(msg)
+	}
+	return msg
 }
 
 // Validate validates the TemplateCardMessage according to WeCom API rules.
 func (m *TemplateCardMessage) Validate() error {
-	// Check card type
-	if m.TemplateCard.CardType != CardTypeTextNotice && m.TemplateCard.CardType != CardTypeNewsNotice {
-		return core.NewParamError(fmt.Sprintf("invalid card_type: %s; must be %s or %s", m.TemplateCard.CardType, CardTypeTextNotice, CardTypeNewsNotice))
+	if err := m.validateCardType(); err != nil {
+		return err
 	}
+	if err := m.validateMainTitleAndSubTitle(); err != nil {
+		return err
+	}
+	if err := m.validateCardAction(); err != nil {
+		return err
+	}
+	if err := m.validateHorizontalContentList(); err != nil {
+		return err
+	}
+	if err := m.validateJumpList(); err != nil {
+		return err
+	}
+	if err := m.validateCardTypeSpecific(); err != nil {
+		return err
+	}
+	if err := m.validateQuoteArea(); err != nil {
+		return err
+	}
+	if err := m.validateImageTextArea(); err != nil {
+		return err
+	}
+	if err := m.validateMainTitleLength(); err != nil {
+		return err
+	}
+	if err := m.validateSubTitleTextLength(); err != nil {
+		return err
+	}
+	if err := m.validateSource(); err != nil {
+		return err
+	}
+	return nil
+}
 
-	// Validate MainTitle and SubTitleText coexistence/mutual exclusivity
+// 拆分的辅助校验函数（示例，需补全所有逻辑）.
+func (m *TemplateCardMessage) validateCardType() error {
+	if m.TemplateCard.CardType != CardTypeTextNotice && m.TemplateCard.CardType != CardTypeNewsNotice {
+		return core.NewParamError(
+			fmt.Sprintf(
+				"invalid card_type: %s; must be %s or %s",
+				m.TemplateCard.CardType,
+				CardTypeTextNotice,
+				CardTypeNewsNotice,
+			),
+		)
+	}
+	return nil
+}
+
+func (m *TemplateCardMessage) validateMainTitleAndSubTitle() error {
 	if m.TemplateCard.MainTitle.Title == "" && m.TemplateCard.SubTitleText == "" {
 		return core.NewParamError("main_title.title or sub_title_text must be provided")
 	}
+	return nil
+}
 
-	// Validate card_action
+func (m *TemplateCardMessage) validateCardAction() error {
 	if m.TemplateCard.CardAction.Type == 0 {
 		return core.NewParamError("card_action.type is required")
 	}
 	if m.TemplateCard.CardAction.Type == 1 && m.TemplateCard.CardAction.URL == "" {
 		return core.NewParamError("card_action.url is required for type 1")
 	}
-	if m.TemplateCard.CardAction.Type == 2 && (m.TemplateCard.CardAction.AppID == "" || m.TemplateCard.CardAction.PagePath == "") {
+	if m.TemplateCard.CardAction.Type == 2 &&
+		(m.TemplateCard.CardAction.AppID == "" || m.TemplateCard.CardAction.PagePath == "") {
 		return core.NewParamError("card_action.appid and pagepath are required for type 2")
 	}
-	// Check for unsupported card_action types
 	if m.TemplateCard.CardAction.Type < 0 || m.TemplateCard.CardAction.Type > 2 {
-		return core.NewParamError(fmt.Sprintf("invalid card_action.type: %d; must be 0, 1, or 2", m.TemplateCard.CardAction.Type))
+		return core.NewParamError(
+			fmt.Sprintf("invalid card_action.type: %d; must be 0, 1, or 2", m.TemplateCard.CardAction.Type),
+		)
 	}
+	return nil
+}
 
-	// Validate list lengths
-	// The comment for HorizontalContent says "list length cannot exceed 6", but the code validates against 5.
-	if len(m.TemplateCard.HorizontalContentList) > 6 { // Changed to 6 based on updated comment.
+func (m *TemplateCardMessage) validateHorizontalContentList() error {
+	if len(m.TemplateCard.HorizontalContentList) > maxHorizontalContentList {
 		return core.NewParamError("horizontal_content_list cannot exceed 6 items")
 	}
-	if len(m.TemplateCard.JumpList) > 5 {
-		return core.NewParamError("jump_list cannot exceed 5 items")
-	}
-	if m.TemplateCard.CardType == CardTypeNewsNotice && len(m.TemplateCard.VerticalContentList) > 5 {
-		return core.NewParamError("vertical_content_list cannot exceed 5 items")
-	}
-
-	// Validate horizontal_content_list items
 	for i, item := range m.TemplateCard.HorizontalContentList {
-		if item.Keyname == "" { // Keyname is mandatory
+		if item.Keyname == "" {
 			return core.NewParamError(fmt.Sprintf("horizontal_content_list item %d: keyname cannot be empty", i))
 		}
-		if item.Value == "" { // Value is mandatory
+		if item.Value == "" {
 			return core.NewParamError(fmt.Sprintf("horizontal_content_list item %d: value cannot be empty", i))
 		}
-
-		// Enforce length limits as per comments (using byte length as common for API limits)
-		if len([]byte(item.Keyname)) > 5 {
+		if len([]byte(item.Keyname)) > maxHorizontalKeyLen {
 			return core.NewParamError(fmt.Sprintf("horizontal_content_list item %d: keyname exceeds 5 bytes", i))
 		}
-		if len([]byte(item.Value)) > 26 {
+		if len([]byte(item.Value)) > maxHorizontalValueLen {
 			return core.NewParamError(fmt.Sprintf("horizontal_content_list item %d: value exceeds 26 bytes", i))
 		}
-
-		if item.Type == 1 {
+		switch item.Type {
+		case HorizontalTypeURL:
 			if item.URL == "" {
 				return core.NewParamError(fmt.Sprintf("horizontal_content_list item %d: url is required for type 1", i))
 			}
-		} else if item.Type == 2 {
+		case HorizontalTypeMedia:
 			if item.MediaID == "" {
-				return core.NewParamError(fmt.Sprintf("horizontal_content_list item %d: media_id is required for type 2", i))
+				return core.NewParamError(
+					fmt.Sprintf(
+						"horizontal_content_list item %d: media_id is required for type 2",
+						i,
+					),
+				)
 			}
-		} else if item.Type < 0 || item.Type > 3 { // Check for invalid types for HorizontalContent
-			return core.NewParamError(fmt.Sprintf("horizontal_content_list item %d: invalid type %d; must be 0, 1, 2, or 3", i, item.Type))
+		case HorizontalTypeDefault, HorizontalTypeMember:
+			// valid, do nothing
+		default:
+			return core.NewParamError(
+				fmt.Sprintf("horizontal_content_list item %d: invalid type %d; must be 0, 1, 2, or 3", i, item.Type),
+			)
 		}
 	}
+	return nil
+}
 
-	// Validate jump_list items
+func (m *TemplateCardMessage) validateJumpList() error {
+	if len(m.TemplateCard.JumpList) > maxJumpList {
+		return core.NewParamError("jump_list cannot exceed 5 items")
+	}
 	for i, jump := range m.TemplateCard.JumpList {
-		if jump.Type == 0 || jump.Title == "" { // Type 0 is usually 'no action' but API requires a type to be specified. Title is always required.
+		if jump.Type == 0 || jump.Title == "" {
 			return core.NewParamError(fmt.Sprintf("jump_list item %d: type and title are required", i))
 		}
 		if jump.Type == 1 && jump.URL == "" {
@@ -239,33 +335,33 @@ func (m *TemplateCardMessage) Validate() error {
 		if jump.Type == 2 && (jump.AppID == "" || jump.PagePath == "") {
 			return core.NewParamError(fmt.Sprintf("jump_list item %d: appid and pagepath are required for type 2", i))
 		}
-		// Check for unsupported jump.Type
 		if jump.Type < 0 || jump.Type > 2 {
-			return core.NewParamError(fmt.Sprintf("jump_list item %d: invalid type: %d; must be 0, 1, or 2", i, jump.Type))
+			return core.NewParamError(
+				fmt.Sprintf("jump_list item %d: invalid type: %d; must be 0, 1, or 2", i, jump.Type),
+			)
 		}
-		if len([]byte(jump.Title)) > 128 { // Assuming a reasonable limit if not specified, often aligns with main title.
+		if len([]byte(jump.Title)) > maxJumpTitleLength {
 			return core.NewParamError(fmt.Sprintf("jump_list item %d: title exceeds 128 bytes", i))
 		}
 	}
+	return nil
+}
 
-	// Validate news_notice specific fields
-	if m.TemplateCard.CardType == CardTypeNewsNotice {
+func (m *TemplateCardMessage) validateCardTypeSpecific() error {
+	switch m.TemplateCard.CardType {
+	case CardTypeNewsNotice:
 		if m.TemplateCard.CardImage == nil || m.TemplateCard.CardImage.URL == "" {
 			return core.NewParamError("card_image.url is required for news_notice cards")
 		}
-		if m.TemplateCard.CardImage.AspectRatio == 0 { // Aspect ratio should be a positive value
+		if m.TemplateCard.CardImage.AspectRatio == 0 {
 			return core.NewParamError("card_image.aspect_ratio cannot be zero for news_notice cards")
 		}
-		// Validate VerticalContentList for news_notice
 		for i, vc := range m.TemplateCard.VerticalContentList {
 			if vc.Title == "" {
 				return core.NewParamError(fmt.Sprintf("vertical_content_list item %d: title cannot be empty", i))
 			}
-			// Add length validation for title and desc if API specifies. (Currently missing in comments)
 		}
-
-	} else if m.TemplateCard.CardType == CardTypeTextNotice {
-		// Ensure news_notice-specific fields are NOT set for text_notice
+	case CardTypeTextNotice:
 		if m.TemplateCard.CardImage != nil {
 			return core.NewParamError("card_image is not allowed for text_notice cards")
 		}
@@ -276,11 +372,15 @@ func (m *TemplateCardMessage) Validate() error {
 			return core.NewParamError("vertical_content_list is not allowed for text_notice cards")
 		}
 	}
+	return nil
+}
 
-	// Validate quote_area if present
+func (m *TemplateCardMessage) validateQuoteArea() error {
 	if m.TemplateCard.QuoteArea != nil {
-		if m.TemplateCard.QuoteArea.Type < 0 || m.TemplateCard.QuoteArea.Type > 2 { // Check for invalid types
-			return core.NewParamError(fmt.Sprintf("quote_area: invalid type: %d; must be 0, 1, or 2", m.TemplateCard.QuoteArea.Type))
+		if m.TemplateCard.QuoteArea.Type < 0 || m.TemplateCard.QuoteArea.Type > 2 {
+			return core.NewParamError(
+				fmt.Sprintf("quote_area: invalid type: %d; must be 0, 1, or 2", m.TemplateCard.QuoteArea.Type),
+			)
 		}
 		if m.TemplateCard.QuoteArea.Title == "" || m.TemplateCard.QuoteArea.QuoteText == "" {
 			return core.NewParamError("quote_area must have title and quote_text")
@@ -288,66 +388,68 @@ func (m *TemplateCardMessage) Validate() error {
 		if m.TemplateCard.QuoteArea.Type == 1 && m.TemplateCard.QuoteArea.URL == "" {
 			return core.NewParamError("quote_area.url is required for type 1")
 		}
-		if m.TemplateCard.QuoteArea.Type == 2 && (m.TemplateCard.QuoteArea.AppID == "" || m.TemplateCard.QuoteArea.PagePath == "") {
+		if m.TemplateCard.QuoteArea.Type == 2 &&
+			(m.TemplateCard.QuoteArea.AppID == "" || m.TemplateCard.QuoteArea.PagePath == "") {
 			return core.NewParamError("quote_area.appid and pagepath are required for type 2")
 		}
 	}
+	return nil
+}
 
-	// Validate image_text_area if present (news_notice only)
+func (m *TemplateCardMessage) validateImageTextArea() error {
 	if m.TemplateCard.ImageTextArea != nil {
 		if m.TemplateCard.CardType != CardTypeNewsNotice {
 			return core.NewParamError("image_text_area is only allowed for news_notice cards")
 		}
-		if m.TemplateCard.ImageTextArea.Type == 0 || m.TemplateCard.ImageTextArea.Title == "" || m.TemplateCard.ImageTextArea.ImageURL == "" {
+		if m.TemplateCard.ImageTextArea.Type == 0 || m.TemplateCard.ImageTextArea.Title == "" ||
+			m.TemplateCard.ImageTextArea.ImageURL == "" {
 			return core.NewParamError("image_text_area must have type, title, and image_url")
 		}
 		if m.TemplateCard.ImageTextArea.Type == 1 && m.TemplateCard.ImageTextArea.URL == "" {
 			return core.NewParamError("image_text_area.url is required for type 1")
 		}
-		if m.TemplateCard.ImageTextArea.Type < 0 || m.TemplateCard.ImageTextArea.Type > 1 { // Assuming only 0 and 1 as valid types
-			return core.NewParamError(fmt.Sprintf("image_text_area: invalid type: %d; must be 0 or 1", m.TemplateCard.ImageTextArea.Type))
+		if m.TemplateCard.ImageTextArea.Type < 0 ||
+			m.TemplateCard.ImageTextArea.Type > 1 {
+			return core.NewParamError(
+				fmt.Sprintf("image_text_area: invalid type: %d; must be 0 or 1", m.TemplateCard.ImageTextArea.Type),
+			)
 		}
 	}
+	return nil
+}
 
-	// Validate MainTitle length and its auxiliary description
-	if len([]byte(m.TemplateCard.MainTitle.Title)) > 26 {
+func (m *TemplateCardMessage) validateMainTitleLength() error {
+	if len([]byte(m.TemplateCard.MainTitle.Title)) > maxMainTitleTitleLen {
 		return core.NewParamError("main_title.title exceeds 26 bytes")
 	}
-	if len([]byte(m.TemplateCard.MainTitle.Desc)) > 30 {
+	if len([]byte(m.TemplateCard.MainTitle.Desc)) > maxMainTitleDescLen {
 		return core.NewParamError("main_title.desc exceeds 30 bytes")
 	}
+	return nil
+}
 
-	// Validate SubTitleText length if present
-	if m.TemplateCard.SubTitleText != "" && len([]byte(m.TemplateCard.SubTitleText)) > 4096 { // A common large text limit, specific to WeCom
-		return core.NewParamError("sub_title_text exceeds 4096 bytes") // Assuming byte limit based on other fields
+func (m *TemplateCardMessage) validateSubTitleTextLength() error {
+	if m.TemplateCard.SubTitleText != "" &&
+		len([]byte(m.TemplateCard.SubTitleText)) > maxSubTitleTextLength {
+		return core.NewParamError("sub_title_text exceeds 4096 bytes")
 	}
+	return nil
+}
 
-	// Validate Source field if present
+func (m *TemplateCardMessage) validateSource() error {
 	if m.TemplateCard.Source != nil {
-		if m.TemplateCard.Source.IconURL == "" { // IconURL typically required if Source is used
+		if m.TemplateCard.Source.IconURL == "" {
 			return core.NewParamError("source.icon_url is required if source is provided")
 		}
-		if len([]byte(m.TemplateCard.Source.Desc)) > 13 {
+		if len([]byte(m.TemplateCard.Source.Desc)) > maxSourceDescLen {
 			return core.NewParamError("source.desc exceeds 13 bytes")
 		}
 		if m.TemplateCard.Source.DescColor < 0 || m.TemplateCard.Source.DescColor > 3 {
-			return core.NewParamError(fmt.Sprintf("invalid source.desc_color: %d; must be 0, 1, 2, or 3", m.TemplateCard.Source.DescColor))
+			return core.NewParamError(
+				fmt.Sprintf("invalid source.desc_color: %d; must be 0, 1, 2, or 3", m.TemplateCard.Source.DescColor),
+			)
 		}
 	}
-
-	// Validate EmphasisContent if present (text_notice only)
-	if m.TemplateCard.EmphasisContent != nil {
-		if m.TemplateCard.CardType != CardTypeTextNotice {
-			return core.NewParamError("emphasis_content is only allowed for text_notice cards")
-		}
-		if len([]byte(m.TemplateCard.EmphasisContent.Title)) > 10 {
-			return core.NewParamError("emphasis_content.title exceeds 10 bytes")
-		}
-		if len([]byte(m.TemplateCard.EmphasisContent.Desc)) > 15 {
-			return core.NewParamError("emphasis_content.desc exceeds 15 bytes")
-		}
-	}
-
 	return nil
 }
 
@@ -415,22 +517,4 @@ func WithJumpList(list []Jump) TemplateCardMessageOption {
 	return func(m *TemplateCardMessage) {
 		m.TemplateCard.JumpList = list
 	}
-}
-
-// NewTemplateCardMessage creates a new TemplateCardMessage with required fields and applies optional configurations.
-func NewTemplateCardMessage(cardType TemplateCardType, mainTitle MainTitle, cardAction CardAction, opts ...TemplateCardMessageOption) *TemplateCardMessage {
-	msg := &TemplateCardMessage{
-		BaseMessage: BaseMessage{
-			MsgType: TypeTemplateCard,
-		},
-		TemplateCard: TemplateCard{
-			CardType:   cardType,
-			MainTitle:  mainTitle,
-			CardAction: cardAction,
-		},
-	}
-	for _, opt := range opts {
-		opt(msg)
-	}
-	return msg
 }

@@ -10,7 +10,7 @@ import (
 	"github.com/wneessen/go-mail"
 )
 
-// Provider supports multiple accounts and strategy selection
+// Provider supports multiple accounts and strategy selection.
 type Provider struct {
 	accounts []*Account
 	strategy core.SelectionStrategy
@@ -18,7 +18,7 @@ type Provider struct {
 
 var _ core.Provider = (*Provider)(nil)
 
-// New creates a new email provider instance
+// New creates a new email provider instance.
 func New(config Config) (*Provider, error) {
 	if !config.IsConfigured() {
 		return nil, errors.New("email provider is not configured or is disabled")
@@ -42,8 +42,8 @@ func New(config Config) (*Provider, error) {
 	}, nil
 }
 
-// Send sends an email message
-func (p *Provider) Send(ctx context.Context, message core.Message, opts *core.ProviderSendOptions) error {
+// Send sends an email message.
+func (p *Provider) Send(ctx context.Context, message core.Message, _ *core.ProviderSendOptions) error {
 	emailMsg, ok := message.(*Message)
 	if !ok {
 		return core.NewParamError(fmt.Sprintf("invalid message type: expected *email.Message, got %T", message))
@@ -76,7 +76,7 @@ func (p *Provider) Send(ctx context.Context, message core.Message, opts *core.Pr
 	return p.doSendEmail(ctx, account, emailMsg)
 }
 
-// doSendEmail performs the actual email sending
+// doSendEmail performs the actual email sending.
 func (p *Provider) doSendEmail(ctx context.Context, account *Account, emailMsg *Message) error {
 	// Set default From if not provided
 	if emailMsg.From == "" {
@@ -146,8 +146,8 @@ func (p *Provider) doSendEmail(ctx context.Context, account *Account, emailMsg *
 	defer client.Close()
 
 	client.SetSSL(true)
-	if err := client.DialAndSendWithContext(ctx, m); err != nil {
-		return fmt.Errorf("failed to send email: %w", err)
+	if errSend := client.DialAndSendWithContext(ctx, m); errSend != nil {
+		return errSend
 	}
 
 	return nil
@@ -172,7 +172,7 @@ func (a *Account) IsEnabled() bool {
 	return !a.Disabled
 }
 
-// GetType returns the subprovider type of this account
+// GetType returns the subprovider type of this account.
 func (a *Account) GetType() string {
 	return a.Type
 }

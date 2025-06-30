@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
-	"time"
 
 	"github.com/shellvon/go-sender/core"
 )
@@ -28,10 +28,6 @@ import (
 // 注意：支持国内外手机号码，需模板ID。
 type ucpTransformer struct{}
 
-func newUcpTransformer() core.HTTPTransformer[*core.Account] {
-	return &ucpTransformer{}
-}
-
 func init() {
 	RegisterTransformer(string(SubProviderUcp), &ucpTransformer{})
 }
@@ -41,10 +37,14 @@ func (t *ucpTransformer) CanTransform(msg core.Message) bool {
 	return ok && smsMsg.SubProvider == string(SubProviderUcp)
 }
 
-func (t *ucpTransformer) Transform(ctx context.Context, msg core.Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+func (t *ucpTransformer) Transform(
+	ctx context.Context,
+	msg core.Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
-		return nil, nil, fmt.Errorf("unsupported message type for ucp: %T", msg)
+		return nil, nil, errors.New("invalid message type for ucpTransformer")
 	}
 	if err := t.validateMessage(smsMsg); err != nil {
 		return nil, nil, err
@@ -62,9 +62,13 @@ func (t *ucpTransformer) validateMessage(msg *Message) error {
 	return nil
 }
 
-// transformTextSMS 转换普通短信
+// transformTextSMS 构造 UCP 短信 HTTP 请求
 //   - 短信API: http://docs.ucpaas.com/doku.php?id=%E7%9F%AD%E4%BF%A1:about_sms
-func (t *ucpTransformer) transformTextSMS(ctx context.Context, msg *Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+func (t *ucpTransformer) transformTextSMS(
+	_ context.Context,
+	msg *Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	// 根据手机号数量选择API
 	var apiPath string
 	if len(msg.Mobiles) > 1 {
@@ -111,11 +115,10 @@ func (t *ucpTransformer) transformTextSMS(ctx context.Context, msg *Message, acc
 		Headers:  map[string]string{"Content-Type": "application/json"},
 		Body:     bodyData,
 		BodyType: "json",
-		Timeout:  30 * time.Second,
 	}, t.handleUcpResponse, nil
 }
 
-// handleUcpResponse 处理云之讯API响应
+// handleUcpResponse 处理云之讯API响应.
 func (t *ucpTransformer) handleUcpResponse(statusCode int, body []byte) error {
 	if statusCode < 200 || statusCode >= 300 {
 		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
@@ -129,8 +132,8 @@ func (t *ucpTransformer) handleUcpResponse(statusCode int, body []byte) error {
 		return fmt.Errorf("failed to parse ucp response: %w", err)
 	}
 	if result.Code != 0 {
-		return &SMSError{
-			Code:     fmt.Sprintf("%d", result.Code),
+		return &Error{
+			Code:     strconv.Itoa(result.Code),
 			Message:  result.Msg,
 			Provider: string(SubProviderUcp),
 		}

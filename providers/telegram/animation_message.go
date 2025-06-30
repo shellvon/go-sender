@@ -10,7 +10,7 @@ type AnimationMessage struct {
 
 	// Animation to send. Pass a file_id as String to send an animation that exists on the Telegram servers (recommended),
 	// pass an HTTP URL as a String for Telegram to get an animation from the Internet, or upload a new animation using multipart/form-data.
-	// The animation must be at most 50 MB in size.
+	// The animation must be at most maxAnimationSizeMB MB in size.
 	Animation string `json:"animation"`
 
 	// Duration of sent animation in seconds
@@ -45,6 +45,11 @@ type AnimationMessage struct {
 	HasSpoiler bool `json:"has_spoiler,omitempty"`
 }
 
+// NewAnimationMessage creates a new AnimationMessage instance.
+func NewAnimationMessage(chatID string, animation string, opts ...interface{}) *AnimationMessage {
+	return NewAnimationMessageWithBuilder(chatID, animation, opts...)
+}
+
 func (m *AnimationMessage) GetBase() *BaseMessage {
 	return &m.BaseMessage
 }
@@ -66,53 +71,32 @@ func (m *AnimationMessage) Validate() error {
 type AnimationMessageOption func(*AnimationMessage)
 
 // WithAnimationDuration sets the duration of the animation in seconds
-// This is optional and can be used to provide metadata about the animation
+// This is optional and can be used to provide metadata about the animation.
 func WithAnimationDuration(duration int) AnimationMessageOption {
 	return func(m *AnimationMessage) { m.Duration = duration }
 }
 
 // WithAnimationWidth sets the width of the animation
-// This is optional and can be used to provide metadata about the animation
+// This is optional and can be used to provide metadata about the animation.
 func WithAnimationWidth(width int) AnimationMessageOption {
 	return func(m *AnimationMessage) { m.Width = width }
 }
 
 // WithAnimationHeight sets the height of the animation
-// This is optional and can be used to provide metadata about the animation
+// This is optional and can be used to provide metadata about the animation.
 func WithAnimationHeight(height int) AnimationMessageOption {
 	return func(m *AnimationMessage) { m.Height = height }
 }
 
 // WithAnimationThumbnail sets the thumbnail for the animation
 // Should be in JPEG format and less than 200 kB in size
-// Width and height should not exceed 320
+// Width and height should not exceed 320.
 func WithAnimationThumbnail(thumbnail string) AnimationMessageOption {
 	return func(m *AnimationMessage) { m.Thumbnail = thumbnail }
 }
 
 // WithAnimationHasSpoiler sets whether the animation should be covered with a spoiler animation
-// Users will need to tap to reveal the animation content
+// Users will need to tap to reveal the animation content.
 func WithAnimationHasSpoiler(has bool) AnimationMessageOption {
 	return func(m *AnimationMessage) { m.HasSpoiler = has }
-}
-
-func NewAnimationMessage(chatID string, animation string, opts ...interface{}) *AnimationMessage {
-	msg := &AnimationMessage{
-		MediaMessage: MediaMessage{
-			BaseMessage: BaseMessage{
-				MsgType: TypeAnimation,
-				ChatID:  chatID,
-			},
-		},
-		Animation: animation,
-	}
-	for _, opt := range opts {
-		switch o := opt.(type) {
-		case AnimationMessageOption:
-			o(msg)
-		case MessageOption:
-			o(msg)
-		}
-	}
-	return msg
 }

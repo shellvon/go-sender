@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/shellvon/go-sender/core"
@@ -32,13 +33,10 @@ const (
 	tencentVoiceAction       = "SendCodeVoice"
 	tencentVoiceNotifyAction = "SendVoice"
 	tencentDefaultRegion     = "ap-guangzhou"
+	tencentTimeout           = 30 * time.Second
 )
 
 type tencentTransformer struct{}
-
-func newTencentTransformer() core.HTTPTransformer[*core.Account] {
-	return &tencentTransformer{}
-}
 
 func init() {
 	RegisterTransformer(string(SubProviderTencent), &tencentTransformer{})
@@ -49,10 +47,14 @@ func (t *tencentTransformer) CanTransform(msg core.Message) bool {
 	return ok && smsMsg.SubProvider == string(SubProviderTencent)
 }
 
-func (t *tencentTransformer) Transform(ctx context.Context, msg core.Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+func (t *tencentTransformer) Transform(
+	ctx context.Context,
+	msg core.Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
-		return nil, nil, fmt.Errorf("unsupported message type for tencent: %T", msg)
+		return nil, nil, errors.New("invalid message type for tencentTransformer")
 	}
 	if err := t.validateMessage(smsMsg); err != nil {
 		return nil, nil, err
@@ -62,6 +64,8 @@ func (t *tencentTransformer) Transform(ctx context.Context, msg core.Message, ac
 		return t.transformTextSMS(ctx, smsMsg, account)
 	case Voice:
 		return t.transformVoiceSMS(ctx, smsMsg, account)
+	case MMS:
+		fallthrough
 	default:
 		return nil, nil, fmt.Errorf("unsupported tencent message type: %s", smsMsg.Type)
 	}
@@ -86,7 +90,11 @@ func (t *tencentTransformer) validateMessage(msg *Message) error {
 // 短信API文档: https://cloud.tencent.com/document/product/382/55981
 //   - 国内短信: 支持验证码、通知类短信和营销短信
 //   - 国际/港澳台短信: 支持验证码、通知类短信和营销短信
-func (t *tencentTransformer) transformTextSMS(ctx context.Context, msg *Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+func (t *tencentTransformer) transformTextSMS(
+	_ context.Context,
+	msg *Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	endpoint := account.Endpoint
 	if endpoint == "" {
 		endpoint = "sms.tencentcloudapi.com"
@@ -112,8 +120,8 @@ func (t *tencentTransformer) transformTextSMS(ctx context.Context, msg *Message,
 	if extendCode := msg.GetExtraStringOrDefault(tencentExtendCode, ""); extendCode != "" {
 		params["ExtendCode"] = extendCode
 	}
-	if senderId := msg.GetExtraStringOrDefault(tencentSenderID, ""); senderId != "" {
-		params["SenderId"] = senderId
+	if senderID := msg.GetExtraStringOrDefault(tencentSenderID, ""); senderID != "" {
+		params["SenderId"] = senderID
 	}
 
 	requestBody := map[string]interface{}{
@@ -148,7 +156,6 @@ func (t *tencentTransformer) transformTextSMS(ctx context.Context, msg *Message,
 		Headers:  headers,
 		Body:     bodyData,
 		BodyType: "json",
-		Timeout:  30 * time.Second,
 	}, t.handleTencentResponse, nil
 }
 
@@ -156,8 +163,12 @@ func (t *tencentTransformer) transformTextSMS(ctx context.Context, msg *Message,
 //   - 语音验证码API: https://cloud.tencent.com/document/product/1128/51559
 //   - 语音通知API: https://cloud.tencent.com/document/product/1128/51558
 //
-// 当短信为验证码类型时，使用语音验证码API，否则使用语音通知API
-func (t *tencentTransformer) transformVoiceSMS(ctx context.Context, msg *Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+// 当短信为验证码类型时，使用语音验证码API，否则使用语音通知API.
+func (t *tencentTransformer) transformVoiceSMS(
+	_ context.Context,
+	msg *Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	endpoint := account.Endpoint
 	if endpoint == "" {
 		endpoint = tencentVoiceEndpoint
@@ -220,11 +231,10 @@ func (t *tencentTransformer) transformVoiceSMS(ctx context.Context, msg *Message
 		Headers:  headers,
 		Body:     bodyData,
 		BodyType: "json",
-		Timeout:  30 * time.Second,
 	}, t.handleTencentResponse, nil
 }
 
-// formatTencentPhone 格式化手机号，始终+开头，国内强制+86，国际为+regionCode
+// formatTencentPhone 格式化手机号，始终+开头，国内强制+86，国际为+regionCode.
 func (t *tencentTransformer) formatTencentPhone(mobile string, regionCode int) string {
 	if regionCode == 0 {
 		regionCode = 86
@@ -232,7 +242,7 @@ func (t *tencentTransformer) formatTencentPhone(mobile string, regionCode int) s
 	return fmt.Sprintf("+%d%s", regionCode, mobile)
 }
 
-// tencentHeaderParams 腾讯云API请求头参数
+// tencentHeaderParams 腾讯云API请求头参数.
 type tencentHeaderParams struct {
 	Endpoint  string
 	Action    string
@@ -244,7 +254,7 @@ type tencentHeaderParams struct {
 	Date      string
 }
 
-// buildTencentHeaders 构造腾讯云API请求头并签名
+// buildTencentHeaders 构造腾讯云API请求头并签名.
 func (t *tencentTransformer) buildTencentHeaders(params tencentHeaderParams) map[string]string {
 	credentialScope := fmt.Sprintf("%s/sms/tc3_request", params.Date)
 	signature := t.calculateTencentSignature(params.AppSecret, params.BodyData, params.Timestamp, credentialScope)
@@ -254,15 +264,20 @@ func (t *tencentTransformer) buildTencentHeaders(params tencentHeaderParams) map
 		"Host":            params.Endpoint,
 		"X-TC-Action":     params.Action,
 		"X-TC-Version":    params.Version,
-		"X-TC-Timestamp":  fmt.Sprintf("%d", params.Timestamp),
+		"X-TC-Timestamp":  strconv.FormatInt(params.Timestamp, 10),
 		"X-TC-Region":     params.Region,
 		"Authorization":   signature,
 		"X-TC-Credential": fmt.Sprintf("%s/%s", params.AppSecret, credentialScope),
 	}
 }
 
-// calculateTencentSignature 计算腾讯云API签名
-func (t *tencentTransformer) calculateTencentSignature(secretKey string, payload []byte, timestamp int64, credentialScope string) string {
+// calculateTencentSignature 计算腾讯云API签名.
+func (t *tencentTransformer) calculateTencentSignature(
+	secretKey string,
+	payload []byte,
+	timestamp int64,
+	credentialScope string,
+) string {
 	h := hmac.New(sha256.New, []byte("TC3"+secretKey))
 	date := time.Unix(timestamp, 0).UTC().Format("20060102")
 	h.Write([]byte(date))
@@ -284,12 +299,8 @@ func (t *tencentTransformer) calculateTencentSignature(secretKey string, payload
 		secretKey, credentialScope, signature)
 }
 
-// handleTencentResponse 处理腾讯云API响应
-func (t *tencentTransformer) handleTencentResponse(statusCode int, body []byte) error {
-	if statusCode < 200 || statusCode >= 300 {
-		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
-	}
-
+// handleTencentResponse 处理腾讯云API响应.
+func (t *tencentTransformer) handleTencentResponse(_ int, body []byte) error {
 	var result struct {
 		Response struct {
 			SendStatusSet []struct {
@@ -301,7 +312,7 @@ func (t *tencentTransformer) handleTencentResponse(statusCode int, body []byte) 
 				Message        string `json:"Message"`
 				IsoCode        string `json:"IsoCode"`
 			} `json:"SendStatusSet"`
-			RequestId string `json:"RequestId"`
+			RequestID string `json:"RequestID"`
 		} `json:"Response"`
 		Error *struct {
 			Code    string `json:"Code"`
@@ -315,7 +326,7 @@ func (t *tencentTransformer) handleTencentResponse(statusCode int, body []byte) 
 
 	// 检查是否有错误
 	if result.Error != nil {
-		return &SMSError{
+		return &Error{
 			Code:     result.Error.Code,
 			Message:  result.Error.Message,
 			Provider: string(SubProviderTencent),
@@ -325,7 +336,7 @@ func (t *tencentTransformer) handleTencentResponse(statusCode int, body []byte) 
 	// 检查发送状态
 	for _, status := range result.Response.SendStatusSet {
 		if status.Code != "Ok" {
-			return &SMSError{
+			return &Error{
 				Code:     status.Code,
 				Message:  status.Message,
 				Provider: string(SubProviderTencent),

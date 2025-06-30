@@ -18,6 +18,7 @@ type Account struct {
 // Config holds the configuration for the email provider.
 type Config struct {
 	core.BaseConfig
+
 	Accounts []Account `json:"accounts"` // A list of email accounts to use.
 }
 

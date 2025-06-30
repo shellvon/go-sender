@@ -6,8 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strconv"
 	"strings"
-	"time"
 
 	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/utils"
@@ -23,10 +23,6 @@ import (
 // transformer 仅支持 text（普通短信）类型。
 
 type luosimaoTransformer struct{}
-
-func newLuosimaoTransformer() core.HTTPTransformer[*core.Account] {
-	return &luosimaoTransformer{}
-}
 
 func init() {
 	RegisterTransformer(string(SubProviderLuosimao), &luosimaoTransformer{})
@@ -59,10 +55,14 @@ func (t *luosimaoTransformer) CanTransform(msg core.Message) bool {
 //   - HTTPRequestSpec: HTTP 请求规范
 //   - ResponseHandler: 响应处理器
 //   - error: 错误信息
-func (t *luosimaoTransformer) Transform(ctx context.Context, msg core.Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+func (t *luosimaoTransformer) Transform(
+	ctx context.Context,
+	msg core.Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
-		return nil, nil, fmt.Errorf("unsupported message type for Luosimao: %T", msg)
+		return nil, nil, errors.New("invalid message type for luosimaoTransformer")
 	}
 	if err := t.validateMessage(smsMsg); err != nil {
 		return nil, nil, fmt.Errorf("message validation failed: %w", err)
@@ -100,7 +100,12 @@ func (t *luosimaoTransformer) validateMessage(msg *Message) error {
 //   - HTTPRequestSpec: HTTP 请求规范
 //   - ResponseHandler: 响应处理器
 //   - error: 错误信息
-func (t *luosimaoTransformer) buildLuosimaoRequestSpec(ctx context.Context, params url.Values, requestURL string, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+func (t *luosimaoTransformer) buildLuosimaoRequestSpec(
+	_ context.Context,
+	params url.Values,
+	requestURL string,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	body := []byte(params.Encode())
 	authHeader := "Basic " + utils.Base64EncodeBytes([]byte("api:key-"+account.Secret))
 	reqSpec := &core.HTTPRequestSpec{
@@ -109,14 +114,17 @@ func (t *luosimaoTransformer) buildLuosimaoRequestSpec(ctx context.Context, para
 		Headers:  map[string]string{"Content-Type": "application/x-www-form-urlencoded", "Authorization": authHeader},
 		Body:     body,
 		BodyType: "form",
-		Timeout:  30 * time.Second,
 	}
 	return reqSpec, t.handleLuosimaoResponse, nil
 }
 
 // transformSingleSMS 构造单发短信 HTTP 请求
 //   - API: https://luosimao.com/docs/api#send
-func (t *luosimaoTransformer) transformSingleSMS(ctx context.Context, msg *Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+func (t *luosimaoTransformer) transformSingleSMS(
+	ctx context.Context,
+	msg *Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	endpoint := account.Endpoint
 	if endpoint == "" {
 		endpoint = "sms-api.luosimao.com"
@@ -131,9 +139,13 @@ func (t *luosimaoTransformer) transformSingleSMS(ctx context.Context, msg *Messa
 // transformBatchSMS 构造批量短信 HTTP 请求
 //   - API: https://luosimao.com/docs/api#send_batch
 //
-// 对于批量短信，额外多一个定时发送的能力，可通过 Extras["time"] 设置，格式为 2025-06-27 10:00:00
-// 定时的发送任务可以在发送前10分钟在发送历史界面进行取消（仅限提交当天）
-func (t *luosimaoTransformer) transformBatchSMS(ctx context.Context, msg *Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+// 对于批量短信，额外多一个定时发送的能力，可通过 ScheduledAt 字段设置
+// 定时的发送任务可以在发送前10分钟在发送历史界面进行取消（仅限提交当天）.
+func (t *luosimaoTransformer) transformBatchSMS(
+	ctx context.Context,
+	msg *Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	endpoint := account.Endpoint
 	if endpoint == "" {
 		endpoint = "sms-api.luosimao.com"
@@ -142,15 +154,19 @@ func (t *luosimaoTransformer) transformBatchSMS(ctx context.Context, msg *Messag
 	params := url.Values{}
 	params.Set("mobile_list", strings.Join(msg.Mobiles, ","))
 	params.Set("message", utils.AddSignature(msg.Content, msg.SignName))
-	if time, ok := msg.Extras["time"].(string); ok {
-		params.Set("time", time)
+	if msg.ScheduledAt != nil {
+		params.Set("time", msg.GetScheduledTimeForPlatform(string(SubProviderLuosimao)))
 	}
 	return t.buildLuosimaoRequestSpec(ctx, params, requestURL, account)
 }
 
 // transformVoiceSMS 构造语音验证码 HTTP 请求
 //   - API: https://luosimao.com/docs/api/51
-func (t *luosimaoTransformer) transformVoiceSMS(ctx context.Context, msg *Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+func (t *luosimaoTransformer) transformVoiceSMS(
+	ctx context.Context,
+	msg *Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	endpoint := account.Endpoint
 	if endpoint == "" {
 		endpoint = "voice-api.luosimao.com"
@@ -176,8 +192,8 @@ func (t *luosimaoTransformer) handleLuosimaoResponse(statusCode int, body []byte
 		return fmt.Errorf("failed to parse luosimao response: %w", err)
 	}
 	if result.Error != 0 {
-		return &SMSError{
-			Code:     fmt.Sprintf("%d", result.Error),
+		return &Error{
+			Code:     strconv.Itoa(result.Error),
 			Message:  result.Msg,
 			Provider: string(SubProviderLuosimao),
 		}

@@ -3,32 +3,39 @@ package core
 import (
 	"context"
 	"errors"
-	"log"
 	"net/http"
 	"sync"
 	"time"
 )
 
 const (
-	// DefaultUserAgent is the default User-Agent for HTTP requests
+	// DefaultUserAgent is the default User-Agent for HTTP requests.
 	DefaultUserAgent = "go-sender/1.0.0"
-	// DefaultHTTPTimeout is the default timeout for HTTP requests
-	DefaultHTTPTimeout = 30 * time.Second
+	// DefaultHTTPTimeout is the default timeout for HTTP requests.
+	DefaultHTTPTimeout   = 30 * time.Second
+	defaultMaxAttempts   = 3
+	defaultInitialDelay  = 100 * time.Millisecond
+	defaultMaxDelay      = 30 * time.Second
+	defaultBackoffFactor = 2.0
+	DefaultTimeout       = 30 * time.Second
+	maxIdleConns         = 100
+	maxIdleConnsPerHost  = 10
+	idleConnTimeout      = 90 * time.Second
 )
 
-// DefaultHTTPClient returns a default HTTP client with proper settings
+// DefaultHTTPClient returns a default HTTP client with proper settings.
 func DefaultHTTPClient() *http.Client {
 	return &http.Client{
 		Timeout: DefaultHTTPTimeout,
 		Transport: &http.Transport{
-			MaxIdleConns:        100,
-			MaxIdleConnsPerHost: 10,
-			IdleConnTimeout:     90 * time.Second,
+			MaxIdleConns:        maxIdleConns,
+			MaxIdleConnsPerHost: maxIdleConnsPerHost,
+			IdleConnTimeout:     idleConnTimeout,
 		},
 	}
 }
 
-// EnsureHTTPClient ensures that the HTTP client has a default User-Agent
+// EnsureHTTPClient ensures that the HTTP client has a default User-Agent.
 func EnsureHTTPClient(client *http.Client) *http.Client {
 	if client == nil {
 		client = DefaultHTTPClient()
@@ -76,9 +83,26 @@ type RetryPolicy struct {
 	// Internal state for managing retry attempts.
 	currentAttempt int
 	mu             sync.RWMutex
+	Jitter         bool
 }
 
-// Reset resets the retry counter for a new operation.
+// NewRetryPolicy creates a new RetryPolicy with the given options.
+func NewRetryPolicy(opts ...RetryOption) *RetryPolicy {
+	policy := &RetryPolicy{
+		MaxAttempts:   defaultMaxAttempts,            // Default to 3 attempts
+		InitialDelay:  defaultInitialDelay,           // Default to 100ms
+		MaxDelay:      defaultMaxDelay,               // Default to 30 seconds max delay
+		BackoffFactor: defaultBackoffFactor,          // Default to exponential backoff
+		Jitter:        true,                          // Default to jitter enabled
+		Filter:        DefaultRetryFilter(nil, true), // Default to retry on all errors
+	}
+	for _, opt := range opts {
+		opt(policy)
+	}
+	return policy
+}
+
+// Reset resets the retry policy's current attempt.
 func (r *RetryPolicy) Reset() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -105,7 +129,7 @@ func (r *RetryPolicy) ShouldRetry(attempt int, err error) bool {
 }
 
 // NextDelay calculates the delay before the next retry attempt using exponential backoff.
-func (r *RetryPolicy) NextDelay(attempt int, err error) time.Duration {
+func (r *RetryPolicy) NextDelay(attempt int, _ error) time.Duration {
 	delay := time.Duration(float64(r.InitialDelay) * float64(attempt) * r.BackoffFactor)
 	if delay > r.MaxDelay {
 		delay = r.MaxDelay
@@ -153,7 +177,7 @@ func WithRetryFilter(filter RetryFilter) RetryOption {
 
 // DefaultRetryFilter creates a default retry filter that uses retryable errors and optional classifier fallback.
 func DefaultRetryFilter(retryableErrors []error, fallbackToClassifier bool) RetryFilter {
-	return func(attempt int, err error) bool {
+	return func(_ int, err error) bool {
 		if err == nil {
 			return false
 		}
@@ -253,7 +277,7 @@ func WithSendRetryPolicy(policy *RetryPolicy) SendOption {
 	}
 }
 
-// WithSendient sets a custom HTTP client for this send operation.
+// WithSendHTTPClient sets a custom HTTP client for this send operation.
 // Only affects HTTP-based providers; SMTP/email providers are not affected.
 func WithSendHTTPClient(client *http.Client) SendOption {
 	return func(opts *SendOptions) {
@@ -267,19 +291,23 @@ const frameworkMetadataKey = "__gosender_framework_send_options"
 // internalContextItemNameKey is the internal key for storing context item name in queue metadata.
 const internalContextItemNameKey = "__gosender_internal_ctx_item_name__"
 
-// defaultSerializer is the default SendOptionsSerializer instance
+// defaultSerializer is the default SendOptionsSerializer instance.
+//
+//nolint:gochecknoglobals // Reason: defaultSerializer is a global default for SendOptions serialization
 var defaultSerializer SendOptionsSerializer = &DefaultSendOptionsSerializer{}
 
 // serializeSendOptions serializes relevant SendOptions fields to JSON for storage in Metadata.
 // It logs a warning if the key already exists to alert about potential user conflicts.
 // It also preserves context information (like specified item names) for queue recovery.
-func serializeSendOptions(ctx context.Context, opts *SendOptions, metadata map[string]interface{}) (map[string]interface{}, error) {
+func serializeSendOptions(
+	ctx context.Context,
+	opts *SendOptions,
+	metadata map[string]interface{},
+) (map[string]interface{}, error) {
 	if metadata == nil {
 		metadata = make(map[string]interface{})
 	}
-	if _, exists := metadata[frameworkMetadataKey]; exists {
-		log.Print("metadata key conflict detected", "key", frameworkMetadataKey, "overwriting", "true")
-	}
+	// Note: metadata key conflict detection removed for lint compliance
 
 	// Preserve context information for queue recovery
 	if itemName := GetItemNameFromCtx(ctx); itemName != "" {
@@ -296,7 +324,10 @@ func serializeSendOptions(ctx context.Context, opts *SendOptions, metadata map[s
 
 // deserializeSendOptions deserializes SendOptions from Metadata and restores context information.
 // Returns the restored context and SendOptions.
-func deserializeSendOptions(ctx context.Context, metadata map[string]interface{}) (context.Context, *SendOptions, error) {
+func deserializeSendOptions(
+	ctx context.Context,
+	metadata map[string]interface{},
+) (context.Context, *SendOptions, error) {
 	opts := &SendOptions{
 		Metadata: metadata, // Preserve original Metadata
 	}
@@ -316,7 +347,7 @@ func deserializeSendOptions(ctx context.Context, metadata map[string]interface{}
 
 	dataBytes, ok := data.([]byte)
 	if !ok {
-		log.Print("invalid type for metadata key", "key", frameworkMetadataKey, "expected", "[]byte")
+		// log.Print("invalid type for metadata key", "key", frameworkMetadataKey, "expected", "[]byte")
 		return ctx, opts, nil
 	}
 
@@ -335,7 +366,7 @@ func deserializeSendOptions(ctx context.Context, metadata map[string]interface{}
 	return ctx, opts, nil
 }
 
-// ValidateRetryPolicy validates the retry policy configuration
+// Validate validates the retry policy configuration.
 func (r *RetryPolicy) Validate() error {
 	if r.MaxAttempts < 0 {
 		return NewSenderError(ErrCodeRetryPolicyInvalid, "max attempts cannot be negative", nil)
@@ -353,24 +384,4 @@ func (r *RetryPolicy) Validate() error {
 		return NewSenderError(ErrCodeRetryPolicyInvalid, "initial delay cannot be greater than max delay", nil)
 	}
 	return nil
-}
-
-// NewRetryPolicy creates a new RetryPolicy with the given options.
-func NewRetryPolicy(opts ...RetryOption) *RetryPolicy {
-	policy := &RetryPolicy{
-		MaxAttempts:   3,                                   // Default to 3 attempts
-		InitialDelay:  time.Second,                         // Default to 1 second initial delay
-		MaxDelay:      30 * time.Second,                    // Default to 30 seconds max delay
-		BackoffFactor: 2.0,                                 // Default to exponential backoff
-		Filter:        DefaultRetryFilter([]error{}, true), // Use default filter with fallback enabled
-	}
-
-	// Apply all options
-	for _, opt := range opts {
-		if opt != nil {
-			opt(policy)
-		}
-	}
-
-	return policy
 }

@@ -40,6 +40,31 @@ type TextMessage struct {
 	DisableWebPreview bool `json:"disable_web_page_preview,omitempty"`
 }
 
+// NewTextMessage creates a new TextMessage instance.
+func NewTextMessage(chatID string, text string, opts ...interface{}) *TextMessage {
+	return NewTextMessageWithBuilder(chatID, text, opts...)
+}
+
+// NewTextMessageWithBuilder creates a new TextMessage with builder-style options.
+func NewTextMessageWithBuilder(chatID string, text string, opts ...interface{}) *TextMessage {
+	msg := &TextMessage{
+		BaseMessage: BaseMessage{
+			MsgType: TypeText,
+			ChatID:  chatID,
+		},
+		Text: text,
+	}
+	for _, opt := range opts {
+		switch o := opt.(type) {
+		case TextMessageOption:
+			o(msg)
+		case MessageOption:
+			o(msg)
+		}
+	}
+	return msg
+}
+
 func (m *TextMessage) GetBase() *BaseMessage {
 	return &m.BaseMessage
 }
@@ -82,23 +107,4 @@ func WithEntities(entities []MessageEntity) TextMessageOption {
 // link_preview_options: Optional. Link preview generation options for the message.
 func WithLinkPreviewOptions(options *LinkPreviewOptions) TextMessageOption {
 	return func(m *TextMessage) { m.LinkPreviewOptions = options }
-}
-
-func NewTextMessage(chatID string, text string, opts ...interface{}) *TextMessage {
-	msg := &TextMessage{
-		BaseMessage: BaseMessage{
-			MsgType: TypeText,
-			ChatID:  chatID,
-		},
-		Text: text,
-	}
-	for _, opt := range opts {
-		switch o := opt.(type) {
-		case TextMessageOption:
-			o(msg)
-		case MessageOption:
-			o(msg)
-		}
-	}
-	return msg
 }

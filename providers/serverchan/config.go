@@ -4,13 +4,14 @@ import (
 	"github.com/shellvon/go-sender/core"
 )
 
-// Config holds configuration for the ServerChan provider
+// Config holds configuration for the ServerChan provider.
 type Config struct {
 	core.BaseConfig
+
 	Accounts []core.Account `json:"accounts"` // Multiple account configuration
 }
 
-// IsConfigured checks if the ServerChan configuration is valid
+// IsConfigured checks if the ServerChan configuration is valid.
 func (c Config) IsConfigured() bool {
 	return !c.IsDisabled() && len(c.Accounts) > 0
 }

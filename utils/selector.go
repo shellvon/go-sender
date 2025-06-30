@@ -1,3 +1,4 @@
+//revive:disable:var-naming
 package utils
 
 import (
@@ -7,7 +8,7 @@ import (
 	"github.com/shellvon/go-sender/core"
 )
 
-// FilterEnabled filters enabled items from a slice
+// FilterEnabled filters enabled items from a slice.
 func FilterEnabled[T core.Selectable](items []T) []T {
 	enabled := make([]T, 0, len(items))
 	for i := range items {
@@ -18,7 +19,7 @@ func FilterEnabled[T core.Selectable](items []T) []T {
 	return enabled
 }
 
-// GetStrategy gets strategy from registry or returns default
+// GetStrategy gets strategy from registry or returns default.
 func GetStrategy(strategyType core.StrategyType) core.SelectionStrategy {
 	strategy, exists := core.GlobalStrategyRegistry.Get(strategyType)
 	if !exists {
@@ -30,7 +31,7 @@ func GetStrategy(strategyType core.StrategyType) core.SelectionStrategy {
 // Select selects an item from the provided items based on the following priority:
 // 1. Item name from context (if specified)
 // 2. Strategy from context (if specified)
-// 3. Default strategy
+// 3. Default strategy.
 func Select(ctx context.Context, items []core.Selectable, strategy core.SelectionStrategy) core.Selectable {
 	// 1. Use item name from context if specified
 	if itemName := core.GetItemNameFromCtx(ctx); itemName != "" {
@@ -56,7 +57,7 @@ func Select(ctx context.Context, items []core.Selectable, strategy core.Selectio
 	return nil
 }
 
-// InitProvider initializes a provider with common setup logic
+// InitProvider initializes a provider with common setup logic.
 func InitProvider[T core.Selectable](config core.ConfigProvider, items []T) ([]T, core.SelectionStrategy, error) {
 	// Filter enabled items
 	enabledItems := FilterEnabled(items)

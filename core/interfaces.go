@@ -36,16 +36,21 @@ const (
 	ProviderTypeEmailAPI ProviderType = "emailapi"
 )
 
-// HealthStatus represents the health status of a component
+// HealthStatus represents the health status of a component.
 type HealthStatus string
 
 const (
-	HealthStatusHealthy   HealthStatus = "healthy"
+	// HealthStatusHealthy represents a healthy status.
+	HealthStatusHealthy HealthStatus = "healthy"
+	// HealthStatusUnhealthy represents an unhealthy status.
 	HealthStatusUnhealthy HealthStatus = "unhealthy"
-	HealthStatusDegraded  HealthStatus = "degraded"
+	// HealthStatusDegraded represents a degraded status.
+	HealthStatusDegraded HealthStatus = "degraded"
+	// HealthStatusUnknown represents an unknown status.
+	HealthStatusUnknown HealthStatus = "unknown"
 )
 
-// HealthCheck represents a health check result
+// HealthCheck represents a health check result.
 type HealthCheck struct {
 	Status    HealthStatus            `json:"status"`
 	Message   string                  `json:"message,omitempty"`
@@ -54,13 +59,13 @@ type HealthCheck struct {
 	Checks    map[string]*HealthCheck `json:"checks,omitempty"`
 }
 
-// HealthChecker defines the interface for health checking
+// HealthChecker defines the interface for health checking.
 type HealthChecker interface {
 	// HealthCheck performs a health check and returns the result
 	HealthCheck(ctx context.Context) *HealthCheck
 }
 
-// ProviderHealth represents the health status of a provider
+// ProviderHealth represents the health status of a provider.
 type ProviderHealth struct {
 	ProviderType ProviderType  `json:"provider_type"`
 	Status       HealthStatus  `json:"status"`
@@ -70,7 +75,7 @@ type ProviderHealth struct {
 	Latency      time.Duration `json:"latency"`
 }
 
-// SenderHealth represents the overall health status of the sender
+// SenderHealth represents the overall health status of the sender.
 type SenderHealth struct {
 	Status    HealthStatus                     `json:"status"`
 	Message   string                           `json:"message,omitempty"`
@@ -93,13 +98,13 @@ type Message interface {
 
 // DefaultMessage provides a base implementation for Message with a unique id.
 type DefaultMessage struct {
-	msgId  string                 // 可选，允许自定义消息ID，未设置时自动生成
+	msgID  string                 // 可选，允许自定义消息ID，未设置时自动生成
 	Extras map[string]interface{} `json:"extras,omitempty"`
 }
 
-// LoggerAware defines an interface for components that can have a logger injected
+// LoggerAware is implemented by types that can set a logger.
 type LoggerAware interface {
-	SetLogger(logger Logger)
+	SetLogger(Logger)
 }
 
 // NewDefaultMessage creates a DefaultMessage with a new uuid.
@@ -109,14 +114,14 @@ func NewDefaultMessage() DefaultMessage {
 
 // MsgID returns the unique id of the message.
 func (m *DefaultMessage) MsgID() string {
-	if m.msgId == "" {
-		m.msgId = uuid.NewString()
+	if m.msgID == "" {
+		m.msgID = uuid.NewString()
 	}
-	return m.msgId
+	return m.msgID
 }
 
 // SubProviderType returns the sub-provider type, default implementation returns empty string
-// @deprecated: Use GetAccountName() instead
+// @deprecated: Use GetAccountName() instead.
 func (m *DefaultMessage) SubProviderType() string {
 	return ""
 }
@@ -131,11 +136,6 @@ type Provider interface {
 	Send(ctx context.Context, msg Message, opts *ProviderSendOptions) error
 	// Name returns the unique name of the provider.
 	Name() string
-}
-
-// LoggerAwareProvider is an optional interface for Providers that support logger injection.
-type LoggerAwareProvider interface {
-	SetLogger(logger Logger)
 }
 
 // RateLimiter is an interface for controlling the rate of operations.
@@ -213,7 +213,7 @@ type Queue interface {
 	Close() error
 }
 
-// PerformanceMetrics represents detailed performance metrics
+// PerformanceMetrics represents detailed performance metrics.
 type PerformanceMetrics struct {
 	SendLatency         time.Duration `json:"send_latency"`
 	QueueLatency        time.Duration `json:"queue_latency,omitempty"`
@@ -225,7 +225,7 @@ type PerformanceMetrics struct {
 	RateLimitRemaining  int           `json:"rate_limit_remaining,omitempty"`
 }
 
-// MetricsData represents structured metrics data
+// MetricsData represents structured metrics data.
 type MetricsData struct {
 	Provider     string                 `json:"provider"`
 	Success      bool                   `json:"success"`
@@ -257,16 +257,16 @@ type CircuitBreaker interface {
 // RetryFilter is a function type that determines whether an error should trigger a retry.
 type RetryFilter func(attempt int, err error) bool
 
-// SendOptionsSerializer defines the interface for serializing/deserializing SendOptions
+// SendOptionsSerializer defines the interface for serializing/deserializing SendOptions.
 type SendOptionsSerializer interface {
 	Serialize(opts *SendOptions) ([]byte, error)
 	Deserialize(data []byte) (*SendOptions, error)
 }
 
-// DefaultSendOptionsSerializer is the default implementation of SendOptionsSerializer
+// DefaultSendOptionsSerializer is the default implementation of SendOptionsSerializer.
 type DefaultSendOptionsSerializer struct{}
 
-// Serialize serializes SendOptions to JSON bytes
+// Serialize serializes SendOptions to JSON bytes.
 func (s *DefaultSendOptionsSerializer) Serialize(opts *SendOptions) ([]byte, error) {
 	if opts == nil {
 		return nil, errors.New("send options cannot be nil")
@@ -293,7 +293,7 @@ func (s *DefaultSendOptionsSerializer) Serialize(opts *SendOptions) ([]byte, err
 	return json.Marshal(data)
 }
 
-// Deserialize deserializes JSON bytes to SendOptions
+// Deserialize deserializes JSON bytes to SendOptions.
 func (s *DefaultSendOptionsSerializer) Deserialize(data []byte) (*SendOptions, error) {
 	if len(data) == 0 {
 		return &SendOptions{}, nil
@@ -327,7 +327,7 @@ func (s *DefaultSendOptionsSerializer) Deserialize(data []byte) (*SendOptions, e
 	return opts, nil
 }
 
-// sendOptionsData represents the serializable data structure for SendOptions
+// sendOptionsData represents the serializable data structure for SendOptions.
 type sendOptionsData struct {
 	Priority              int                    `json:"priority"`
 	Timeout               int64                  `json:"timeout_ns"`
@@ -338,7 +338,7 @@ type sendOptionsData struct {
 	RetryPolicy *serializableRetryPolicy `json:"retry_policy,omitempty"`
 }
 
-// serializableRetryPolicy represents a serializable version of RetryPolicy
+// serializableRetryPolicy represents a serializable version of RetryPolicy.
 type serializableRetryPolicy struct {
 	MaxAttempts   int     `json:"max_attempts"`
 	InitialDelay  int64   `json:"initial_delay_ns"`
@@ -347,29 +347,33 @@ type serializableRetryPolicy struct {
 	// Note: Filter function cannot be serialized, will use default filter on deserialization
 }
 
-// ConfigProvider defines the interface for configuration providers
+// ConfigProvider defines the interface for configuration providers.
 type ConfigProvider interface {
 	GetStrategy() StrategyType
 }
 
 const (
+	// OperationEnqueue represents the enqueue operation.
 	OperationEnqueue = "enqueue"
+	// OperationDequeue represents the dequeue operation.
 	OperationDequeue = "dequeue"
 	OperationSent    = "sent"
 )
 
+// GetExtraString retrieves a string value from extras.
 func (m *DefaultMessage) GetExtraString(key string) (string, bool) {
 	if m.Extras == nil {
 		return "", false
 	}
 	if value, ok := m.Extras[key]; ok {
-		if str, ok := value.(string); ok {
+		if str, okStr := value.(string); okStr {
 			return str, true
 		}
 	}
 	return "", false
 }
 
+// GetExtraStringOrDefault retrieves a string value from extras with a default fallback.
 func (m *DefaultMessage) GetExtraStringOrDefault(key, defaultValue string) string {
 	if value, ok := m.GetExtraString(key); ok && value != "" {
 		return value
@@ -377,6 +381,7 @@ func (m *DefaultMessage) GetExtraStringOrDefault(key, defaultValue string) strin
 	return defaultValue
 }
 
+// GetExtraInt retrieves an integer value from extras.
 func (m *DefaultMessage) GetExtraInt(key string) (int, bool) {
 	if m.Extras == nil {
 		return 0, false
@@ -396,6 +401,7 @@ func (m *DefaultMessage) GetExtraInt(key string) (int, bool) {
 	return 0, false
 }
 
+// GetExtraIntOrDefault retrieves an integer value from extras with a default fallback.
 func (m *DefaultMessage) GetExtraIntOrDefault(key string, defaultValue int) int {
 	if value, ok := m.GetExtraInt(key); ok {
 		return value
@@ -403,18 +409,20 @@ func (m *DefaultMessage) GetExtraIntOrDefault(key string, defaultValue int) int 
 	return defaultValue
 }
 
+// GetExtraBool retrieves a boolean value from extras.
 func (m *DefaultMessage) GetExtraBool(key string) (bool, bool) {
 	if m.Extras == nil {
 		return false, false
 	}
 	if value, ok := m.Extras[key]; ok {
-		if b, ok := value.(bool); ok {
+		if b, okBool := value.(bool); okBool {
 			return b, true
 		}
 	}
 	return false, false
 }
 
+// GetExtraBoolOrDefault retrieves a boolean value from extras with a default fallback.
 func (m *DefaultMessage) GetExtraBoolOrDefault(key string, defaultValue bool) bool {
 	if value, ok := m.GetExtraBool(key); ok {
 		return value
@@ -422,6 +430,7 @@ func (m *DefaultMessage) GetExtraBoolOrDefault(key string, defaultValue bool) bo
 	return defaultValue
 }
 
+// GetExtraFloat retrieves a float64 value from extras.
 func (m *DefaultMessage) GetExtraFloat(key string) (float64, bool) {
 	if m.Extras == nil {
 		return 0, false
@@ -441,6 +450,7 @@ func (m *DefaultMessage) GetExtraFloat(key string) (float64, bool) {
 	return 0, false
 }
 
+// GetExtraFloatOrDefault retrieves a float64 value from extras with a default fallback.
 func (m *DefaultMessage) GetExtraFloatOrDefault(key string, defaultValue float64) float64 {
 	if value, ok := m.GetExtraFloat(key); ok {
 		return value

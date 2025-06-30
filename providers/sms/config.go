@@ -4,7 +4,7 @@ import (
 	"github.com/shellvon/go-sender/core"
 )
 
-// ProviderType represents different SMS service providers
+// ProviderType represents different SMS service providers.
 type ProviderType string
 
 const (
@@ -22,52 +22,55 @@ const (
 	ProviderTypeTencent    ProviderType = "tencent"    // 腾讯云短信（支持国内和国际）
 )
 
-// Config holds configuration for the SMS provider
+// Config holds configuration for the SMS provider.
 type Config struct {
 	core.BaseConfig
-	Providers []SMSProvider     `json:"providers"` // Multiple SMS providers configuration
+
+	Providers []ProviderConfig  `json:"providers"` // Multiple SMS providers configuration
 	Strategy  core.StrategyType `json:"strategy"`  // Selection strategy
 }
 
-// SMSProvider represents a single SMS service provider configuration
-type SMSProvider struct {
-	Name     string       `json:"name"`     // Provider name for selection
-	Type     ProviderType `json:"type"`     // SMS service provider type
-	Weight   int          `json:"weight"`   // Weight for weighted strategy
-	Disabled bool         `json:"disabled"` // Whether this provider is disabled
-
-	// Common fields
-	AppID        string `json:"app_id"`        // App ID/Account
-	AppSecret    string `json:"app_secret"`    // App Secret/Password/Token
-	Channel      string `json:"channel"`       // 通道号（如csms100000001）
-	Callback     string `json:"callback"`      // 回调地址（华为等部分厂商需要）
-	Endpoint     string `json:"endpoint"`      // 自定义API Endpoint（国内短信）
-	IntlEndpoint string `json:"intl_endpoint"` // 自定义API Endpoint（国际短信）
+// ProviderConfig holds configuration for an SMS provider.
+type ProviderConfig struct {
+	Name         string                 `json:"name"`
+	Type         string                 `json:"type"`
+	Key          string                 `json:"key"`
+	Secret       string                 `json:"secret"`
+	SignName     string                 `json:"sign_name"`
+	Endpoint     string                 `json:"endpoint"`
+	IntlEndpoint string                 `json:"intl_endpoint,omitempty"`
+	Weight       int                    `json:"weight,omitempty"`
+	Disabled     bool                   `json:"disabled,omitempty"`
+	AppID        string                 `json:"app_id,omitempty"`
+	AppSecret    string                 `json:"app_secret,omitempty"`
+	Channel      string                 `json:"channel,omitempty"`
+	Callback     string                 `json:"callback,omitempty"`
+	Extras       map[string]interface{} `json:"extras,omitempty"`
 }
 
 func (c Config) IsConfigured() bool {
 	return len(c.Providers) > 0
 }
 
-func (p *SMSProvider) GetName() string {
+func (p *ProviderConfig) GetName() string {
 	return p.Name
 }
 
-func (p *SMSProvider) GetWeight() int {
+func (p *ProviderConfig) GetWeight() int {
 	if p.Weight <= 0 {
 		return 1
 	}
 	return p.Weight
 }
 
-func (p *SMSProvider) IsEnabled() bool {
+func (p *ProviderConfig) IsEnabled() bool {
 	return !p.Disabled
 }
 
 // GetEndpoint 根据 isIntl 获取对应的 endpoint
 // isIntl: 是否为国际短信
-// defaultEndpoint: 默认的 endpoint
-func (p *SMSProvider) GetEndpoint(isIntl bool, defaultEndpoint string) string {
+// defaultEndpoint: 默认的 endpoint.
+func (p *ProviderConfig) GetEndpoint(isIntl bool, defaultEndpoint string) string {
 	if isIntl {
 		if p.IntlEndpoint != "" {
 			return p.IntlEndpoint

@@ -6,6 +6,13 @@ import (
 	"github.com/shellvon/go-sender/core"
 )
 
+const (
+	base64ToRawRatio  = 3
+	base64Divisor     = 4
+	maxImageSizeBytes = 2 * 1024 * 1024 // 2MB
+	bytesPerMB        = 1024 * 1024
+)
+
 // Image represents the image content for a WeCom message.
 type Image struct {
 	// Base64 encoded content of the image.
@@ -20,45 +27,8 @@ type Image struct {
 // Note: The original image size (before Base64 encoding) must not exceed 2MB. JPG and PNG formats are supported.
 type ImageMessage struct {
 	BaseMessage
+
 	Image Image `json:"image"`
-}
-
-const MaxImageSizeBytes = 2 * 1024 * 1024 // 2MB
-
-// Validate validates the ImageMessage to ensure it meets WeCom API requirements.
-func (m *ImageMessage) Validate() error {
-	if m.Image.Base64 == "" {
-		return core.NewParamError("image base64 cannot be empty")
-	}
-	if m.Image.MD5 == "" {
-		return core.NewParamError("image md5 cannot be empty")
-	}
-
-	// Estimate the raw size of the image from its Base64 encoded string.
-	// A rough estimation is (len(base64) * 3) / 4.
-	estimatedRawSize := (len(m.Image.Base64) * 3) / 4
-	if estimatedRawSize > MaxImageSizeBytes { // Image size limit is 2MB.
-		return core.NewParamError(fmt.Sprintf("image size exceeds %dMB: estimated size %d bytes", MaxImageSizeBytes/(1024*1024), estimatedRawSize))
-
-	}
-	return nil
-}
-
-// ImageMessageOption defines a function type for configuring ImageMessage.
-type ImageMessageOption func(*ImageMessage)
-
-// WithBase64 sets the Base64 field for ImageMessage.
-func WithBase64(base64 string) ImageMessageOption {
-	return func(m *ImageMessage) {
-		m.Image.Base64 = base64
-	}
-}
-
-// WithMD5 sets the MD5 field for ImageMessage.
-func WithMD5(md5 string) ImageMessageOption {
-	return func(m *ImageMessage) {
-		m.Image.MD5 = md5
-	}
 }
 
 // NewImageMessage creates a new ImageMessage with required fields and applies optional configurations.
@@ -80,4 +50,44 @@ func NewImageMessage(base64, md5 string, opts ...ImageMessageOption) *ImageMessa
 	}
 
 	return msg
+}
+
+// Validate validates the ImageMessage to ensure it meets WeCom API requirements.
+func (m *ImageMessage) Validate() error {
+	if m.Image.Base64 == "" {
+		return core.NewParamError("image base64 cannot be empty")
+	}
+	if m.Image.MD5 == "" {
+		return core.NewParamError("image md5 cannot be empty")
+	}
+
+	// Estimate the raw size of the image from its Base64 encoded string.
+	estimatedRawSize := (len(m.Image.Base64) * base64ToRawRatio) / base64Divisor
+	if estimatedRawSize > maxImageSizeBytes { // Image size limit is 2MB.
+		return core.NewParamError(
+			fmt.Sprintf(
+				"image size exceeds %dMB: estimated size %d bytes",
+				maxImageSizeBytes/bytesPerMB,
+				estimatedRawSize,
+			),
+		)
+	}
+	return nil
+}
+
+// ImageMessageOption defines a function type for configuring ImageMessage.
+type ImageMessageOption func(*ImageMessage)
+
+// WithBase64 sets the Base64 field for ImageMessage.
+func WithBase64(base64 string) ImageMessageOption {
+	return func(m *ImageMessage) {
+		m.Image.Base64 = base64
+	}
+}
+
+// WithMD5 sets the MD5 field for ImageMessage.
+func WithMD5(md5 string) ImageMessageOption {
+	return func(m *ImageMessage) {
+		m.Image.MD5 = md5
+	}
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"strconv"
 	"time"
 
@@ -13,7 +14,7 @@ import (
 
 type larkTransformer struct{}
 
-// CanTransform 判断是否为 Lark 消息
+// CanTransform 判断是否为 Lark 消息.
 func (t *larkTransformer) CanTransform(msg core.Message) bool {
 	return msg.ProviderType() == core.ProviderTypeLark
 }
@@ -30,7 +31,11 @@ func (t *larkTransformer) CanTransform(msg core.Message) bool {
 //   - HTTPRequestSpec: HTTP 请求规范
 //   - ResponseHandler: 响应处理器
 //   - error: 错误信息
-func (t *larkTransformer) Transform(ctx context.Context, msg core.Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+func (t *larkTransformer) Transform(
+	_ context.Context,
+	msg core.Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	larkMsg, ok := msg.(Message)
 	if !ok {
 		return nil, nil, fmt.Errorf("unsupported message type for lark transformer: %T", msg)
@@ -70,14 +75,13 @@ func (t *larkTransformer) Transform(ctx context.Context, msg core.Message, accou
 		Headers:  map[string]string{"Content-Type": "application/json"},
 		Body:     body,
 		BodyType: "json",
-		Timeout:  30 * time.Second,
 	}
 	return reqSpec, t.handleLarkResponse, nil
 }
 
-// handleLarkResponse 处理 Lark API 响应
+// handleLarkResponse 处理 Lark API 响应.
 func (t *larkTransformer) handleLarkResponse(statusCode int, body []byte) error {
-	if statusCode != 200 {
+	if statusCode != http.StatusOK {
 		return fmt.Errorf("lark API returned non-OK status: %d", statusCode)
 	}
 	var result struct {
@@ -94,7 +98,7 @@ func (t *larkTransformer) handleLarkResponse(statusCode int, body []byte) error 
 }
 
 // newLarkTransformer 创建 Lark 的 transformer 实例
-// 返回实现 core.HTTPTransformer[*core.Account] 的 larkTransformer
+// 返回实现 core.HTTPTransformer[*core.Account] 的 larkTransformer.
 func newLarkTransformer() core.HTTPTransformer[*core.Account] {
 	return &larkTransformer{}
 }

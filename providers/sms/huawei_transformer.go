@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -28,22 +29,18 @@ const (
 	huaweiEndpoint     = "https://api.rtc.huaweicloud.com:10443"
 	huaweiEndpointPath = "/sms/batchSendSms/v1"
 	huaweiSuccessCode  = "000000"
+	huaweiTimeout      = 30 * time.Second
 )
 
-// huaweiTransformer implements HTTPRequestTransformer for Huawei Cloud SMS
+// huaweiTransformer implements HTTPRequestTransformer for Huawei Cloud SMS.
 type huaweiTransformer struct{}
 
-// newHuaweiTransformer creates a new Huawei transformer
-func newHuaweiTransformer() core.HTTPTransformer[*core.Account] {
-	return &huaweiTransformer{}
-}
-
-// init automatically registers the Huawei transformer
+// init automatically registers the Huawei transformer.
 func init() {
 	RegisterTransformer(string(SubProviderHuawei), &huaweiTransformer{})
 }
 
-// CanTransform checks if this transformer can handle the given message
+// CanTransform checks if this transformer can handle the given message.
 func (t *huaweiTransformer) CanTransform(msg core.Message) bool {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
@@ -55,7 +52,11 @@ func (t *huaweiTransformer) CanTransform(msg core.Message) bool {
 // Transform converts a Huawei SMS message to HTTP request specification
 //
 // - 短信API(国内/国际): https://support.huaweicloud.com/intl/zh-cn/api-msgsms/sms_05_0001.html
-func (t *huaweiTransformer) Transform(ctx context.Context, msg core.Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+func (t *huaweiTransformer) Transform(
+	_ context.Context,
+	msg core.Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
 		return nil, nil, fmt.Errorf("unsupported message type for Huawei: %T", msg)
@@ -63,10 +64,10 @@ func (t *huaweiTransformer) Transform(ctx context.Context, msg core.Message, acc
 	if err := t.validateMessage(smsMsg); err != nil {
 		return nil, nil, fmt.Errorf("message validation failed: %w", err)
 	}
-	return t.transformSMS(ctx, smsMsg, account)
+	return t.transformSMS(smsMsg, account)
 }
 
-// validateMessage validates the message for Huawei
+// validateMessage validates the message for Huawei.
 func (t *huaweiTransformer) validateMessage(msg *Message) error {
 	if msg.TemplateID == "" {
 		return errors.New("templateId is required for Huawei SMS")
@@ -87,7 +88,10 @@ func (t *huaweiTransformer) validateMessage(msg *Message) error {
 // 如果"to"参数携带的号码中包含除数字和+之外的其他字符，则无法向该参数携带的所有号码发送短信。如果"to"参数携带的所有号码只包含数字和+，
 // 但部分号码不符合号码规则要求，则在响应消息中会通过状态码标识发送失败的号码，不影响其他正常号码的短信发送。号码之间以英文逗号分隔，
 // 每个号码最大长度为21位，最多允许携带500个号码。如果携带超过500个号码，则全部号码都会发送失败。
-func (t *huaweiTransformer) transformSMS(ctx context.Context, msg *Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+func (t *huaweiTransformer) transformSMS(
+	msg *Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	// 格式化手机号
 	formattedMobiles := make([]string, len(msg.Mobiles))
 	for i, mobile := range msg.Mobiles {
@@ -116,8 +120,6 @@ func (t *huaweiTransformer) transformSMS(ctx context.Context, msg *Message, acco
 	// 回调地址推荐使用域名。
 	if msg.CallbackURL != "" {
 		params.Set("statusCallback", msg.CallbackURL)
-	} else if callbackUrl := msg.GetExtraStringOrDefault(huaweiStatusCallback, account.Webhook); callbackUrl != "" {
-		params.Set("statusCallback", callbackUrl)
 	}
 	// 扩展参数，在状态报告中会原样返回。
 	// 不允许赋空值，不允许携带以下字符："{","}"（即大括号）。
@@ -143,13 +145,12 @@ func (t *huaweiTransformer) transformSMS(ctx context.Context, msg *Message, acco
 		Headers:  headers,
 		Body:     body,
 		BodyType: "form",
-		Timeout:  30 * time.Second,
 	}
 	return reqSpec, t.handleHuaweiResponse, nil
 }
 
 // formatHuaweiPhoneNumber formats phone number for Huawei Cloud API
-// 华为云要求：标准号码格式为：+{国家码}{地区码}{终端号码}
+// 华为云要求：标准号码格式为：+{国家码}{地区码}{终端号码}.
 func (t *huaweiTransformer) formatHuaweiPhoneNumber(mobile string, regionCode int) string {
 	if regionCode == 0 {
 		regionCode = 86
@@ -157,7 +158,7 @@ func (t *huaweiTransformer) formatHuaweiPhoneNumber(mobile string, regionCode in
 	return fmt.Sprintf("+%d%s", regionCode, mobile)
 }
 
-// getHuaweiEndpoint returns the full endpoint URL
+// getHuaweiEndpoint returns the full endpoint URL.
 func (t *huaweiTransformer) getHuaweiEndpoint(endpoint string) string {
 	if endpoint == "" {
 		endpoint = huaweiEndpoint
@@ -165,7 +166,7 @@ func (t *huaweiTransformer) getHuaweiEndpoint(endpoint string) string {
 	return strings.TrimRight(endpoint, "/") + huaweiEndpointPath
 }
 
-// buildHeaders 构建华为云短信请求头
+// buildHeaders 构建华为云短信请求头.
 func (t *huaweiTransformer) buildHeaders(appKey, appSecret string) map[string]string {
 	return map[string]string{
 		"Content-Type":  "application/x-www-form-urlencoded",
@@ -174,10 +175,10 @@ func (t *huaweiTransformer) buildHeaders(appKey, appSecret string) map[string]st
 	}
 }
 
-// buildHuaweiWsseHeader 构建 X-WSSE 认证头
+// buildHuaweiWsseHeader 构建 X-WSSE 认证头.
 func (t *huaweiTransformer) buildHuaweiWsseHeader(appKey, appSecret string) string {
 	now := time.Now().UTC().Format(time.RFC3339)
-	nonce := fmt.Sprintf("%d", time.Now().UnixNano())
+	nonce := strconv.FormatInt(time.Now().UnixNano(), 10)
 	passwordDigest := utils.Base64EncodeBytes(utils.SHA256Sum([]byte(nonce + now + appSecret)))
 	return fmt.Sprintf(
 		"UsernameToken Username=\"%s\",PasswordDigest=\"%s\",Nonce=\"%s\",Created=\"%s\"",
@@ -185,7 +186,7 @@ func (t *huaweiTransformer) buildHuaweiWsseHeader(appKey, appSecret string) stri
 	)
 }
 
-// handleHuaweiResponse 处理华为云短信 API 响应
+// handleHuaweiResponse 处理华为云短信 API 响应.
 func (t *huaweiTransformer) handleHuaweiResponse(statusCode int, body []byte) error {
 	if statusCode < 200 || statusCode >= 300 {
 		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
@@ -198,7 +199,7 @@ func (t *huaweiTransformer) handleHuaweiResponse(statusCode int, body []byte) er
 		return fmt.Errorf("failed to parse huawei response: %w", err)
 	}
 	if result.Code != huaweiSuccessCode {
-		return &SMSError{
+		return &Error{
 			Code:     result.Code,
 			Message:  result.Description,
 			Provider: string(SubProviderHuawei),

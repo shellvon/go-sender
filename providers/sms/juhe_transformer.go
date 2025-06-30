@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/url"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -28,13 +29,10 @@ import (
 const (
 	juheDefaultEndpoint     = "v.juhe.cn"
 	juheDefaultIntlEndpoint = "v.juhe.cn"
+	juheTimeout             = 30 * time.Second
 )
 
 type juheTransformer struct{}
-
-func newJuheTransformer() core.HTTPTransformer[*core.Account] {
-	return &juheTransformer{}
-}
 
 func init() {
 	RegisterTransformer(string(SubProviderJuhe), &juheTransformer{})
@@ -48,22 +46,29 @@ func (t *juheTransformer) CanTransform(msg core.Message) bool {
 	return smsMsg.SubProvider == string(SubProviderJuhe)
 }
 
-func (t *juheTransformer) Transform(ctx context.Context, msg core.Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+func (t *juheTransformer) Transform(
+	_ context.Context,
+	msg core.Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
-		return nil, nil, fmt.Errorf("unsupported message type for Juhe: %T", msg)
+		return nil, nil, errors.New("invalid message type for juheTransformer")
 	}
 	if err := t.validateMessage(smsMsg); err != nil {
 		return nil, nil, fmt.Errorf("message validation failed: %w", err)
 	}
 
-	if smsMsg.Type == MMS {
-		return t.transformMMSSMS(ctx, smsMsg, account)
+	switch smsMsg.Type {
+	case SMSText:
+		return t.transformDomesticSMS(context.Background(), smsMsg, account)
+	case Voice:
+		return t.transformIntlSMS(context.Background(), smsMsg, account)
+	case MMS:
+		return t.transformMMSSMS(context.Background(), smsMsg, account)
+	default:
+		return nil, nil, fmt.Errorf("unsupported juhe message type: %v", smsMsg.Type)
 	}
-	if smsMsg.IsIntl() {
-		return t.transformIntlSMS(ctx, smsMsg, account)
-	}
-	return t.transformDomesticSMS(ctx, smsMsg, account)
 }
 
 func (t *juheTransformer) validateMessage(msg *Message) error {
@@ -75,7 +80,11 @@ func (t *juheTransformer) validateMessage(msg *Message) error {
 
 // transformDomesticSMS 处理国内短信
 //   - API: https://www.juhe.cn/docs/api/id/54
-func (t *juheTransformer) transformDomesticSMS(ctx context.Context, msg *Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+func (t *juheTransformer) transformDomesticSMS(
+	_ context.Context,
+	msg *Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	params := url.Values{}
 	params.Set("mobile", msg.Mobiles[0])
 	params.Set("tpl_id", msg.TemplateID)
@@ -95,17 +104,20 @@ func (t *juheTransformer) transformDomesticSMS(ctx context.Context, msg *Message
 		Headers:  map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
 		Body:     body,
 		BodyType: "form",
-		Timeout:  30 * time.Second,
 	}
 	return reqSpec, t.handleJuheResponse, nil
 }
 
 // transformIntlSMS 处理国际短信
 //   - API: https://www.juhe.cn/docs/api/id/357
-func (t *juheTransformer) transformIntlSMS(ctx context.Context, msg *Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+func (t *juheTransformer) transformIntlSMS(
+	_ context.Context,
+	msg *Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	params := url.Values{}
 	params.Set("mobile", msg.Mobiles[0])
-	params.Set("areaNum", fmt.Sprintf("%d", msg.RegionCode))
+	params.Set("areaNum", strconv.Itoa(msg.RegionCode))
 	params.Set("tpl_id", msg.TemplateID)
 	params.Set("tpl_value", t.buildTemplateValue(msg.TemplateParams))
 	params.Set("key", account.Key)
@@ -120,14 +132,17 @@ func (t *juheTransformer) transformIntlSMS(ctx context.Context, msg *Message, ac
 		Headers:  map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
 		Body:     body,
 		BodyType: "form",
-		Timeout:  30 * time.Second,
 	}
 	return reqSpec, t.handleJuheResponse, nil
 }
 
 // transformMMSSMS 处理彩信/视频短信
 //   - API: https://www.juhe.cn/docs/api/id/363
-func (t *juheTransformer) transformMMSSMS(ctx context.Context, msg *Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+func (t *juheTransformer) transformMMSSMS(
+	_ context.Context,
+	msg *Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	params := url.Values{}
 	params.Set("mobile", strings.Join(msg.Mobiles, ","))
 	params.Set("tpl_id", msg.TemplateID)
@@ -144,7 +159,6 @@ func (t *juheTransformer) transformMMSSMS(ctx context.Context, msg *Message, acc
 		Headers:  map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
 		Body:     body,
 		BodyType: "form",
-		Timeout:  30 * time.Second,
 	}
 	return reqSpec, t.handleJuheResponse, nil
 }
@@ -161,8 +175,8 @@ func (t *juheTransformer) handleJuheResponse(statusCode int, body []byte) error 
 		return fmt.Errorf("failed to parse juhe response: %w", err)
 	}
 	if result.ErrorCode != 0 {
-		return &SMSError{
-			Code:     fmt.Sprintf("%d", result.ErrorCode),
+		return &Error{
+			Code:     strconv.Itoa(result.ErrorCode),
 			Message:  result.Reason,
 			Provider: string(SubProviderJuhe),
 		}

@@ -5,26 +5,30 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"time"
+	"net/http"
 
 	"github.com/shellvon/go-sender/core"
 )
 
-// wecombotTransformer implements core.HTTPTransformer[*core.Account] for WeCom Bot
+// wecombotTransformer implements core.HTTPTransformer[*core.Account] for WeCom Bot.
 type wecombotTransformer struct{}
 
-// newWecombotTransformer creates a new WeCom Bot transformer (stateless)
+// newWecombotTransformer creates a new WeCom Bot transformer (stateless).
 func newWecombotTransformer() core.HTTPTransformer[*core.Account] {
 	return &wecombotTransformer{}
 }
 
-// CanTransform checks if this transformer can handle the given message
+// CanTransform checks if this transformer can handle the given message.
 func (t *wecombotTransformer) CanTransform(msg core.Message) bool {
 	return msg.ProviderType() == core.ProviderTypeWecombot
 }
 
-// Transform converts a WeCom Bot message to HTTP request specification
-func (t *wecombotTransformer) Transform(ctx context.Context, msg core.Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+// Transform converts a WeCom Bot message to HTTP request specification.
+func (t *wecombotTransformer) Transform(
+	_ context.Context,
+	msg core.Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	wecomMsg, ok := msg.(Message)
 	if !ok {
 		return nil, nil, fmt.Errorf("unsupported message type for wecombot transformer: %T", msg)
@@ -48,15 +52,14 @@ func (t *wecombotTransformer) Transform(ctx context.Context, msg core.Message, a
 		Headers:  map[string]string{"Content-Type": "application/json"},
 		Body:     body,
 		BodyType: "json",
-		Timeout:  30 * time.Second,
 	}
 
 	return reqSpec, t.handleWecombotResponse, nil
 }
 
-// handleWecombotResponse handles WeCom Bot API response
+// handleWecombotResponse handles WeCom Bot API response.
 func (t *wecombotTransformer) handleWecombotResponse(statusCode int, body []byte) error {
-	if statusCode != 200 {
+	if statusCode != http.StatusOK {
 		return fmt.Errorf("wecom API returned non-OK status: %d", statusCode)
 	}
 

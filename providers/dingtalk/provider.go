@@ -8,14 +8,14 @@ import (
 	"github.com/shellvon/go-sender/utils"
 )
 
-// Provider implements the DingTalk provider using generic base
+// Provider implements the DingTalk provider using generic base.
 type Provider struct {
 	*providers.HTTPProvider[*core.Account]
 }
 
 var _ core.Provider = (*Provider)(nil)
 
-// New creates a new DingTalk provider instance
+// New creates a new DingTalk provider instance.
 func New(config Config) (*Provider, error) {
 	if !config.IsConfigured() {
 		return nil, errors.New("dingtalk provider is not configured or is disabled")
@@ -47,7 +47,7 @@ func New(config Config) (*Provider, error) {
 	}, nil
 }
 
-// Name returns the provider name
+// Name returns the provider name.
 func (p *Provider) Name() string {
 	return string(core.ProviderTypeDingtalk)
 }

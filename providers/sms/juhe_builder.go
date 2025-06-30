@@ -28,8 +28,8 @@ func NewJuheTextMessage(mobiles []string, content, sign string, opts ...MessageO
 		WithContent(content),
 		WithSignName(sign),
 	}
-	allOpts := append(baseOpts, opts...)
-	return NewMessageWithOptions(allOpts...)
+	baseOpts = append(baseOpts, opts...)
+	return NewMessageWithOptions(baseOpts...)
 }
 
 // WithJuheExtendCode 设置扩展码

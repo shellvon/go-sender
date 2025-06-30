@@ -26,7 +26,24 @@ type FeedCardLink struct {
 // Reference: https://open.dingtalk.com/document/robots/custom-robot-access
 type FeedCardMessage struct {
 	BaseMessage
+
 	FeedCard FeedCard `json:"feedCard"`
+}
+
+// NewFeedCardMessage creates a new FeedCardMessage with required content and applies optional configurations.
+func NewFeedCardMessage(links []FeedCardLink, opts ...FeedCardMessageOption) *FeedCardMessage {
+	msg := &FeedCardMessage{
+		BaseMessage: BaseMessage{
+			MsgType: TypeFeedCard,
+		},
+		FeedCard: FeedCard{
+			Links: links,
+		},
+	}
+	for _, opt := range opts {
+		opt(msg)
+	}
+	return msg
 }
 
 // Validate validates the FeedCardMessage to ensure it meets DingTalk API requirements.
@@ -61,20 +78,4 @@ func WithFeedCardLinks(links []FeedCardLink) FeedCardMessageOption {
 	return func(m *FeedCardMessage) {
 		m.FeedCard.Links = links
 	}
-}
-
-// NewFeedCardMessage creates a new FeedCardMessage with required content and applies optional configurations.
-func NewFeedCardMessage(links []FeedCardLink, opts ...FeedCardMessageOption) *FeedCardMessage {
-	msg := &FeedCardMessage{
-		BaseMessage: BaseMessage{
-			MsgType: TypeFeedCard,
-		},
-		FeedCard: FeedCard{
-			Links: links,
-		},
-	}
-	for _, opt := range opts {
-		opt(msg)
-	}
-	return msg
 }
