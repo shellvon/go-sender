@@ -4,6 +4,8 @@ import (
 	"github.com/shellvon/go-sender/core"
 )
 
+const maxTextContentLength = 2048
+
 // Text represents the text content and mentions for a WeCom message.
 type Text struct {
 	// Content of the text message. Maximum length is 2048 bytes and must be UTF-8 encoded.
@@ -20,7 +22,24 @@ type Text struct {
 // https://developer.work.weixin.qq.com/document/path/91770#%E6%96%87%E6%9C%AC%E7%B1%BB%E5%9E%8B
 type TextMessage struct {
 	BaseMessage
+
 	Text Text `json:"text"`
+}
+
+// NewTextMessage creates a new TextMessage with required content and applies optional configurations.
+func NewTextMessage(content string, opts ...TextMessageOption) *TextMessage {
+	msg := &TextMessage{
+		BaseMessage: BaseMessage{
+			MsgType: TypeText,
+		},
+		Text: Text{
+			Content: content,
+		},
+	}
+	for _, opt := range opts {
+		opt(msg)
+	}
+	return msg
 }
 
 // Validate validates the TextMessage to ensure it meets WeCom API requirements.
@@ -29,8 +48,7 @@ func (m *TextMessage) Validate() error {
 		return core.NewParamError("text content cannot be empty")
 	}
 	// WeCom text message content has a maximum length of 2048 bytes and must be UTF-8 encoded.
-	// Using len(m.Text.Content) to check byte length, as per common API string length limits.
-	if len(m.Text.Content) > 2048 {
+	if len(m.Text.Content) > maxTextContentLength {
 		return core.NewParamError("text content exceeds 2048 bytes")
 	}
 
@@ -39,7 +57,8 @@ func (m *TextMessage) Validate() error {
 	if len(m.Text.MentionedList) > 0 && containsAll(m.Text.MentionedList) && len(m.Text.MentionedList) > 1 {
 		return core.NewParamError("cannot combine '@all' with specific user IDs in mentioned_list")
 	}
-	if len(m.Text.MentionedMobileList) > 0 && containsAll(m.Text.MentionedMobileList) && len(m.Text.MentionedMobileList) > 1 {
+	if len(m.Text.MentionedMobileList) > 0 && containsAll(m.Text.MentionedMobileList) &&
+		len(m.Text.MentionedMobileList) > 1 {
 		return core.NewParamError("cannot combine '@all' with specific mobile numbers in mentioned_mobile_list")
 	}
 
@@ -71,20 +90,4 @@ func WithMentionedMobileList(list []string) TextMessageOption {
 	return func(m *TextMessage) {
 		m.Text.MentionedMobileList = list
 	}
-}
-
-// NewTextMessage creates a new TextMessage with required content and applies optional configurations.
-func NewTextMessage(content string, opts ...TextMessageOption) *TextMessage {
-	msg := &TextMessage{
-		BaseMessage: BaseMessage{
-			MsgType: TypeText,
-		},
-		Text: Text{
-			Content: content,
-		},
-	}
-	for _, opt := range opts {
-		opt(msg)
-	}
-	return msg
 }

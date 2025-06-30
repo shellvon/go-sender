@@ -36,11 +36,12 @@ func GetItemNameFromCtx(ctx context.Context) string {
 	return ""
 }
 
+// WithCtxSendMetadata adds send metadata to the context.
 func WithCtxSendMetadata(ctx context.Context, metadata map[string]interface{}) context.Context {
 	return context.WithValue(ctx, metadataKey{}, metadata)
 }
 
-// GetSendMetadataFromCtx 从context读取metadata
+// GetSendMetadataFromCtx 从context读取metadata.
 func GetSendMetadataFromCtx(ctx context.Context) map[string]interface{} {
 	if m, ok := ctx.Value(metadataKey{}).(map[string]interface{}); ok {
 		return m

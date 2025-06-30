@@ -9,6 +9,7 @@ import (
 	"github.com/shellvon/go-sender/core"
 )
 
+// MemoryCircuitBreaker implements a circuit breaker pattern using in-memory state.
 type MemoryCircuitBreaker struct {
 	name         string
 	maxFailures  int64
@@ -22,12 +23,15 @@ type MemoryCircuitBreaker struct {
 	nextRetryTime   time.Time
 }
 
-// CircuitState represents the state of the circuit breaker
+// CircuitState represents the state of the circuit breaker.
 type CircuitState int
 
 const (
+	// StateClosed represents the closed state of the circuit breaker.
 	StateClosed CircuitState = iota
+	// StateOpen represents the open state of the circuit breaker.
 	StateOpen
+	// StateHalfOpen represents the half-open state of the circuit breaker.
 	StateHalfOpen
 )
 
@@ -44,7 +48,7 @@ func (s CircuitState) String() string {
 	}
 }
 
-// NewMemoryCircuitBreaker creates a new in-memory circuit breaker
+// NewMemoryCircuitBreaker creates a new in-memory circuit breaker.
 func NewMemoryCircuitBreaker(name string, maxFailures int64, resetTimeout time.Duration) *MemoryCircuitBreaker {
 	return &MemoryCircuitBreaker{
 		name:         name,
@@ -55,12 +59,13 @@ func NewMemoryCircuitBreaker(name string, maxFailures int64, resetTimeout time.D
 	}
 }
 
-// SetLogger sets the logger for the circuit breaker
+// SetLogger sets the logger for the circuit breaker.
 func (cb *MemoryCircuitBreaker) SetLogger(logger core.Logger) {
 	cb.logger = logger
 }
 
-func (cb *MemoryCircuitBreaker) Execute(ctx context.Context, fn func() error) error {
+// Execute executes the given function with circuit breaker protection.
+func (cb *MemoryCircuitBreaker) Execute(_ context.Context, fn func() error) error {
 	if err := cb.beforeRequest(); err != nil {
 		return err
 	}
@@ -109,11 +114,20 @@ func (cb *MemoryCircuitBreaker) afterRequest(err error) {
 }
 
 func (cb *MemoryCircuitBreaker) onSuccess() {
+	//nolint:exhaustive // intentionally not all cases handled, default covers the rest
 	switch cb.state {
 	case StateHalfOpen:
 		cb.state = StateClosed
 		cb.failureCount = 0
-		cb.logger.Log(core.LevelInfo, "message", "circuit breaker half open to closed", "circuit_breaker", cb.name, "state", "HALF_OPEN -> CLOSED")
+		_ = cb.logger.Log(
+			core.LevelInfo,
+			"message",
+			"circuit breaker half open to closed",
+			"circuit_breaker",
+			cb.name,
+			"state",
+			"HALF_OPEN -> CLOSED",
+		)
 
 	case StateClosed:
 		cb.failureCount = 0
@@ -124,41 +138,68 @@ func (cb *MemoryCircuitBreaker) onFailure() {
 	cb.failureCount++
 	cb.lastFailureTime = time.Now()
 
+	//nolint:exhaustive // intentionally not all cases handled, default covers the rest
 	switch cb.state {
 	case StateClosed:
 		if cb.failureCount >= cb.maxFailures {
 			cb.state = StateOpen
 			cb.nextRetryTime = time.Now().Add(cb.resetTimeout)
-			cb.logger.Log(core.LevelWarn, "message", "circuit breaker closed to open", "circuit_breaker", cb.name, "state", "CLOSED -> OPEN", "failures", cb.failureCount)
+			_ = cb.logger.Log(
+				core.LevelWarn,
+				"message",
+				"circuit breaker closed to open",
+				"circuit_breaker",
+				cb.name,
+				"state",
+				"CLOSED -> OPEN",
+				"failures",
+				cb.failureCount,
+			)
 		}
 
 	case StateHalfOpen:
 		cb.state = StateOpen
 		cb.nextRetryTime = time.Now().Add(cb.resetTimeout)
-		cb.logger.Log(core.LevelWarn, "message", "circuit breaker half open to open", "circuit_breaker", cb.name, "state", "HALF_OPEN -> OPEN")
+		_ = cb.logger.Log(
+			core.LevelWarn,
+			"message",
+			"circuit breaker half open to open",
+			"circuit_breaker",
+			cb.name,
+			"state",
+			"HALF_OPEN -> OPEN",
+		)
 	}
 }
 
-// GetState returns the current state
+// GetState returns the current state.
 func (cb *MemoryCircuitBreaker) GetState() CircuitState {
 	cb.mu.RLock()
 	defer cb.mu.RUnlock()
 	return cb.state
 }
 
-// GetFailureCount returns the failure count
+// GetFailureCount returns the failure count.
 func (cb *MemoryCircuitBreaker) GetFailureCount() int64 {
 	cb.mu.RLock()
 	defer cb.mu.RUnlock()
 	return cb.failureCount
 }
 
-// Reset resets the circuit breaker
+// Reset resets the circuit breaker.
 func (cb *MemoryCircuitBreaker) Reset() {
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
 
-	cb.logger.Log(core.LevelInfo, "message", "circuit breaker reset", "circuit_breaker", cb.name, "state", "RESET -> CLOSED")
+	_ = cb.logger.Log(
+		core.LevelInfo,
+		"message",
+		"circuit breaker reset",
+		"circuit_breaker",
+		cb.name,
+		"state",
+		"RESET -> CLOSED",
+	)
 	cb.state = StateClosed
 	cb.failureCount = 0
 	cb.lastFailureTime = time.Time{}

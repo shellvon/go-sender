@@ -3,8 +3,8 @@ package dingtalk
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"time"
 
 	"github.com/shellvon/go-sender/core"
 )
@@ -13,18 +13,22 @@ import (
 // It is stateless and does not hold any config.
 type dingTalkTransformer struct{}
 
-// newDingTalkTransformer creates a new DingTalk transformer (stateless)
+// newDingTalkTransformer creates a new DingTalk transformer (stateless).
 func newDingTalkTransformer() core.HTTPTransformer[*core.Account] {
 	return &dingTalkTransformer{}
 }
 
-// CanTransform checks if this transformer can handle the given message
+// CanTransform checks if this transformer can handle the given message.
 func (t *dingTalkTransformer) CanTransform(msg core.Message) bool {
 	return msg.ProviderType() == core.ProviderTypeDingtalk
 }
 
-// Transform converts a DingTalk message to HTTP request specification
-func (t *dingTalkTransformer) Transform(ctx context.Context, msg core.Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+// Transform converts a DingTalk message to HTTP request specification.
+func (t *dingTalkTransformer) Transform(
+	_ context.Context,
+	msg core.Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	dingMsg, ok := msg.(Message)
 	if !ok {
 		return nil, nil, fmt.Errorf("unsupported message type for DingTalk: %T", msg)
@@ -35,7 +39,7 @@ func (t *dingTalkTransformer) Transform(ctx context.Context, msg core.Message, a
 	}
 
 	if account == nil {
-		return nil, nil, fmt.Errorf("no account provided")
+		return nil, nil, errors.New("no account provided")
 	}
 
 	// Build webhook URL
@@ -43,7 +47,7 @@ func (t *dingTalkTransformer) Transform(ctx context.Context, msg core.Message, a
 
 	// Prepare the request payload
 	payload := map[string]interface{}{
-		"msgtype":                    string(dingMsg.GetMsgType()),
+		"msgtype":                    dingMsg.GetMsgType(),
 		string(dingMsg.GetMsgType()): dingMsg,
 	}
 
@@ -60,13 +64,12 @@ func (t *dingTalkTransformer) Transform(ctx context.Context, msg core.Message, a
 		Headers:  map[string]string{"Content-Type": "application/json"},
 		Body:     body,
 		BodyType: "json",
-		Timeout:  30 * time.Second,
 	}
 
 	return reqSpec, t.handleDingTalkResponse, nil
 }
 
-// handleDingTalkResponse handles DingTalk API response
+// handleDingTalkResponse handles DingTalk API response.
 func (t *dingTalkTransformer) handleDingTalkResponse(statusCode int, body []byte) error {
 	if statusCode < 200 || statusCode >= 300 {
 		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
@@ -83,7 +86,7 @@ func (t *dingTalkTransformer) handleDingTalkResponse(statusCode int, body []byte
 			return nil
 		}
 		errMsg := "unknown error"
-		if msg, ok := response["errmsg"].(string); ok {
+		if msg, okMsg := response["errmsg"].(string); okMsg {
 			errMsg = msg
 		}
 		return fmt.Errorf("dingtalk API error: code=%v, message=%s", errCode, errMsg)

@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/shellvon/go-sender/core"
 )
@@ -17,7 +16,7 @@ import (
 //
 // You need to activate API requests through [Account:Security](https://dashboard.emailjs.com/admin/account/security) for non-browser applications.
 
-// init automatically registers the EmailJS transformer
+// init automatically registers the EmailJS transformer.
 func init() {
 	RegisterTransformer(string(SubProviderEmailJS), newEmailJSTransformer())
 }
@@ -27,15 +26,15 @@ const (
 	emailjsDefaultPath     = "/api/v1.0/email/send"
 )
 
-// emailJSTransformer implements HTTPRequestTransformer for EmailJS
+// emailJSTransformer implements HTTPRequestTransformer for EmailJS.
 type emailJSTransformer struct{}
 
-// newEmailJSTransformer creates a new EmailJS transformer
+// newEmailJSTransformer creates a new EmailJS transformer.
 func newEmailJSTransformer() core.HTTPTransformer[*core.Account] {
 	return &emailJSTransformer{}
 }
 
-// CanTransform checks if this transformer can handle the given message
+// CanTransform checks if this transformer can handle the given message.
 func (t *emailJSTransformer) CanTransform(msg core.Message) bool {
 	emailMsg, ok := msg.(*Message)
 	if !ok {
@@ -44,8 +43,12 @@ func (t *emailJSTransformer) CanTransform(msg core.Message) bool {
 	return emailMsg.SubProvider == string(SubProviderEmailJS)
 }
 
-// Transform converts an EmailJS message to HTTP request specification
-func (t *emailJSTransformer) Transform(ctx context.Context, msg core.Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+// Transform converts an EmailJS message to HTTP request specification.
+func (t *emailJSTransformer) Transform(
+	ctx context.Context,
+	msg core.Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	emailMsg, ok := msg.(*Message)
 	if !ok {
 		return nil, nil, fmt.Errorf("unsupported message type for EmailJS: %T", msg)
@@ -58,7 +61,7 @@ func (t *emailJSTransformer) Transform(ctx context.Context, msg core.Message, ac
 	return t.transformEmail(ctx, emailMsg, account)
 }
 
-// validateMessage validates the message for EmailJS
+// validateMessage validates the message for EmailJS.
 func (t *emailJSTransformer) validateMessage(msg *Message) error {
 	if msg.TemplateID == "" {
 		return errors.New("template_id is required for EmailJS")
@@ -72,8 +75,12 @@ func (t *emailJSTransformer) validateMessage(msg *Message) error {
 	return nil
 }
 
-// transformEmail transforms email message to HTTP request
-func (t *emailJSTransformer) transformEmail(_ context.Context, msg *Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+// transformEmail transforms email message to HTTP request.
+func (t *emailJSTransformer) transformEmail(
+	_ context.Context,
+	msg *Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	// Get required parameters
 	serviceID := msg.From
 	userID := msg.GetExtraStringOrDefault(emailjsUserID, account.Key)
@@ -123,13 +130,12 @@ func (t *emailJSTransformer) transformEmail(_ context.Context, msg *Message, acc
 		Headers:  headers,
 		Body:     bodyData,
 		BodyType: "json",
-		Timeout:  30 * time.Second,
 	}, t.handleEmailJSResponse, nil
 }
 
 // prepareTemplateData intelligently merges message fields with template data
 // EmailJS is special - recipients, sender, subject can come from template variables
-// We prioritize user's template data, only adding message fields if they don't exist in template
+// We prioritize user's template data, only adding message fields if they don't exist in template.
 func (t *emailJSTransformer) prepareTemplateData(msg *Message) map[string]interface{} {
 	// Start with user's template data if provided
 	templateData := make(map[string]interface{})
@@ -167,7 +173,7 @@ func (t *emailJSTransformer) prepareTemplateData(msg *Message) map[string]interf
 	return templateData
 }
 
-// isEmptyValue checks if a value is considered empty for template data
+// isEmptyValue checks if a value is considered empty for template data.
 func isEmptyValue(v interface{}) bool {
 	if v == nil {
 		return true
@@ -185,21 +191,19 @@ func isEmptyValue(v interface{}) bool {
 	}
 }
 
-// getEndpoint returns the appropriate endpoint URL
+// getEndpoint returns the appropriate endpoint URL.
 func (t *emailJSTransformer) getEndpoint(account *core.Account) string {
-	// Priority: account.Endpoint → account.IntlEndpoint → default
-	var host string
-	if account.Endpoint != "" {
-		host = account.Endpoint
-	} else if account.IntlEndpoint != "" {
-		host = account.IntlEndpoint
-	} else {
-		host = emailjsDefaultEndpoint
+	switch {
+	case account.Endpoint != "":
+		return "https://" + account.Endpoint + emailjsDefaultPath
+	case account.IntlEndpoint != "":
+		return "https://" + account.IntlEndpoint + emailjsDefaultPath
+	default:
+		return "https://" + emailjsDefaultEndpoint + emailjsDefaultPath
 	}
-	return "https://" + host + emailjsDefaultPath
 }
 
-// handleEmailJSResponse handles EmailJS API response
+// handleEmailJSResponse handles EmailJS API response.
 func (t *emailJSTransformer) handleEmailJSResponse(statusCode int, body []byte) error {
 	if statusCode < 200 || statusCode >= 300 {
 		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))

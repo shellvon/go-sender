@@ -27,7 +27,7 @@ import (
 //
 // 签名和营销短信的结尾是拼接在内容里的，签名本实现会自动增加。
 
-// init automatically registers the CL253 transformer
+// init automatically registers the CL253 transformer.
 func init() {
 	RegisterTransformer(string(SubProviderCl253), &cl253Transformer{})
 }
@@ -35,12 +35,13 @@ func init() {
 const (
 	cl253DomesticEndpoint = "smssh1.253.com"
 	cl253IntlEndpoint     = "intapi.253.com"
+	cl253Timeout          = 30 * time.Second
 )
 
-// cl253Transformer implements HTTPRequestTransformer for CL253 SMS
+// cl253Transformer implements HTTPRequestTransformer for CL253 SMS.
 type cl253Transformer struct{}
 
-// CanTransform checks if this transformer can handle the given message
+// CanTransform checks if this transformer can handle the given message.
 func (t *cl253Transformer) CanTransform(msg core.Message) bool {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
@@ -52,7 +53,11 @@ func (t *cl253Transformer) CanTransform(msg core.Message) bool {
 // Transform converts a CL253 SMS message to HTTP request specification
 //   - 国内短信 API: https://doc.chuanglan.com/document/HAQYSZKH9HT5Z50L
 //   - 国际短信 API: https://doc.chuanglan.com/document/O58743GF76M7754H
-func (t *cl253Transformer) Transform(ctx context.Context, msg core.Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+func (t *cl253Transformer) Transform(
+	_ context.Context,
+	msg core.Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
 		return nil, nil, fmt.Errorf("unsupported message type for CL253: %T", msg)
@@ -61,12 +66,12 @@ func (t *cl253Transformer) Transform(ctx context.Context, msg core.Message, acco
 		return nil, nil, fmt.Errorf("message validation failed: %w", err)
 	}
 	if smsMsg.IsIntl() {
-		return t.transformIntlSMS(ctx, smsMsg, account)
+		return t.transformIntlSMS(context.Background(), smsMsg, account)
 	}
-	return t.transformDomesticSMS(ctx, smsMsg, account)
+	return t.transformDomesticSMS(context.Background(), smsMsg, account)
 }
 
-// validateMessage validates the message for CL253
+// validateMessage validates the message for CL253.
 func (t *cl253Transformer) validateMessage(msg *Message) error {
 	// 国内短信必须有签名
 	if msg.SignName == "" && utils.HasSignature(msg.Content) && msg.IsDomestic() {
@@ -87,7 +92,11 @@ func (t *cl253Transformer) validateMessage(msg *Message) error {
 // transformDomesticSMS transforms domestic SMS message to HTTP request
 //
 //   - 国内短信 API: https://doc.chuanglan.com/document/HAQYSZKH9HT5Z50L
-func (t *cl253Transformer) transformDomesticSMS(ctx context.Context, msg *Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+func (t *cl253Transformer) transformDomesticSMS(
+	_ context.Context,
+	msg *Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	url := "https://" + cl253DomesticEndpoint + "/msg/v1/send/json"
 	params := map[string]interface{}{
 		"account":  account.Key,
@@ -123,7 +132,6 @@ func (t *cl253Transformer) transformDomesticSMS(ctx context.Context, msg *Messag
 		Headers:  t.buildHeaders(nil),
 		Body:     body,
 		BodyType: "json",
-		Timeout:  30 * time.Second,
 	}
 	return reqSpec, t.handleCl253Response, nil
 }
@@ -131,7 +139,11 @@ func (t *cl253Transformer) transformDomesticSMS(ctx context.Context, msg *Messag
 // transformIntlSMS transforms international SMS message to HTTP request
 //
 //   - 国际短信 API: https://doc.chuanglan.com/document/O58743GF76M7754H
-func (t *cl253Transformer) transformIntlSMS(ctx context.Context, msg *Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+func (t *cl253Transformer) transformIntlSMS(
+	_ context.Context,
+	msg *Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	url := "https://" + cl253IntlEndpoint + "/send/sms"
 
 	// 手机号码，格式(区号+手机号码)，例如：8615800000000，其中 86 为中国的区号， 区号前不使用 00 开头,15800000000 为接收短信的真实手机号码。5-20 位
@@ -143,11 +155,11 @@ func (t *cl253Transformer) transformIntlSMS(ctx context.Context, msg *Message, a
 	}
 
 	// 处理统一的接口字段 - 适配到CL253国际短信特定的key
-	if senderId := msg.GetExtraStringOrDefault(cl253SenderID, ""); senderId != "" {
-		params["senderId"] = senderId
+	if senderID := msg.GetExtraStringOrDefault(cl253SenderID, ""); senderID != "" {
+		params["senderId"] = senderID
 	}
-	if templateId := msg.GetExtraStringOrDefault(cl253TemplateID, ""); templateId != "" {
-		params["templateId"] = templateId
+	if templateID := msg.GetExtraStringOrDefault(msg.TemplateID, ""); templateID != "" {
+		params["templateId"] = templateID
 	}
 	if msg.UID != "" {
 		params["uid"] = msg.UID // CL253使用 uid
@@ -163,12 +175,11 @@ func (t *cl253Transformer) transformIntlSMS(ctx context.Context, msg *Message, a
 		Headers:  t.buildHeaders(nil),
 		Body:     body,
 		BodyType: "json",
-		Timeout:  30 * time.Second,
 	}
 	return reqSpec, t.handleCl253Response, nil
 }
 
-// buildHeaders 构建请求头，支持用户自定义 header 合并，默认加 content-type
+// buildHeaders 构建请求头，支持用户自定义 header 合并，默认加 content-type.
 func (t *cl253Transformer) buildHeaders(userHeaders map[string]string) map[string]string {
 	headers := map[string]string{
 		"content-type": "application/json",
@@ -179,14 +190,14 @@ func (t *cl253Transformer) buildHeaders(userHeaders map[string]string) map[strin
 	return headers
 }
 
-// handleCl253Response 处理 CL253 API 响应
+// handleCl253Response 处理 CL253 API 响应.
 func (t *cl253Transformer) handleCl253Response(statusCode int, body []byte) error {
 	if statusCode < 200 || statusCode >= 300 {
 		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
 	}
 	var result struct {
 		Code     string `json:"code"`
-		MsgId    string `json:"msgId"`
+		MsgID    string `json:"msgId"`
 		RespTime string `json:"time"`
 		ErrorMsg string `json:"errorMsg"`
 		Message  string `json:"message"`
@@ -195,7 +206,7 @@ func (t *cl253Transformer) handleCl253Response(statusCode int, body []byte) erro
 		return fmt.Errorf("failed to parse CL253 response: %w", err)
 	}
 	if result.Code != "0" {
-		return &SMSError{
+		return &Error{
 			Code:     result.Code,
 			Message:  result.ErrorMsg + result.Message,
 			Provider: string(SubProviderCl253),

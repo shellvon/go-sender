@@ -1,10 +1,15 @@
 package telegram
 
-import "github.com/shellvon/go-sender/core"
+import (
+	"reflect"
+
+	"github.com/shellvon/go-sender/core"
+)
 
 // BaseMessage represents a base message with common fields for all Telegram messages.
 type BaseMessage struct {
 	core.DefaultMessage
+
 	MsgType MessageType `json:"msgtype"`
 
 	// Unique identifier of the business connection on behalf of which the message will be sent
@@ -104,7 +109,7 @@ func WithMessageThreadID(threadID int) MessageOption {
 	}
 }
 
-// MediaMessage represents common fields for media messages
+// MediaMessage represents common fields for media messages.
 type MediaMessage struct {
 	BaseMessage
 
@@ -128,90 +133,124 @@ func (m *MediaMessage) GetBase() *BaseMessage {
 
 // WithCaption sets the caption for the media message
 // Caption can be 0-1024 characters after entities parsing
-// Use with ParseMode to format the caption (HTML, Markdown, MarkdownV2)
+// Use with ParseMode to format the caption (HTML, Markdown, MarkdownV2).
 func WithCaption(caption string) MessageOption {
 	return func(m MessageWithBase) {
-		// Try to access MediaMessage fields through type assertions
-		if p, ok := m.(*MediaMessage); ok {
+		switch p := m.(type) {
+		case *MediaMessage:
 			p.Caption = caption
-		} else if p, ok := m.(*PhotoMessage); ok {
+		case *PhotoMessage:
 			p.Caption = caption
-		} else if p, ok := m.(*AudioMessage); ok {
+		case *AudioMessage:
 			p.Caption = caption
-		} else if p, ok := m.(*DocumentMessage); ok {
+		case *DocumentMessage:
 			p.Caption = caption
-		} else if p, ok := m.(*VideoMessage); ok {
+		case *VideoMessage:
 			p.Caption = caption
-		} else if p, ok := m.(*AnimationMessage); ok {
+		case *AnimationMessage:
 			p.Caption = caption
-		} else if p, ok := m.(*VoiceMessage); ok {
+		case *VoiceMessage:
 			p.Caption = caption
+		case *TextMessage:
+			p.Text = caption
 		}
 	}
 }
 
 // WithParseMode sets the parse mode for the media caption
 // Supported modes: "HTML", "Markdown", "MarkdownV2"
-// This enables formatting in the caption text
+// This enables formatting in the caption text.
 func WithParseMode(mode string) MessageOption {
 	return func(m MessageWithBase) {
-		// Try to access MediaMessage fields through type assertions
-		if p, ok := m.(*MediaMessage); ok {
+		switch p := m.(type) {
+		case *MediaMessage:
 			p.ParseMode = mode
-		} else if p, ok := m.(*PhotoMessage); ok {
+		case *PhotoMessage:
 			p.ParseMode = mode
-		} else if p, ok := m.(*AudioMessage); ok {
+		case *AudioMessage:
 			p.ParseMode = mode
-		} else if p, ok := m.(*DocumentMessage); ok {
+		case *DocumentMessage:
 			p.ParseMode = mode
-		} else if p, ok := m.(*VideoMessage); ok {
+		case *VideoMessage:
 			p.ParseMode = mode
-		} else if p, ok := m.(*AnimationMessage); ok {
+		case *AnimationMessage:
 			p.ParseMode = mode
-		} else if p, ok := m.(*VoiceMessage); ok {
+		case *VoiceMessage:
 			p.ParseMode = mode
-		} else if p, ok := m.(*TextMessage); ok {
+		case *TextMessage:
 			p.ParseMode = mode
 		}
 	}
 }
 
 // WithCaptionEntities sets the entities for the media caption
-// A JSON-serialized list of special entities that appear in the caption
+// A JSON-serialized list of special entities that appear in the caption.
 func WithCaptionEntities(entities []MessageEntity) MessageOption {
 	return func(m MessageWithBase) {
-		// Try to access MediaMessage fields through type assertions
-		if p, ok := m.(*MediaMessage); ok {
+		switch p := m.(type) {
+		case *MediaMessage:
 			p.CaptionEntities = entities
-		} else if p, ok := m.(*AudioMessage); ok {
+		case *AudioMessage:
 			p.CaptionEntities = entities
-		} else if p, ok := m.(*DocumentMessage); ok {
+		case *DocumentMessage:
 			p.CaptionEntities = entities
-		} else if p, ok := m.(*VideoMessage); ok {
+		case *VideoMessage:
 			p.CaptionEntities = entities
-		} else if p, ok := m.(*AnimationMessage); ok {
+		case *AnimationMessage:
 			p.CaptionEntities = entities
-		} else if p, ok := m.(*VoiceMessage); ok {
+		case *VoiceMessage:
 			p.CaptionEntities = entities
-		} else if p, ok := m.(*TextMessage); ok {
+		case *TextMessage:
 			p.Entities = entities
 		}
 	}
 }
 
 // WithShowCaptionAboveMedia sets whether the caption should be shown above the media
-// By default, captions appear below the media
+// By default, captions are shown below the media.
 func WithShowCaptionAboveMedia(show bool) MessageOption {
 	return func(m MessageWithBase) {
-		// Try to access MediaMessage fields through type assertions
-		if p, ok := m.(*MediaMessage); ok {
+		switch p := m.(type) {
+		case *MediaMessage:
 			p.ShowCaptionAboveMedia = show
-		} else if p, ok := m.(*PhotoMessage); ok {
+		case *PhotoMessage:
 			p.ShowCaptionAboveMedia = show
-		} else if p, ok := m.(*VideoMessage); ok {
+		case *AudioMessage:
 			p.ShowCaptionAboveMedia = show
-		} else if p, ok := m.(*AnimationMessage); ok {
+		case *DocumentMessage:
 			p.ShowCaptionAboveMedia = show
+		case *VideoMessage:
+			p.ShowCaptionAboveMedia = show
+		case *AnimationMessage:
+			p.ShowCaptionAboveMedia = show
+		case *VoiceMessage:
+			p.ShowCaptionAboveMedia = show
+		}
+	}
+}
+
+// applyMediaMessageOptions is a helper function to reduce duplicate code in media message constructors
+// It applies the given options to a media message that implements MessageWithBase.
+func applyMediaMessageOptions(msg MessageWithBase, opts []interface{}) {
+	for _, opt := range opts {
+		switch o := opt.(type) {
+		case MessageOption:
+			o(msg)
+		default:
+			// Try to call the option as a function that takes the specific message type
+			// This handles specific message option types like VoiceMessageOption, PhotoMessageOption, etc.
+			if fn, ok := o.(func(interface{})); ok {
+				fn(msg)
+			} else {
+				// Use reflection to call the option function with the correct message type
+				val := reflect.ValueOf(o)
+				if val.Kind() == reflect.Func && val.Type().NumIn() == 1 {
+					msgVal := reflect.ValueOf(msg)
+					if val.Type().In(0).AssignableTo(msgVal.Type()) {
+						val.Call([]reflect.Value{msgVal})
+					}
+				}
+			}
 		}
 	}
 }

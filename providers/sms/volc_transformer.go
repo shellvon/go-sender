@@ -23,10 +23,6 @@ import (
 
 type volcTransformer struct{}
 
-func newVolcTransformer() core.HTTPTransformer[*core.Account] {
-	return &volcTransformer{}
-}
-
 func init() {
 	RegisterTransformer(string(SubProviderVolc), &volcTransformer{})
 }
@@ -36,10 +32,14 @@ func (t *volcTransformer) CanTransform(msg core.Message) bool {
 	return ok && smsMsg.SubProvider == string(SubProviderVolc)
 }
 
-func (t *volcTransformer) Transform(ctx context.Context, msg core.Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+func (t *volcTransformer) Transform(
+	ctx context.Context,
+	msg core.Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
-		return nil, nil, fmt.Errorf("unsupported message type for volc: %T", msg)
+		return nil, nil, errors.New("invalid message type for volcTransformer")
 	}
 	if err := t.validateMessage(smsMsg); err != nil {
 		return nil, nil, err
@@ -63,7 +63,11 @@ func (t *volcTransformer) validateMessage(msg *Message) error {
 	return nil
 }
 
-func (t *volcTransformer) transformTextSMS(ctx context.Context, msg *Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+func (t *volcTransformer) transformTextSMS(
+	_ context.Context,
+	msg *Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	body := map[string]interface{}{
 		"SmsAccount":   account.Key,
 		"Sign":         msg.SignName,
@@ -95,7 +99,6 @@ func (t *volcTransformer) transformTextSMS(ctx context.Context, msg *Message, ac
 		Headers:  headers,
 		Body:     bodyJSON,
 		BodyType: "json",
-		Timeout:  30 * time.Second,
 	}, t.handleVolcResponse, nil
 }
 
@@ -128,7 +131,7 @@ func (t *volcTransformer) buildVolcHeaders(account *core.Account, body []byte) m
 	return headers
 }
 
-// handleVolcResponse 处理火山引擎API响应
+// handleVolcResponse 处理火山引擎API响应.
 func (t *volcTransformer) handleVolcResponse(statusCode int, body []byte) error {
 	if statusCode < 200 || statusCode >= 300 {
 		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
@@ -136,7 +139,7 @@ func (t *volcTransformer) handleVolcResponse(statusCode int, body []byte) error 
 
 	var result struct {
 		ResponseMetadata struct {
-			RequestId string `json:"RequestId"`
+			RequestID string `json:"RequestId"`
 			Action    string `json:"Action"`
 			Version   string `json:"Version"`
 			Service   string `json:"Service"`
@@ -156,7 +159,7 @@ func (t *volcTransformer) handleVolcResponse(statusCode int, body []byte) error 
 		return fmt.Errorf("failed to parse volc response: %w", err)
 	}
 	if result.ResponseMetadata.Error != nil {
-		return &SMSError{
+		return &Error{
 			Code:     result.ResponseMetadata.Error.Code,
 			Message:  result.ResponseMetadata.Error.Message,
 			Provider: string(SubProviderVolc),

@@ -2,22 +2,31 @@ package core
 
 import (
 	"context"
-	"math/rand"
+	crand "crypto/rand"
+	"encoding/binary"
+	mathrand "math/rand/v2"
 	"sync/atomic"
 	"time"
 )
 
-// StrategyType defines the type for selection strategy (used by providers like wecombot)
+const seedByteLen = 8
+const maxSeedInt = 0x7FFFFFFFFFFFFFFF
+
+// StrategyType defines the type for selection strategy (used by providers like wecombot).
 type StrategyType string
 
 const (
-	StrategyRoundRobin  StrategyType = "round_robin"
-	StrategyRandom      StrategyType = "random"
-	StrategyWeighted    StrategyType = "weighted"
+	// StrategyRoundRobin represents the round-robin selection strategy.
+	StrategyRoundRobin StrategyType = "round_robin"
+	// StrategyRandom represents the random selection strategy.
+	StrategyRandom StrategyType = "random"
+	// StrategyWeighted represents the weighted selection strategy.
+	StrategyWeighted StrategyType = "weighted"
+	// StrategyHealthBased represents the health-based selection strategy.
 	StrategyHealthBased StrategyType = "health_based"
 )
 
-// Selectable defines an interface for items that can be selected
+// Selectable defines an interface for items that can be selected.
 type Selectable interface {
 	GetName() string
 	GetWeight() int
@@ -25,25 +34,28 @@ type Selectable interface {
 	GetType() string // 获取类型标识，用于过滤（如：aliyun, tencent, emailjs等）
 }
 
-// SelectionStrategy defines the selection strategy interface
+// SelectionStrategy defines the selection strategy interface.
 type SelectionStrategy interface {
 	Select(items []Selectable) Selectable
 	Name() StrategyType
 }
 
-// RoundRobinStrategy round-robin strategy
+// RoundRobinStrategy round-robin strategy.
 type RoundRobinStrategy struct {
 	counter int32
 }
 
+// NewRoundRobinStrategy creates a new round-robin selection strategy.
 func NewRoundRobinStrategy() *RoundRobinStrategy {
 	return &RoundRobinStrategy{}
 }
 
+// Name returns the name of the round-robin strategy.
 func (r *RoundRobinStrategy) Name() StrategyType {
 	return StrategyRoundRobin
 }
 
+// Select selects the next item using round-robin algorithm.
 func (r *RoundRobinStrategy) Select(items []Selectable) Selectable {
 	if len(items) == 0 {
 		return nil
@@ -61,25 +73,39 @@ func (r *RoundRobinStrategy) Select(items []Selectable) Selectable {
 		return nil
 	}
 
+	//nolint:gosec // Reason: not used for security, only for load balancing/random selection
 	index := (atomic.AddInt32(&r.counter, 1) - 1) % int32(len(enabledItems))
 	return enabledItems[index]
 }
 
-// RandomStrategy random strategy
+// RandomStrategy random strategy.
 type RandomStrategy struct {
-	rand *rand.Rand
+	rand *mathrand.Rand
 }
 
+// NewRandomStrategy creates a new random selection strategy.
 func NewRandomStrategy() *RandomStrategy {
+	seed := make([]byte, seedByteLen)
+	_, err := crand.Read(seed)
+	var seedInt uint64
+	if err == nil {
+		seedInt = binary.LittleEndian.Uint64(seed)
+	} else {
+		//nolint:gosec // not for security, only for load balancing/random selection
+		seedInt = uint64(time.Now().UnixNano() & maxSeedInt)
+	}
 	return &RandomStrategy{
-		rand: rand.New(rand.NewSource(time.Now().UnixNano())),
+		//nolint:gosec // not for security, only for load balancing/random selection
+		rand: mathrand.New(mathrand.NewPCG(seedInt, 0)),
 	}
 }
 
+// Name returns the name of the random strategy.
 func (r *RandomStrategy) Name() StrategyType {
 	return StrategyRandom
 }
 
+// Select selects a random item from the list.
 func (r *RandomStrategy) Select(items []Selectable) Selectable {
 	if len(items) == 0 {
 		return nil
@@ -97,25 +123,38 @@ func (r *RandomStrategy) Select(items []Selectable) Selectable {
 		return nil
 	}
 
-	index := r.rand.Intn(len(enabledItems))
+	index := r.rand.IntN(len(enabledItems))
 	return enabledItems[index]
 }
 
-// WeightedStrategy weighted strategy
+// WeightedStrategy weighted strategy.
 type WeightedStrategy struct {
-	rand *rand.Rand
+	rand *mathrand.Rand
 }
 
+// NewWeightedStrategy creates a new weighted selection strategy.
 func NewWeightedStrategy() *WeightedStrategy {
+	seed := make([]byte, seedByteLen)
+	_, err := crand.Read(seed)
+	var seedInt uint64
+	if err == nil {
+		seedInt = binary.LittleEndian.Uint64(seed)
+	} else {
+		//nolint:gosec // not for security, only for load balancing/random selection
+		seedInt = uint64(time.Now().UnixNano() & maxSeedInt)
+	}
 	return &WeightedStrategy{
-		rand: rand.New(rand.NewSource(time.Now().UnixNano())),
+		//nolint:gosec // not for security, only for load balancing/random selection
+		rand: mathrand.New(mathrand.NewPCG(seedInt, 0)),
 	}
 }
 
+// Name returns the name of the weighted strategy.
 func (w *WeightedStrategy) Name() StrategyType {
 	return StrategyWeighted
 }
 
+// Select selects an item based on weight distribution.
 func (w *WeightedStrategy) Select(items []Selectable) Selectable {
 	if len(items) == 0 {
 		return nil
@@ -144,7 +183,7 @@ func (w *WeightedStrategy) Select(items []Selectable) Selectable {
 	}
 
 	// Select based on weight
-	random := w.rand.Intn(totalWeight)
+	random := w.rand.IntN(totalWeight)
 	currentWeight := 0
 
 	for _, item := range enabledItems {
@@ -157,23 +196,36 @@ func (w *WeightedStrategy) Select(items []Selectable) Selectable {
 	return enabledItems[0] // Fallback
 }
 
-// HealthBasedStrategy health-based selection strategy
+// HealthBasedStrategy health-based selection strategy.
 type HealthBasedStrategy struct {
 	healthChecker HealthChecker
-	rand          *rand.Rand
+	rand          *mathrand.Rand
 }
 
+// NewHealthBasedStrategy creates a new health-based selection strategy.
 func NewHealthBasedStrategy(healthChecker HealthChecker) *HealthBasedStrategy {
+	seed := make([]byte, seedByteLen)
+	_, err := crand.Read(seed)
+	var seedInt uint64
+	if err == nil {
+		seedInt = binary.LittleEndian.Uint64(seed)
+	} else {
+		//nolint:gosec // not for security, only for load balancing/random selection
+		seedInt = uint64(time.Now().UnixNano() & maxSeedInt)
+	}
 	return &HealthBasedStrategy{
 		healthChecker: healthChecker,
-		rand:          rand.New(rand.NewSource(time.Now().UnixNano())),
+		//nolint:gosec // not for security, only for load balancing/random selection
+		rand: mathrand.New(mathrand.NewPCG(seedInt, 0)),
 	}
 }
 
+// Name returns the name of the health-based strategy.
 func (h *HealthBasedStrategy) Name() StrategyType {
 	return StrategyHealthBased
 }
 
+// Select selects the healthiest item from the list.
 func (h *HealthBasedStrategy) Select(items []Selectable) Selectable {
 	if len(items) == 0 {
 		return nil
@@ -209,21 +261,22 @@ func (h *HealthBasedStrategy) Select(items []Selectable) Selectable {
 	}
 
 	// Random selection among healthy items
-	index := h.rand.Intn(len(healthyItems))
+	index := h.rand.IntN(len(healthyItems))
 	return healthyItems[index]
 }
 
-// HealthCheckable interface for items that support health checks
+// HealthCheckable interface for items that support health checks.
 type HealthCheckable interface {
 	Selectable
 	HealthCheck(ctx context.Context) *HealthCheck
 }
 
-// StrategyRegistry strategy registry
+// StrategyRegistry strategy registry.
 type StrategyRegistry struct {
 	strategies map[StrategyType]SelectionStrategy
 }
 
+// NewStrategyRegistry creates a new strategy registry.
 func NewStrategyRegistry() *StrategyRegistry {
 	registry := &StrategyRegistry{
 		strategies: make(map[StrategyType]SelectionStrategy),
@@ -237,18 +290,23 @@ func NewStrategyRegistry() *StrategyRegistry {
 	return registry
 }
 
+// Register registers a strategy with the given name.
 func (r *StrategyRegistry) Register(name StrategyType, strategy SelectionStrategy) {
 	r.strategies[name] = strategy
 }
 
+// Get retrieves a strategy by name.
 func (r *StrategyRegistry) Get(name StrategyType) (SelectionStrategy, bool) {
 	strategy, exists := r.strategies[name]
 	return strategy, exists
 }
 
+// GetDefault returns the default strategy (round-robin).
 func (r *StrategyRegistry) GetDefault() SelectionStrategy {
 	return r.strategies[StrategyRoundRobin]
 }
 
-// Global strategy registry instance
+// GlobalStrategyRegistry is the global strategy registry instance.
+//
+//nolint:gochecknoglobals // Reason: GlobalStrategyRegistry is a global registry for selection strategies
 var GlobalStrategyRegistry = NewStrategyRegistry()

@@ -21,6 +21,27 @@ type ContactMessage struct {
 	VCard string `json:"vcard,omitempty"`
 }
 
+// NewContactMessage creates a new ContactMessage instance.
+func NewContactMessage(chatID string, phoneNumber, firstName string, opts ...interface{}) *ContactMessage {
+	msg := &ContactMessage{
+		BaseMessage: BaseMessage{
+			MsgType: TypeContact,
+			ChatID:  chatID,
+		},
+		PhoneNumber: phoneNumber,
+		FirstName:   firstName,
+	}
+	for _, opt := range opts {
+		switch o := opt.(type) {
+		case ContactMessageOption:
+			o(msg)
+		case MessageOption:
+			o(msg)
+		}
+	}
+	return msg
+}
+
 func (m *ContactMessage) GetBase() *BaseMessage {
 	return &m.BaseMessage
 }
@@ -45,33 +66,13 @@ func (m *ContactMessage) Validate() error {
 type ContactMessageOption func(*ContactMessage)
 
 // WithContactLastName sets the last name of the contact
-// This is optional and can be omitted
+// This is optional and can be omitted.
 func WithContactLastName(lastName string) ContactMessageOption {
 	return func(m *ContactMessage) { m.LastName = lastName }
 }
 
 // WithContactVCard sets additional data about the contact in vCard format
-// Should be 0-2048 bytes in size
+// Should be 0-2048 bytes in size.
 func WithContactVCard(vCard string) ContactMessageOption {
 	return func(m *ContactMessage) { m.VCard = vCard }
-}
-
-func NewContactMessage(chatID string, phoneNumber, firstName string, opts ...interface{}) *ContactMessage {
-	msg := &ContactMessage{
-		BaseMessage: BaseMessage{
-			MsgType: TypeContact,
-			ChatID:  chatID,
-		},
-		PhoneNumber: phoneNumber,
-		FirstName:   firstName,
-	}
-	for _, opt := range opts {
-		switch o := opt.(type) {
-		case ContactMessageOption:
-			o(msg)
-		case MessageOption:
-			o(msg)
-		}
-	}
-	return msg
 }

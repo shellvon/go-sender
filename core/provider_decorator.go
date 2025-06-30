@@ -2,19 +2,21 @@ package core
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
 )
 
 const (
-	// DefaultSendTimeout is the default timeout for send operations
+	// DefaultSendTimeout is the default timeout for send operations.
 	DefaultSendTimeout = 30 * time.Second
 )
 
 // ProviderDecorator is a decorated Provider that includes middleware for various concerns.
 type ProviderDecorator struct {
 	Provider
+
 	middleware *SenderMiddleware
 	workers    sync.WaitGroup
 	ctx        context.Context
@@ -22,7 +24,9 @@ type ProviderDecorator struct {
 	logger     Logger
 }
 
-// Global callbackRegistry, only used for local/in-memory queue/testing scenarios
+// Global callbackRegistry, only used for local/in-memory queue/testing scenarios.
+//
+//nolint:gochecknoglobals // Reason: callbackRegistry is a global callback registry for async message handling
 var callbackRegistry sync.Map // map[msgID]func(error)
 
 // NewProviderDecorator creates a new ProviderDecorator instance.
@@ -38,8 +42,8 @@ func NewProviderDecorator(provider Provider, middleware *SenderMiddleware, logge
 	}
 
 	// Check if provider supports logger injection
-	if loggerAware, ok := provider.(LoggerAwareProvider); ok {
-		loggerAware.SetLogger(pd.logger)
+	if loggerAware, ok := provider.(LoggerAware); ok {
+		loggerAware.SetLogger(logger)
 	}
 
 	// Start the queue processor if a queue is configured.
@@ -77,14 +81,22 @@ func (pd *ProviderDecorator) Send(ctx context.Context, message Message, opts ...
 	return err
 }
 
-// Unified logic for consumer and synchronous chains
+// Unified logic for consumer and synchronous chains.
 func (pd *ProviderDecorator) executeWithMiddleware(ctx context.Context, message Message, opts *SendOptions) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
 
 	if pd.logger != nil {
-		pd.logger.Log(LevelDebug, "message", "provider send start", "message_id", message.MsgID(), "provider", pd.Provider.Name())
+		_ = pd.logger.Log(
+			LevelDebug,
+			"message",
+			"provider send start",
+			"message_id",
+			message.MsgID(),
+			"provider",
+			pd.Provider.Name(),
+		)
 	}
 
 	// Rate limiting
@@ -112,7 +124,7 @@ func (pd *ProviderDecorator) doSendWithRetry(ctx context.Context, message Messag
 	return err
 }
 
-// The queue consumer worker uses the same logic as the synchronous chain
+// The queue consumer worker uses the same logic as the synchronous chain.
 func (pd *ProviderDecorator) processQueueItem(ctx context.Context, item *QueueItem) {
 	queueLatency := time.Duration(0)
 	if !item.CreatedAt.IsZero() {
@@ -123,7 +135,7 @@ func (pd *ProviderDecorator) processQueueItem(ctx context.Context, item *QueueIt
 	restoredCtx, opts, err := deserializeSendOptions(ctx, item.Metadata)
 	if err != nil {
 		if pd.logger != nil {
-			pd.logger.Log(LevelWarn, "message", "deserialize send options failed", "error", err.Error())
+			_ = pd.logger.Log(LevelWarn, "message", "deserialize send options failed", "error", err.Error())
 		}
 		opts = &SendOptions{} // fallback
 		restoredCtx = ctx
@@ -131,7 +143,7 @@ func (pd *ProviderDecorator) processQueueItem(ctx context.Context, item *QueueIt
 	err = pd.executeWithMiddleware(restoredCtx, item.Message, opts)
 	// Find and invoke callback (only effective for local/in-memory queue)
 	if cb, ok := callbackRegistry.LoadAndDelete(item.Message.MsgID()); ok {
-		if callback, ok := cb.(func(error)); ok {
+		if callback, okCallback := cb.(func(error)); okCallback {
 			callback(err)
 		}
 	}
@@ -163,12 +175,20 @@ func (pd *ProviderDecorator) sendAsync(ctx context.Context, message Message, opt
 
 	// Fallback to goroutine if no queue is configured
 	go func() {
-		err := pd.executeSend(context.Background(), message, opts)
+		errSend := pd.executeSend(context.Background(), message, opts)
 		if opts.Callback != nil {
-			opts.Callback(err)
+			opts.Callback(errSend)
 		}
-		if err != nil && pd.logger != nil {
-			pd.logger.Log(LevelError, "message", "async send failed", "message_id", message.MsgID(), "error", fmt.Sprintf("%v", err))
+		if errSend != nil && pd.logger != nil {
+			_ = pd.logger.Log(
+				LevelError,
+				"message",
+				"async send failed",
+				"message_id",
+				message.MsgID(),
+				"error",
+				fmt.Sprintf("%v", errSend),
+			)
 		}
 	}()
 
@@ -200,7 +220,7 @@ func (pd *ProviderDecorator) sendWithRetry(ctx context.Context, message Message,
 			break
 		}
 		if pd.logger != nil {
-			pd.logger.Log(LevelWarn, "message", "retry filtered", "attempt", attempt, "error", err.Error())
+			_ = pd.logger.Log(LevelWarn, "message", "retry filtered", "attempt", attempt, "error", err.Error())
 		}
 
 		// If this is the last attempt, don't wait
@@ -253,47 +273,56 @@ func (pd *ProviderDecorator) executeSend(ctx context.Context, message Message, o
 // startQueueProcessor starts a goroutine to continuously dequeue and process messages.
 func (pd *ProviderDecorator) startQueueProcessor() {
 	if pd.middleware == nil || pd.middleware.Queue == nil {
-		if pd.logger != nil {
-			pd.logger.Log(LevelInfo, "message", "queue processor not started", "message", "Queue processor not started: queue is not configured.")
-		}
+		pd.logInfo("Queue processor not started: queue is not configured.")
 		return
 	}
 
 	pd.workers.Add(1)
-	go func() {
-		defer pd.workers.Done()
-		if pd.logger != nil {
-			pd.logger.Log(LevelInfo, "message", "queue processor started", "message", "Queue processor started")
-		}
+	go pd.queueProcessorLoop()
+}
 
-		for {
-			select {
-			case <-pd.ctx.Done():
-				if pd.logger != nil {
-					pd.logger.Log(LevelInfo, "message", "queue processor shutting down", "message", "Queue processor shutting down")
-				}
-				return
-			default:
-				item, err := pd.middleware.Queue.Dequeue(pd.ctx)
-				if err != nil {
-					if err == context.Canceled {
-						if pd.logger != nil {
-							pd.logger.Log(LevelInfo, "message", "queue dequeue cancelled", "message", "Queue dequeue cancelled")
-						}
-						return
-					}
-					if pd.logger != nil {
-						pd.logger.Log(LevelError, "message", "queue dequeue failed", "message", "Queue dequeue failed", "error", fmt.Sprintf("%v", err))
-					}
-					time.Sleep(time.Second)
-					continue
-				}
+func (pd *ProviderDecorator) queueProcessorLoop() {
+	defer pd.workers.Done()
+	pd.logInfo("Queue processor started")
 
-				// Process the item
-				pd.processQueueItem(pd.ctx, item)
+	for {
+		select {
+		case <-pd.ctx.Done():
+			pd.logInfo("Queue processor shutting down")
+			return
+		default:
+			item, err := pd.middleware.Queue.Dequeue(pd.ctx)
+			if err != nil {
+				if pd.handleDequeueError(err) {
+					return
+				}
+				continue
 			}
+			pd.processQueueItem(pd.ctx, item)
 		}
-	}()
+	}
+}
+
+func (pd *ProviderDecorator) handleDequeueError(err error) bool {
+	if errors.Is(err, context.Canceled) {
+		pd.logInfo("Queue dequeue cancelled")
+		return true
+	}
+	pd.logError("Queue dequeue failed", err)
+	time.Sleep(time.Second)
+	return false
+}
+
+func (pd *ProviderDecorator) logInfo(msg string) {
+	if pd.logger != nil {
+		_ = pd.logger.Log(LevelInfo, "message", msg)
+	}
+}
+
+func (pd *ProviderDecorator) logError(msg string, err error) {
+	if pd.logger != nil {
+		_ = pd.logger.Log(LevelError, "message", msg, "error", fmt.Sprintf("%v", err))
+	}
 }
 
 // Close gracefully shuts down the ProviderDecorator and its associated middleware.
@@ -306,7 +335,9 @@ func (pd *ProviderDecorator) Close() error {
 	// Wait for all workers to finish
 	pd.workers.Wait()
 
-	pd.logger.Log(LevelInfo, "message", "All provider workers shut down")
+	if pd.logger != nil {
+		_ = pd.logger.Log(LevelInfo, "message", "All provider workers shut down")
+	}
 
 	// Close the underlying provider if it implements io.Closer
 	if closer, ok := pd.Provider.(interface{ Close() error }); ok {
@@ -315,7 +346,9 @@ func (pd *ProviderDecorator) Close() error {
 		}
 	}
 
-	pd.logger.Log(LevelInfo, "message", "ProviderDecorator closed successfully")
+	if pd.logger != nil {
+		_ = pd.logger.Log(LevelInfo, "message", "ProviderDecorator closed successfully")
+	}
 	return nil
 }
 

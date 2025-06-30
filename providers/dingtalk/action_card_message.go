@@ -29,7 +29,22 @@ type ActionCardButton struct {
 // Reference: https://open.dingtalk.com/document/robots/custom-robot-access
 type ActionCardMessage struct {
 	BaseMessage
+
 	ActionCard ActionCard `json:"actionCard"`
+}
+
+// NewActionCardMessage creates a new ActionCardMessage.
+func NewActionCardMessage(title, text string, opts ...ActionCardMessageOption) *ActionCardMessage {
+	msg := &ActionCardMessage{
+		ActionCard: ActionCard{
+			Title: title,
+			Text:  text,
+		},
+	}
+	for _, opt := range opts {
+		opt(msg)
+	}
+	return msg
 }
 
 // Validate validates the ActionCardMessage to ensure it meets DingTalk API requirements.
@@ -79,21 +94,4 @@ func WithMultipleButtons(btns []ActionCardButton) ActionCardMessageOption {
 	return func(m *ActionCardMessage) {
 		m.ActionCard.Btns = btns
 	}
-}
-
-// NewActionCardMessage creates a new ActionCardMessage with required content and applies optional configurations.
-func NewActionCardMessage(title, text string, opts ...ActionCardMessageOption) *ActionCardMessage {
-	msg := &ActionCardMessage{
-		BaseMessage: BaseMessage{
-			MsgType: TypeActionCard,
-		},
-		ActionCard: ActionCard{
-			Title: title,
-			Text:  text,
-		},
-	}
-	for _, opt := range opts {
-		opt(msg)
-	}
-	return msg
 }

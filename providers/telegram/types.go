@@ -2,7 +2,7 @@ package telegram
 
 import "github.com/shellvon/go-sender/core"
 
-// MessageType represents the type of Telegram message
+// MessageType represents the type of Telegram message.
 type MessageType string
 
 const (
@@ -209,7 +209,7 @@ type ReplyParameters struct {
 // - InlineKeyboardMarkup
 // - ReplyKeyboardMarkup
 // - ReplyKeyboardRemove
-// - ForceReply
+// - ForceReply.
 type ReplyMarkup interface {
 	// This is a union type, so we'll use interface{}
 	// In practice, this will be one of the concrete types below
@@ -352,7 +352,7 @@ type SwitchInlineQueryChosenChat struct {
 type CallbackGame struct{}
 
 // ReplyKeyboardMarkup represents a custom keyboard with reply options
-// Based on Telegram Bot API ReplyKeyboardMarkup
+// Based on Telegram Bot API ReplyKeyboardMarkup.
 type ReplyKeyboardMarkup struct {
 	Keyboard              [][]KeyboardButton `json:"keyboard"`
 	IsPersistent          bool               `json:"is_persistent,omitempty"`
@@ -363,7 +363,7 @@ type ReplyKeyboardMarkup struct {
 }
 
 // KeyboardButton represents one button of the reply keyboard
-// Based on Telegram Bot API KeyboardButton
+// Based on Telegram Bot API KeyboardButton.
 type KeyboardButton struct {
 	Text            string                     `json:"text"`
 	RequestUser     *KeyboardButtonRequestUser `json:"request_user,omitempty"`
@@ -375,7 +375,7 @@ type KeyboardButton struct {
 }
 
 // KeyboardButtonRequestUser represents a button that requests the user to create and send a KeyboardButtonRequestUser
-// Based on Telegram Bot API KeyboardButtonRequestUser
+// Based on Telegram Bot API KeyboardButtonRequestUser.
 type KeyboardButtonRequestUser struct {
 	RequestID     int  `json:"request_id"`
 	UserIsBot     bool `json:"user_is_bot,omitempty"`
@@ -383,7 +383,7 @@ type KeyboardButtonRequestUser struct {
 }
 
 // KeyboardButtonRequestChat represents a button that requests the user to create and send a KeyboardButtonRequestChat
-// Based on Telegram Bot API KeyboardButtonRequestChat
+// Based on Telegram Bot API KeyboardButtonRequestChat.
 type KeyboardButtonRequestChat struct {
 	RequestID               int                      `json:"request_id"`
 	ChatIsChannel           bool                     `json:"chat_is_channel"`
@@ -396,7 +396,7 @@ type KeyboardButtonRequestChat struct {
 }
 
 // ChatAdministratorRights represents the rights of an administrator in a chat
-// Based on Telegram Bot API ChatAdministratorRights
+// Based on Telegram Bot API ChatAdministratorRights.
 type ChatAdministratorRights struct {
 	IsAnonymous         bool `json:"is_anonymous,omitempty"`
 	CanManageChat       bool `json:"can_manage_chat,omitempty"`
@@ -416,20 +416,20 @@ type ChatAdministratorRights struct {
 }
 
 // KeyboardButtonPollType represents the type of poll that is requested to be created
-// Based on Telegram Bot API KeyboardButtonPollType
+// Based on Telegram Bot API KeyboardButtonPollType.
 type KeyboardButtonPollType struct {
 	Type string `json:"type,omitempty"`
 }
 
 // ReplyKeyboardRemove represents a reply keyboard that is requested to be removed
-// Based on Telegram Bot API ReplyKeyboardRemove
+// Based on Telegram Bot API ReplyKeyboardRemove.
 type ReplyKeyboardRemove struct {
 	RemoveKeyboard bool `json:"remove_keyboard"`
 	Selective      bool `json:"selective,omitempty"`
 }
 
 // ForceReply represents a reply keyboard that is requested to be shown to the user
-// Based on Telegram Bot API ForceReply
+// Based on Telegram Bot API ForceReply.
 type ForceReply struct {
 	ForceReply            bool   `json:"force_reply"`
 	InputFieldPlaceholder string `json:"input_field_placeholder,omitempty"`
@@ -447,7 +447,7 @@ type InputPollOption struct {
 	VoterCount int `json:"voter_count,omitempty"`
 }
 
-// Message interface definition
+// Message interface definition.
 type Message interface {
 	core.Message
 	GetMsgType() MessageType

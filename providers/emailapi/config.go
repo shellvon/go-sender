@@ -6,6 +6,7 @@ import "github.com/shellvon/go-sender/core"
 type Config struct {
 	// BaseConfig contains common configuration like strategy and disabled flag
 	core.BaseConfig
+
 	// Accounts contains multiple API accounts for load balancing, failover, etc.
 	// Each account can be configured for different sub-providers (emailjs, resend, etc.)
 	Accounts []Account `json:"accounts"`

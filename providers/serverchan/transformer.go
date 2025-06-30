@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/shellvon/go-sender/core"
 )
@@ -17,19 +17,19 @@ import (
 type serverchanTransformer struct{}
 
 // newTransformer 创建 ServerChan 的 transformer 实例
-// 返回实现 core.HTTPTransformer[*core.Account] 的 serverchanTransformer
+// 返回实现 core.HTTPTransformer[*core.Account] 的 serverchanTransformer.
 func newTransformer() core.HTTPTransformer[*core.Account] {
 	return &serverchanTransformer{}
 }
 
-// CanTransform 判断是否为 ServerChan 消息
+// CanTransform 判断是否为 ServerChan 消息.
 func (t *serverchanTransformer) CanTransform(msg core.Message) bool {
 	return msg.ProviderType() == core.ProviderTypeServerChan
 }
 
 // Transform 构造 ServerChan HTTPRequestSpec
 // 参数:
-//   - ctx: 上下文
+//   - _: 上下文
 //   - msg: ServerChan 消息体
 //   - account: 账号配置
 //
@@ -37,7 +37,11 @@ func (t *serverchanTransformer) CanTransform(msg core.Message) bool {
 //   - HTTPRequestSpec: HTTP 请求规范
 //   - ResponseHandler: 响应处理器
 //   - error: 错误信息
-func (t *serverchanTransformer) Transform(ctx context.Context, msg core.Message, account *core.Account) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+func (t *serverchanTransformer) Transform(
+	_ context.Context,
+	msg core.Message,
+	account *core.Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	scMsg, ok := msg.(*Message)
 	if !ok {
 		return nil, nil, fmt.Errorf("unsupported message type for serverchan transformer: %T", msg)
@@ -53,7 +57,6 @@ func (t *serverchanTransformer) Transform(ctx context.Context, msg core.Message,
 		Headers:  map[string]string{"Content-Type": "application/json"},
 		Body:     body,
 		BodyType: "json",
-		Timeout:  30 * time.Second,
 	}
 	return reqSpec, t.handleServerChanResponse, nil
 }
@@ -76,9 +79,9 @@ func (t *serverchanTransformer) buildAPIURL(key string) string {
 	return fmt.Sprintf("https://sctapi.ftqq.com/%s.send", key)
 }
 
-// handleServerChanResponse 处理 ServerChan API 响应
+// handleServerChanResponse 处理 ServerChan API 响应.
 func (t *serverchanTransformer) handleServerChanResponse(statusCode int, body []byte) error {
-	if statusCode != 200 {
+	if statusCode != http.StatusOK {
 		return fmt.Errorf("serverchan API returned non-OK status: %d", statusCode)
 	}
 	var result struct {

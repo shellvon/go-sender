@@ -11,7 +11,7 @@ import (
 )
 
 // HTTPProvider is a unified HTTP Provider base class using generic design
-// T must implement the core.Selectable interface, typically *core.Account
+// T must implement the core.Selectable interface, typically *core.Account.
 type HTTPProvider[T core.Selectable] struct {
 	name        string
 	configs     []T
@@ -19,8 +19,13 @@ type HTTPProvider[T core.Selectable] struct {
 	transformer core.HTTPTransformer[T]
 }
 
-// NewHTTPProvider creates a new HTTP Provider
-func NewHTTPProvider[T core.Selectable](name string, configs []T, transformer core.HTTPTransformer[T], strategy core.SelectionStrategy) *HTTPProvider[T] {
+// NewHTTPProvider creates a new HTTP Provider.
+func NewHTTPProvider[T core.Selectable](
+	name string,
+	configs []T,
+	transformer core.HTTPTransformer[T],
+	strategy core.SelectionStrategy,
+) *HTTPProvider[T] {
 	return &HTTPProvider[T]{
 		name:        name,
 		configs:     configs,
@@ -29,7 +34,7 @@ func NewHTTPProvider[T core.Selectable](name string, configs []T, transformer co
 	}
 }
 
-// Send implements the core.Provider interface
+// Send implements the core.Provider interface.
 func (p *HTTPProvider[T]) Send(ctx context.Context, msg core.Message, opts *core.ProviderSendOptions) error {
 	if opts == nil {
 		opts = &core.ProviderSendOptions{}
@@ -37,13 +42,14 @@ func (p *HTTPProvider[T]) Send(ctx context.Context, msg core.Message, opts *core
 
 	// Select configuration
 	var selectedConfig T
-	if len(p.configs) == 1 {
+	switch {
+	case len(p.configs) == 1:
 		selectedConfig = p.configs[0]
-	} else if len(p.configs) > 1 {
+	case len(p.configs) > 1:
 		// Filter configurations based on message's SubProvider
 		availableConfigs := p.filterConfigsByMessage(msg)
 		if len(availableConfigs) == 0 {
-			return fmt.Errorf("no suitable account found for the specified provider type")
+			return errors.New("no suitable account found for the specified provider type")
 		}
 
 		// Convert to Selectable interface
@@ -54,7 +60,7 @@ func (p *HTTPProvider[T]) Send(ctx context.Context, msg core.Message, opts *core
 
 		selected := utils.Select(ctx, selectables, p.strategy)
 		if selected == nil {
-			return fmt.Errorf("no suitable account selected")
+			return errors.New("no suitable account selected")
 		}
 
 		// Find the corresponding configuration
@@ -64,12 +70,12 @@ func (p *HTTPProvider[T]) Send(ctx context.Context, msg core.Message, opts *core
 				break
 			}
 		}
-	} else {
+	default:
 		return errors.New("no available config")
 	}
 
 	if !selectedConfig.IsEnabled() {
-		return fmt.Errorf("the selected account is disabled")
+		return errors.New("the selected account is disabled")
 	}
 
 	// Transform request
@@ -82,7 +88,7 @@ func (p *HTTPProvider[T]) Send(ctx context.Context, msg core.Message, opts *core
 	return p.executeHTTPRequest(ctx, reqSpec, handler, opts)
 }
 
-// filterConfigsByMessage filters configurations based on message
+// filterConfigsByMessage filters configurations based on message.
 func (p *HTTPProvider[T]) filterConfigsByMessage(msg core.Message) []T {
 	// Try to get SubProvider from message
 	var subProvider string
@@ -104,17 +110,17 @@ func (p *HTTPProvider[T]) filterConfigsByMessage(msg core.Message) []T {
 	return filtered
 }
 
-// Name returns the provider name
+// Name returns the provider name.
 func (p *HTTPProvider[T]) Name() string {
 	return p.name
 }
 
-// GetConfigs returns all configurations
+// GetConfigs returns all configurations.
 func (p *HTTPProvider[T]) GetConfigs() []T {
 	return p.configs
 }
 
-// SelectConfig selects a configuration (for special methods like UploadMedia)
+// SelectConfig selects a configuration (for special methods like UploadMedia).
 func (p *HTTPProvider[T]) SelectConfig(ctx context.Context) T {
 	if len(p.configs) == 1 {
 		return p.configs[0]
@@ -142,8 +148,13 @@ func (p *HTTPProvider[T]) SelectConfig(ctx context.Context) T {
 	return zero
 }
 
-// executeHTTPRequest executes HTTP request
-func (p *HTTPProvider[T]) executeHTTPRequest(ctx context.Context, reqSpec *core.HTTPRequestSpec, handler core.ResponseHandler, opts *core.ProviderSendOptions) error {
+// executeHTTPRequest executes HTTP request.
+func (p *HTTPProvider[T]) executeHTTPRequest(
+	ctx context.Context,
+	reqSpec *core.HTTPRequestSpec,
+	handler core.ResponseHandler,
+	opts *core.ProviderSendOptions,
+) error {
 	// Build URL (including query parameters)
 	requestURL := reqSpec.URL
 	if len(reqSpec.QueryParams) > 0 {
@@ -197,7 +208,7 @@ func (p *HTTPProvider[T]) executeHTTPRequest(ctx context.Context, reqSpec *core.
 	return p.defaultResponseHandler(statusCode, body)
 }
 
-// defaultResponseHandler is the default response handler
+// defaultResponseHandler is the default response handler.
 func (p *HTTPProvider[T]) defaultResponseHandler(statusCode int, body []byte) error {
 	if statusCode < 200 || statusCode >= 300 {
 		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))

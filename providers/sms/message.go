@@ -8,7 +8,7 @@ import (
 	"github.com/shellvon/go-sender/core"
 )
 
-// MessageType represents the type of SMS message
+// MessageType represents the type of SMS message.
 type MessageType int
 
 const (
@@ -17,7 +17,7 @@ const (
 	Voice                      // 语音短信
 )
 
-// MessageCategory represents the category of SMS message
+// MessageCategory represents the category of SMS message.
 type MessageCategory int
 
 const (
@@ -26,7 +26,7 @@ const (
 	CategoryPromotion                           // 营销
 )
 
-// Message represents an SMS message with enhanced type and category support
+// Message represents an SMS message with enhanced type and category support.
 type Message struct {
 	core.DefaultMessage
 
@@ -64,12 +64,104 @@ var (
 	_ core.Message = (*Message)(nil)
 )
 
-// ProviderType returns the provider type for this message
+// NewMessage creates a new Message with required fields and optional configurations.
+func NewMessage(mobile string, opts ...MessageOption) *Message {
+	m := &Message{
+		Mobiles: []string{mobile},
+		Type:    SMSText, // Default to text SMS
+	}
+
+	// Apply optional configurations
+	for _, opt := range opts {
+		if opt != nil {
+			opt(m)
+		}
+	}
+
+	return m
+}
+
+// NewMessageWithOptions creates a new Message with pre-built options
+// This avoids duplicate option application.
+func NewMessageWithOptions(opts ...MessageOption) *Message {
+	m := &Message{
+		Type: SMSText, // Default to text SMS
+	}
+
+	// Apply optional configurations
+	for _, opt := range opts {
+		if opt != nil {
+			opt(m)
+		}
+	}
+
+	return m
+}
+
+// NewTextMessage creates a new text SMS message.
+func NewTextMessage(mobile string, content string, opts ...MessageOption) *Message {
+	opts = append([]MessageOption{WithType(SMSText), WithContent(content)}, opts...)
+	return NewMessage(mobile, opts...)
+}
+
+// NewTemplateMessage creates a new template SMS message.
+func NewTemplateMessage(mobile string, templateID string, params map[string]string, opts ...MessageOption) *Message {
+	opts = append([]MessageOption{
+		WithType(SMSText),
+		WithTemplateID(templateID),
+		WithTemplateParams(params),
+	}, opts...)
+	return NewMessage(mobile, opts...)
+}
+
+// NewVoiceMessage creates a new voice SMS message.
+func NewVoiceMessage(mobile string, content string, opts ...MessageOption) *Message {
+	opts = append([]MessageOption{WithType(Voice), WithContent(content)}, opts...)
+	return NewMessage(mobile, opts...)
+}
+
+// NewMMSMessage creates a new MMS message.
+func NewMMSMessage(mobile string, opts ...MessageOption) *Message {
+	opts = append([]MessageOption{WithType(MMS)}, opts...)
+	return NewMessage(mobile, opts...)
+}
+
+// NewVerificationMessage creates a new verification SMS message.
+func NewVerificationMessage(mobile string, content string, opts ...MessageOption) *Message {
+	opts = append([]MessageOption{
+		WithType(SMSText),
+		WithCategory(CategoryVerification),
+		WithContent(content),
+	}, opts...)
+	return NewMessage(mobile, opts...)
+}
+
+// NewNotificationMessage creates a new notification SMS message.
+func NewNotificationMessage(mobile string, content string, opts ...MessageOption) *Message {
+	opts = append([]MessageOption{
+		WithType(SMSText),
+		WithCategory(CategoryNotification),
+		WithContent(content),
+	}, opts...)
+	return NewMessage(mobile, opts...)
+}
+
+// NewPromotionMessage creates a new promotion SMS message.
+func NewPromotionMessage(mobile string, content string, opts ...MessageOption) *Message {
+	opts = append([]MessageOption{
+		WithType(SMSText),
+		WithCategory(CategoryPromotion),
+		WithContent(content),
+	}, opts...)
+	return NewMessage(mobile, opts...)
+}
+
+// ProviderType returns the provider type for this message.
 func (m *Message) ProviderType() core.ProviderType {
 	return core.ProviderTypeSMS
 }
 
-// Validate checks if the Message is valid
+// Validate checks if the Message is valid.
 func (m *Message) Validate() error {
 	if len(m.Mobiles) == 0 {
 		return core.NewParamError("mobiles cannot be empty")
@@ -88,7 +180,7 @@ func (m *Message) Validate() error {
 	return nil
 }
 
-// isValidMobileNumber validates mobile number format
+// isValidMobileNumber validates mobile number format.
 func isValidMobileNumber(mobile string) bool {
 	// Remove any non-digit characters except +
 	clean := ""
@@ -111,73 +203,73 @@ func isValidMobileNumber(mobile string) bool {
 	return true
 }
 
-// MessageOption defines a function type for configuring Message
+// MessageOption defines a function type for configuring Message.
 type MessageOption func(*Message)
 
-// WithType sets the message type
+// WithType sets the message type.
 func WithType(msgType MessageType) MessageOption {
 	return func(m *Message) {
 		m.Type = msgType
 	}
 }
 
-// WithCategory sets the message category
+// WithCategory sets the message category.
 func WithCategory(category MessageCategory) MessageOption {
 	return func(m *Message) {
 		m.Category = category
 	}
 }
 
-// WithMobiles sets the mobile phone numbers
+// WithMobiles sets the mobile phone numbers.
 func WithMobiles(mobiles []string) MessageOption {
 	return func(m *Message) {
 		m.Mobiles = mobiles
 	}
 }
 
-// WithMobile sets a single mobile phone number
+// WithMobile sets a single mobile phone number.
 func WithMobile(mobile string) MessageOption {
 	return func(m *Message) {
 		m.Mobiles = []string{mobile}
 	}
 }
 
-// WithContent sets the SMS content
+// WithContent sets the SMS content.
 func WithContent(content string) MessageOption {
 	return func(m *Message) {
 		m.Content = content
 	}
 }
 
-// WithTemplateID sets the template ID
+// WithTemplateID sets the template ID.
 func WithTemplateID(templateID string) MessageOption {
 	return func(m *Message) {
 		m.TemplateID = templateID
 	}
 }
 
-// WithTemplateParams sets the template parameters
+// WithTemplateParams sets the template parameters.
 func WithTemplateParams(params map[string]string) MessageOption {
 	return func(m *Message) {
 		m.TemplateParams = params
 	}
 }
 
-// WithParamsOrder sets the template parameters array (ordered parameters for some providers)
+// WithParamsOrder sets the template parameters array (ordered parameters for some providers).
 func WithParamsOrder(paramsArray []string) MessageOption {
 	return func(m *Message) {
 		m.ParamsOrder = paramsArray
 	}
 }
 
-// WithSignName sets the SMS signature name
+// WithSignName sets the SMS signature name.
 func WithSignName(signName string) MessageOption {
 	return func(m *Message) {
 		m.SignName = signName
 	}
 }
 
-// WithRegionCode sets the region code (E.164 国际区号)
+// WithRegionCode sets the region code (E.164 国际区号).
 func WithRegionCode(regionCode int) MessageOption {
 	return func(m *Message) {
 		m.RegionCode = regionCode
@@ -200,7 +292,7 @@ func WithCallbackURL(callbackURL string) MessageOption {
 // Note: This feature requires SMS platform support. Currently supported platforms:
 // - CL253: Uses "sendtime" parameter with format "yyyyMMddHHmm"
 // - Luosimao: Uses "time" parameter with format "yyyy-MM-dd HH:mm:ss"
-// - Other platforms: May not support scheduled sending
+// - Other platforms: May not support scheduled sending.
 func WithScheduledAt(scheduledAt time.Time) MessageOption {
 	return func(m *Message) {
 		m.ScheduledAt = &scheduledAt
@@ -227,7 +319,7 @@ func WithUID(uid string) MessageOption {
 	}
 }
 
-// WithExtras sets the extra fields
+// WithExtras sets the extra fields.
 func WithExtras(extras map[string]interface{}) MessageOption {
 	return func(m *Message) {
 		m.Extras = extras
@@ -235,7 +327,7 @@ func WithExtras(extras map[string]interface{}) MessageOption {
 }
 
 // WithExtra sets a single extra field
-// This is a convenience method to avoid repetitive map initialization code
+// This is a convenience method to avoid repetitive map initialization code.
 func WithExtra(key string, value interface{}) MessageOption {
 	return func(m *Message) {
 		if m.Extras == nil {
@@ -245,106 +337,14 @@ func WithExtra(key string, value interface{}) MessageOption {
 	}
 }
 
-// WithSubProvider sets the sub-provider type for this message
+// WithSubProvider sets the sub-provider type for this message.
 func WithSubProvider(subProvider string) MessageOption {
 	return func(m *Message) {
 		m.SubProvider = subProvider
 	}
 }
 
-// NewMessage creates a new Message with required fields and optional configurations
-func NewMessage(mobile string, opts ...MessageOption) *Message {
-	m := &Message{
-		Mobiles: []string{mobile},
-		Type:    SMSText, // Default to text SMS
-	}
-
-	// Apply optional configurations
-	for _, opt := range opts {
-		if opt != nil {
-			opt(m)
-		}
-	}
-
-	return m
-}
-
-// NewMessageWithOptions creates a new Message with pre-built options
-// This avoids duplicate option application
-func NewMessageWithOptions(opts ...MessageOption) *Message {
-	m := &Message{
-		Type: SMSText, // Default to text SMS
-	}
-
-	// Apply optional configurations
-	for _, opt := range opts {
-		if opt != nil {
-			opt(m)
-		}
-	}
-
-	return m
-}
-
-// NewTextMessage creates a new text SMS message
-func NewTextMessage(mobile string, content string, opts ...MessageOption) *Message {
-	opts = append([]MessageOption{WithType(SMSText), WithContent(content)}, opts...)
-	return NewMessage(mobile, opts...)
-}
-
-// NewTemplateMessage creates a new template SMS message
-func NewTemplateMessage(mobile string, templateID string, params map[string]string, opts ...MessageOption) *Message {
-	opts = append([]MessageOption{
-		WithType(SMSText),
-		WithTemplateID(templateID),
-		WithTemplateParams(params),
-	}, opts...)
-	return NewMessage(mobile, opts...)
-}
-
-// NewVoiceMessage creates a new voice SMS message
-func NewVoiceMessage(mobile string, content string, opts ...MessageOption) *Message {
-	opts = append([]MessageOption{WithType(Voice), WithContent(content)}, opts...)
-	return NewMessage(mobile, opts...)
-}
-
-// NewMMSMessage creates a new MMS message
-func NewMMSMessage(mobile string, opts ...MessageOption) *Message {
-	opts = append([]MessageOption{WithType(MMS)}, opts...)
-	return NewMessage(mobile, opts...)
-}
-
-// NewVerificationMessage creates a new verification SMS message
-func NewVerificationMessage(mobile string, content string, opts ...MessageOption) *Message {
-	opts = append([]MessageOption{
-		WithType(SMSText),
-		WithCategory(CategoryVerification),
-		WithContent(content),
-	}, opts...)
-	return NewMessage(mobile, opts...)
-}
-
-// NewNotificationMessage creates a new notification SMS message
-func NewNotificationMessage(mobile string, content string, opts ...MessageOption) *Message {
-	opts = append([]MessageOption{
-		WithType(SMSText),
-		WithCategory(CategoryNotification),
-		WithContent(content),
-	}, opts...)
-	return NewMessage(mobile, opts...)
-}
-
-// NewPromotionMessage creates a new promotion SMS message
-func NewPromotionMessage(mobile string, content string, opts ...MessageOption) *Message {
-	opts = append([]MessageOption{
-		WithType(SMSText),
-		WithCategory(CategoryPromotion),
-		WithContent(content),
-	}, opts...)
-	return NewMessage(mobile, opts...)
-}
-
-// String returns the string representation of MessageType
+// String returns the string representation of MessageType.
 func (mt MessageType) String() string {
 	switch mt {
 	case SMSText:
@@ -358,7 +358,7 @@ func (mt MessageType) String() string {
 	}
 }
 
-// String returns the string representation of MessageCategory
+// String returns the string representation of MessageCategory.
 func (mc MessageCategory) String() string {
 	switch mc {
 	case CategoryVerification:
@@ -372,12 +372,12 @@ func (mc MessageCategory) String() string {
 	}
 }
 
-// IsIntl 判断是否为国际/港澳台短信（regionCode != 0 且 != 86）
+// IsIntl 判断是否为国际/港澳台短信（regionCode != 0 且 != 86）.
 func (m *Message) IsIntl() bool {
 	return m.RegionCode != 0 && m.RegionCode != 86
 }
 
-// IsDomestic 判断是否为中国大陆短信（regionCode == 0 或 86）
+// IsDomestic 判断是否为中国大陆短信（regionCode == 0 或 86）.
 func (m *Message) IsDomestic() bool {
 	return m.RegionCode == 0 || m.RegionCode == 86
 }
@@ -387,17 +387,17 @@ func (m *Message) HasMultipleRecipients() bool {
 	return len(m.Mobiles) > 1
 }
 
-// SubProviderType returns the sub-provider type for this message
+// SubProviderType returns the sub-provider type for this message.
 func (m *Message) SubProviderType() string {
 	return m.SubProvider
 }
 
-// IsScheduled returns true if the message is scheduled for later delivery
+// IsScheduled returns true if the message is scheduled for later delivery.
 func (m *Message) IsScheduled() bool {
 	return m.ScheduledAt != nil && m.ScheduledAt.After(time.Now())
 }
 
-// GetScheduledTime returns the scheduled time in a platform-agnostic format
+// GetScheduledTime returns the scheduled time in a platform-agnostic format.
 func (m *Message) GetScheduledTime() string {
 	if m.ScheduledAt == nil {
 		return ""
@@ -405,7 +405,7 @@ func (m *Message) GetScheduledTime() string {
 	return m.ScheduledAt.Format("2006-01-02 15:04:05")
 }
 
-// GetScheduledTimeForPlatform returns the scheduled time formatted for a specific platform
+// GetScheduledTimeForPlatform returns the scheduled time formatted for a specific platform.
 func (m *Message) GetScheduledTimeForPlatform(platform string) string {
 	if m.ScheduledAt == nil {
 		return ""
@@ -424,25 +424,25 @@ func (m *Message) GetScheduledTimeForPlatform(platform string) string {
 	}
 }
 
-// GetCallbackURL returns the callback URL for the message
+// GetCallbackURL returns the callback URL for the message.
 func (m *Message) GetCallbackURL() string {
 	return m.CallbackURL
 }
 
-// GetExtraString safely gets a string value from Extras
+// GetExtraString safely gets a string value from Extras.
 func (m *Message) GetExtraString(key string) (string, bool) {
 	if m.Extras == nil {
 		return "", false
 	}
 	if value, ok := m.Extras[key]; ok {
-		if str, ok := value.(string); ok {
+		if str, okStr := value.(string); okStr {
 			return str, true
 		}
 	}
 	return "", false
 }
 
-// GetExtraStringOrDefault safely gets a string value from Extras with default
+// GetExtraStringOrDefault safely gets a string value from Extras with default.
 func (m *Message) GetExtraStringOrDefault(key, defaultValue string) string {
 	if value, ok := m.GetExtraString(key); ok && value != "" {
 		return value
@@ -450,7 +450,7 @@ func (m *Message) GetExtraStringOrDefault(key, defaultValue string) string {
 	return defaultValue
 }
 
-// GetExtraInt safely gets an int value from Extras
+// GetExtraInt safely gets an int value from Extras.
 func (m *Message) GetExtraInt(key string) (int, bool) {
 	if m.Extras == nil {
 		return 0, false
@@ -470,7 +470,7 @@ func (m *Message) GetExtraInt(key string) (int, bool) {
 	return 0, false
 }
 
-// GetExtraIntOrDefault safely gets an int value from Extras with default
+// GetExtraIntOrDefault safely gets an int value from Extras with default.
 func (m *Message) GetExtraIntOrDefault(key string, defaultValue int) int {
 	if value, ok := m.GetExtraInt(key); ok {
 		return value
@@ -478,20 +478,20 @@ func (m *Message) GetExtraIntOrDefault(key string, defaultValue int) int {
 	return defaultValue
 }
 
-// GetExtraBool safely gets a bool value from Extras
+// GetExtraBool safely gets a bool value from Extras.
 func (m *Message) GetExtraBool(key string) (bool, bool) {
 	if m.Extras == nil {
 		return false, false
 	}
 	if value, ok := m.Extras[key]; ok {
-		if b, ok := value.(bool); ok {
+		if b, okBool := value.(bool); okBool {
 			return b, true
 		}
 	}
 	return false, false
 }
 
-// GetExtraBoolOrDefault safely gets a bool value from Extras with default
+// GetExtraBoolOrDefault safely gets a bool value from Extras with default.
 func (m *Message) GetExtraBoolOrDefault(key string, defaultValue bool) bool {
 	if value, ok := m.GetExtraBool(key); ok {
 		return value
@@ -499,7 +499,9 @@ func (m *Message) GetExtraBoolOrDefault(key string, defaultValue bool) bool {
 	return defaultValue
 }
 
-// GetSubProvider 实现 SubProviderMessage 接口
+// GetSubProvider 实现 SubProviderMessage 接口.
 func (m *Message) GetSubProvider() string {
 	return m.SubProvider
 }
+
+// NewUnsupportedMessageTypeError creates an error for unsupported message types.

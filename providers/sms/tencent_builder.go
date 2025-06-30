@@ -18,7 +18,12 @@ package sms
 //   - sign: 签名
 //   - paramsOrder: 模板参数顺序
 //   - opts: 其他可选参数
-func NewTencentTextMessage(mobiles []string, templateID, sign string, paramsOrder []string, opts ...MessageOption) *Message {
+func NewTencentTextMessage(
+	mobiles []string,
+	templateID, sign string,
+	paramsOrder []string,
+	opts ...MessageOption,
+) *Message {
 	baseOpts := []MessageOption{
 		WithSubProvider(string(SubProviderTencent)),
 		WithType(SMSText),
@@ -27,8 +32,8 @@ func NewTencentTextMessage(mobiles []string, templateID, sign string, paramsOrde
 		WithSignName(sign),
 		WithParamsOrder(paramsOrder),
 	}
-	allOpts := append(baseOpts, opts...)
-	return NewMessageWithOptions(allOpts...)
+	baseOpts = append(baseOpts, opts...)
+	return NewMessageWithOptions(baseOpts...)
 }
 
 // NewTencentVoiceMessage 创建腾讯云语音短信消息
@@ -46,26 +51,18 @@ func NewTencentVoiceMessage(mobile string, templateID string, paramsOrder []stri
 		WithTemplateID(templateID),
 		WithParamsOrder(paramsOrder),
 	}
-	allOpts := append(baseOpts, opts...)
-	return NewMessageWithOptions(allOpts...)
+	baseOpts = append(baseOpts, opts...)
+	return NewMessageWithOptions(baseOpts...)
 }
 
-// WithTencentExtendCode 设置扩展码
-//   - https://cloud.tencent.com/document/product/382/55981
-//
-// 短信码号扩展号，默认未开通，如需开通请联系 腾讯云短信小助手。
-func WithTencentExtendCode(extend string) MessageOption {
-	return WithExtra("ExtendCode", extend)
-}
-
-// WithTencentSenderId 设置 SenderId（国际/港澳台短信专用）
+// WithTencentSenderID 设置 SenderId（国际/港澳台短信专用）
 //   - https://cloud.tencent.com/document/product/382/55981
 //
 // 国内短信无需填写该项；国际/港澳台短信已申请独立 SenderId 需要填写该字段，默认使用公共 SenderId，无需填写该字段。
 //
 //   - 注：月度使用量达到指定量级可申请独立 SenderId 使用，详情请联系 腾讯云短信小助手。示例值：Qsms
-func WithTencentSenderId(senderId string) MessageOption {
-	return WithExtra("SenderId", senderId)
+func WithTencentSenderID(senderID string) MessageOption {
+	return WithExtra(tencentSenderID, senderID)
 }
 
 // WithTencentRegion 设置 Region
@@ -80,11 +77,19 @@ func WithTencentRegion(region string) MessageOption {
 }
 
 // WithTencentPlayTimes 设置语音播放次数
+//
+// 语音验证码/通知API参数：PlayTimes
+// - 取值范围：1~3，默认值为2。
+// - 仅语音短信有效，文本短信无效。
+// - 超出范围将被自动修正为默认值。
+//
+// 官方文档：
+//   - https://cloud.tencent.com/document/product/382/38778
 //   - https://cloud.tencent.com/document/product/1128/51559
 //
-// 语音验证码API: https://cloud.tencent.com/document/product/1128/51559
-// 语音通知API: https://cloud.tencent.com/document/product/1128/51558
-// 默认值为2次。可选范围1～3
+// 示例：
+//
+//	msg := NewTencentVoiceMessage("13800138000", "1234", nil, WithTencentPlayTimes(3))
 func WithTencentPlayTimes(times int) MessageOption {
 	return WithExtra("PlayTimes", times)
 }

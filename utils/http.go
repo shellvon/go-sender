@@ -1,3 +1,4 @@
+//revive:disable:var-naming
 package utils
 
 import (
@@ -15,10 +16,10 @@ import (
 	"time"
 
 	"github.com/shellvon/go-sender/core"
-	// For a default timeout
+	// For a default timeout.
 )
 
-// RequestOptions holds the parameters for your HTTP request.
+// HTTPRequestOptions holds the parameters for your HTTP request.
 // Similar to Python requests, supports data, json, form fields for easy data handling.
 type HTTPRequestOptions struct {
 	Method  string            // e.g., http.MethodGet, http.MethodPost
@@ -60,168 +61,198 @@ type HTTPRequestOptions struct {
 //   - int: HTTP status code
 //   - error: Request error
 func DoRequest(ctx context.Context, requestURL string, options HTTPRequestOptions) ([]byte, int, error) {
-	if ctx == nil {
-		ctx = context.Background()
-	}
-
-	// Handle timeout
-	if options.Timeout > 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, options.Timeout)
+	ctx, cancel := prepareContext(ctx, &options)
+	if cancel != nil {
 		defer cancel()
 	}
 
-	// Determine request body and content type
 	reqBody, contentType, err := buildRequestBody(options)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to build request body: %w", err)
 	}
 
-	// Handle query string parameters
-	finalURL := requestURL
-	if len(options.Query) > 0 {
-		parsedURL, err := url.Parse(requestURL)
-		if err != nil {
-			return nil, 0, fmt.Errorf("failed to parse URL: %w", err)
-		}
-
-		// Get existing query parameters
-		query := parsedURL.Query()
-
-		// Add new query parameters
-		for key, value := range options.Query {
-			switch v := value.(type) {
-			case string:
-				query.Set(key, v)
-			case []string:
-				for _, val := range v {
-					query.Add(key, val)
-				}
-			default:
-				return nil, 0, fmt.Errorf("unsupported query parameter type for key '%s': %T (only string and []string are supported)", key, value)
-			}
-		}
-
-		// Update URL with query parameters
-		parsedURL.RawQuery = query.Encode()
-		finalURL = parsedURL.String()
+	finalURL, err := buildFinalURL(requestURL, options.Query)
+	if err != nil {
+		return nil, 0, err
 	}
 
-	// Set default method if not provided
-	if options.Method == "" {
-		if reqBody != nil {
-			options.Method = http.MethodPost
-		} else {
-			options.Method = http.MethodGet
-		}
-	}
-
-	// Create request
-	req, err := http.NewRequestWithContext(ctx, options.Method, finalURL, reqBody)
+	method := setDefaultMethod(options.Method, reqBody)
+	req, err := http.NewRequestWithContext(ctx, method, finalURL, reqBody)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to create HTTP request: %w", err)
 	}
 
-	// Set headers
-	for key, value := range options.Headers {
-		req.Header.Set(key, value)
-	}
-
-	// Set default User-Agent if not provided
-	if req.Header.Get("User-Agent") == "" {
-		req.Header.Set("User-Agent", core.DefaultUserAgent)
-	}
-
-	// Set content type if determined
-	if contentType != "" {
-		req.Header.Set("Content-Type", contentType)
-	}
-
-	// Use custom client if provided, otherwise default
+	setRequestHeaders(req, options.Headers, contentType)
 	client := core.EnsureHTTPClient(options.Client)
 
-	// Perform request
-	resp, err := client.Do(req)
+	resp, err := sendRequest(client, req)
 	if err != nil {
 		return nil, 0, fmt.Errorf("HTTP request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
-	// Read response
-	bodyBytes, readErr := io.ReadAll(resp.Body)
-	if readErr != nil {
-		return nil, resp.StatusCode, fmt.Errorf("failed to read response body: %w", readErr)
+	bodyBytes, err := readResponseBody(resp)
+	if err != nil {
+		return nil, resp.StatusCode, fmt.Errorf("failed to read response body: %w", err)
 	}
 
-	// Check status code
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return bodyBytes, resp.StatusCode, fmt.Errorf("HTTP request failed with status code %d. Response body: %s", resp.StatusCode, string(bodyBytes))
+	if err = checkStatusCode(resp.StatusCode, bodyBytes); err != nil {
+		return bodyBytes, resp.StatusCode, err
 	}
 
 	return bodyBytes, resp.StatusCode, nil
 }
 
-// buildRequestBody builds the request body and determines content type
+func prepareContext(ctx context.Context, options *HTTPRequestOptions) (context.Context, context.CancelFunc) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if options.Timeout == 0 {
+		options.Timeout = core.DefaultTimeout
+	}
+	if options.Timeout > 0 {
+		return context.WithTimeout(ctx, options.Timeout)
+	}
+	return ctx, nil
+}
+
+func buildFinalURL(requestURL string, query map[string]interface{}) (string, error) {
+	if len(query) == 0 {
+		return requestURL, nil
+	}
+	parsedURL, err := url.Parse(requestURL)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse URL: %w", err)
+	}
+	q := parsedURL.Query()
+	for key, value := range query {
+		switch v := value.(type) {
+		case string:
+			q.Set(key, v)
+		case []string:
+			for _, val := range v {
+				q.Add(key, val)
+			}
+		default:
+			return "", fmt.Errorf("unsupported query parameter type for key '%s': %T (only string and []string are supported)", key, value)
+		}
+	}
+	parsedURL.RawQuery = q.Encode()
+	return parsedURL.String(), nil
+}
+
+func setDefaultMethod(method string, reqBody io.Reader) string {
+	if method != "" {
+		return method
+	}
+	if reqBody != nil {
+		return http.MethodPost
+	}
+	return http.MethodGet
+}
+
+func setRequestHeaders(req *http.Request, headers map[string]string, contentType string) {
+	for key, value := range headers {
+		req.Header.Set(key, value)
+	}
+	if req.Header.Get("User-Agent") == "" {
+		req.Header.Set("User-Agent", core.DefaultUserAgent)
+	}
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
+	}
+}
+
+func sendRequest(client *http.Client, req *http.Request) (*http.Response, error) {
+	return client.Do(req)
+}
+
+func readResponseBody(resp *http.Response) ([]byte, error) {
+	return io.ReadAll(resp.Body)
+}
+
+func checkStatusCode(statusCode int, body []byte) error {
+	if statusCode < 200 || statusCode >= 300 {
+		return fmt.Errorf(
+			"HTTP request failed with status code %d. Response body: %s",
+			statusCode,
+			string(body),
+		)
+	}
+	return nil
+}
+
+// buildRequestBody builds the request body and determines content type.
 func buildRequestBody(options HTTPRequestOptions) (io.Reader, string, error) {
-	// Priority 1: Raw data
 	if options.Raw != nil {
-		return bytes.NewReader(options.Raw), "", nil
+		return buildRawBody(options.Raw)
 	}
-
 	if options.RawReader != nil {
-		return options.RawReader, "", nil
+		return buildRawReaderBody(options.RawReader)
 	}
-
-	// Priority 2: JSON data
 	if options.JSON != nil {
-		jsonData, err := json.Marshal(options.JSON)
-		if err != nil {
-			return nil, "", fmt.Errorf("failed to marshal JSON: %w", err)
-		}
-		return bytes.NewReader(jsonData), "application/json", nil
+		return buildJSONBody(options.JSON)
 	}
-
-	// Priority 3: Multipart form data
 	if len(options.Form) > 0 || len(options.Files) > 0 {
-		body := &bytes.Buffer{}
-		writer := multipart.NewWriter(body)
-
-		// Add form fields
-		for key, value := range options.Form {
-			if err := writer.WriteField(key, value); err != nil {
-				return nil, "", fmt.Errorf("failed to write form field %s: %w", key, err)
-			}
-		}
-
-		// Add files
-		for fieldName, filePath := range options.Files {
-			if err := addFileToMultipart(writer, fieldName, filePath); err != nil {
-				return nil, "", err
-			}
-		}
-
-		if err := writer.Close(); err != nil {
-			return nil, "", fmt.Errorf("failed to close multipart writer: %w", err)
-		}
-
-		return body, writer.FormDataContentType(), nil
+		return buildMultipartBody(options.Form, options.Files)
 	}
-
-	// Priority 4: URL-encoded form data
 	if len(options.Data) > 0 {
-		values := url.Values{}
-		for key, value := range options.Data {
-			values.Set(key, value)
-		}
-		encoded := values.Encode()
-		return strings.NewReader(encoded), "application/x-www-form-urlencoded", nil
+		return buildURLEncodedBody(options.Data)
 	}
-
-	// No body
 	return nil, "", nil
 }
 
-// addFileToMultipart adds a file to multipart form
+func buildRawBody(raw []byte) (io.Reader, string, error) {
+	return bytes.NewReader(raw), "", nil
+}
+
+func buildRawReaderBody(reader io.Reader) (io.Reader, string, error) {
+	return reader, "", nil
+}
+
+func buildJSONBody(jsonObj interface{}) (io.Reader, string, error) {
+	jsonData, err := json.Marshal(jsonObj)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to marshal JSON: %w", err)
+	}
+	return bytes.NewReader(jsonData), "application/json", nil
+}
+
+func buildMultipartBody(form map[string]string, files map[string]string) (io.Reader, string, error) {
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	// Add form fields
+	for key, value := range form {
+		if err := writer.WriteField(key, value); err != nil {
+			return nil, "", fmt.Errorf("failed to write form field %s: %w", key, err)
+		}
+	}
+
+	// Add files
+	for fieldName, filePath := range files {
+		if err := addFileToMultipart(writer, fieldName, filePath); err != nil {
+			return nil, "", err
+		}
+	}
+
+	if err := writer.Close(); err != nil {
+		return nil, "", fmt.Errorf("failed to close multipart writer: %w", err)
+	}
+
+	return body, writer.FormDataContentType(), nil
+}
+
+func buildURLEncodedBody(data map[string]string) (io.Reader, string, error) {
+	values := url.Values{}
+	for key, value := range data {
+		values.Set(key, value)
+	}
+	encoded := values.Encode()
+	return strings.NewReader(encoded), "application/x-www-form-urlencoded", nil
+}
+
+// addFileToMultipart adds a file to multipart form.
 func addFileToMultipart(writer *multipart.Writer, fieldName, filePath string) error {
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -234,8 +265,8 @@ func addFileToMultipart(writer *multipart.Writer, fieldName, filePath string) er
 		return fmt.Errorf("failed to create form file part: %w", err)
 	}
 
-	if _, err := io.Copy(part, file); err != nil {
-		return fmt.Errorf("failed to copy file content: %w", err)
+	if _, errCopy := io.Copy(part, file); errCopy != nil {
+		return fmt.Errorf("failed to copy file content: %w", errCopy)
 	}
 
 	return nil
