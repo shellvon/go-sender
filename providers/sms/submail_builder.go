@@ -53,17 +53,17 @@ func NewSubmailMMSMessage(mobiles []string, opts ...MessageOption) *Message {
 // WithSubmailTag 设置标签
 // 用于消息追踪，最大32个字符.
 func WithSubmailTag(tag string) MessageOption {
-	return WithExtra("tag", tag)
+	return WithExtra(submailTagKey, tag)
 }
 
 // WithSubmailSender 设置发送方标识
 // 主要用于国际短信，可选字段.
 func WithSubmailSender(sender string) MessageOption {
-	return WithExtra("sender", sender)
+	return WithExtra(submailSenderKey, sender)
 }
 
 // WithSubmailSignType 设置签名类型
 // 可选值：md5（默认）、sha1、normal.
 func WithSubmailSignType(signType string) MessageOption {
-	return WithExtra("signType", signType)
+	return WithExtra(submailSignTypeKey, signType)
 }

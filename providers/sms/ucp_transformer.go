@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 
@@ -82,17 +83,13 @@ func (t *ucpTransformer) transformTextSMS(
 		"password":   account.Secret,
 		"templateid": msg.TemplateID,
 		"mobile":     strings.Join(msg.Mobiles, ","),
+		"uid":        msg.UID,
 	}
 
 	// 模板参数处理
 	if len(msg.ParamsOrder) > 0 {
 		// 模板中的替换参数，如该模板不存在参数则无需传该参数或者参数为空，如果有多个参数则需要写在同一个字符串中，以分号分隔 （如："a;b;c"），参数中不能含有特殊符号"【】"和","
 		params["param"] = strings.Join(msg.ParamsOrder, ";")
-	}
-
-	// 可选参数：uid（用户自定义ID，用于回调时识别）
-	if uid := msg.GetExtraStringOrDefault("uid", ""); uid != "" {
-		params["uid"] = uid
 	}
 
 	endpoint := account.Endpoint
@@ -120,7 +117,7 @@ func (t *ucpTransformer) transformTextSMS(
 
 // handleUcpResponse 处理云之讯API响应.
 func (t *ucpTransformer) handleUcpResponse(statusCode int, body []byte) error {
-	if statusCode < 200 || statusCode >= 300 {
+	if statusCode < http.StatusOK || statusCode >= http.StatusMultipleChoices {
 		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
 	}
 

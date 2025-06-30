@@ -51,7 +51,7 @@ func NewCL253TextMessage(mobiles []string, content, sign string, opts ...Message
 //
 // 文档地址: https://www.cl253.com/api/send
 func WithCL253Report(report bool) MessageOption {
-	return WithExtra(cl253Report, strconv.FormatBool(report))
+	return WithExtra(cl253ReportKey, strconv.FormatBool(report))
 }
 
 // WithCL253SenderID 设置发件人ID
@@ -61,7 +61,7 @@ func WithCL253Report(report bool) MessageOption {
 //
 // 此参数仅国际短信支持.
 func WithCL253SenderID(senderID string) MessageOption {
-	return WithExtra(cl253SenderID, senderID)
+	return WithExtra(cl253SenderIDKey, senderID)
 }
 
 // WithCL253TdFlag 设置国际短信的 TD 标志
@@ -71,5 +71,5 @@ func WithCL253SenderID(senderID string) MessageOption {
 //
 // 此参数仅国际短信支持.
 func WithCL253TdFlag(tdFlag string) MessageOption {
-	return WithExtra(cl253TDFlag, tdFlag)
+	return WithExtra(cl253TDFlagKey, tdFlag)
 }

@@ -428,11 +428,6 @@ func (m *Message) GetScheduledTimeForPlatform(platform string) string {
 	}
 }
 
-// GetCallbackURL returns the callback URL for the message.
-func (m *Message) GetCallbackURL() string {
-	return m.CallbackURL
-}
-
 // GetExtraString safely gets a string value from Extras.
 func (m *Message) GetExtraString(key string) (string, bool) {
 	if m.Extras == nil {

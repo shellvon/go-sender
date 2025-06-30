@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -104,7 +105,7 @@ func (t *huaweiTransformer) transformSMS(
 	}
 	// 构建参数，注释与每个参数紧密对应
 	params := url.Values{}
-	params.Set("from", msg.GetExtraStringOrDefault(huaweiFrom, account.From))
+	params.Set("from", msg.GetExtraStringOrDefault(huaweiFromKey, account.From))
 	params.Set("to", strings.Join(formattedMobiles, ","))
 	params.Set("templateId", msg.TemplateID)
 	params.Set("templateParas", paras)
@@ -118,16 +119,10 @@ func (t *huaweiTransformer) transformSMS(
 	// 如果设置了该字段，则该消息的状态报告将通过"接收状态报告"接口直接通知客户。
 	// 如果未设置该字段，则短信平台收到运营商短信中心返回的状态报告不会推送给客户，该状态报告将在短信平台中保存1个小时，超时后系统会自动删除。
 	// 回调地址推荐使用域名。
-	if msg.CallbackURL != "" {
-		params.Set("statusCallback", msg.CallbackURL)
-	}
+	params.Set("statusCallback", utils.DefaultStringIfEmpty(msg.CallbackURL, account.Webhook))
 	// 扩展参数，在状态报告中会原样返回。
 	// 不允许赋空值，不允许携带以下字符："{","}"（即大括号）。
-	if msg.Extend != "" {
-		params.Set("extend", msg.Extend)
-	} else if extend := msg.GetExtraStringOrDefault(huaweiExtend, ""); extend != "" {
-		params.Set("extend", extend)
-	}
+	params.Set("extend", msg.Extend)
 
 	body := []byte(params.Encode())
 
@@ -188,7 +183,7 @@ func (t *huaweiTransformer) buildHuaweiWsseHeader(appKey, appSecret string) stri
 
 // handleHuaweiResponse 处理华为云短信 API 响应.
 func (t *huaweiTransformer) handleHuaweiResponse(statusCode int, body []byte) error {
-	if statusCode < 200 || statusCode >= 300 {
+	if statusCode < http.StatusOK || statusCode >= http.StatusMultipleChoices {
 		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
 	}
 	var result struct {

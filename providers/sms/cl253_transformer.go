@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -99,24 +100,14 @@ func (t *cl253Transformer) transformDomesticSMS(
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	url := "https://" + cl253DomesticEndpoint + "/msg/v1/send/json"
 	params := map[string]interface{}{
-		"account":  account.Key,
-		"password": account.Secret,
-		"msg":      utils.AddSignature(msg.Content, msg.SignName),
-		"phone":    strings.Join(msg.Mobiles, ","),
-	}
-
-	// 处理统一的接口字段 - 适配到CL253特定的key
-	if report := msg.GetExtraStringOrDefault(cl253Report, ""); report != "" {
-		params["report"] = report
-	}
-	if msg.CallbackURL != "" {
-		params["callbackUrl"] = msg.CallbackURL // CL253使用 callbackUrl
-	}
-	if msg.UID != "" {
-		params["uid"] = msg.UID // CL253使用 uid
-	}
-	if msg.Extend != "" {
-		params["extend"] = msg.Extend // CL253使用 extend
+		"account":     account.Key,
+		"password":    account.Secret,
+		"msg":         utils.AddSignature(msg.Content, msg.SignName),
+		"phone":       strings.Join(msg.Mobiles, ","),
+		"report":      msg.GetExtraStringOrDefault(cl253ReportKey, ""),
+		"callbackUrl": utils.DefaultStringIfEmpty(msg.CallbackURL, account.Webhook),
+		"uid":         msg.UID,
+		"extend":      msg.Extend,
 	}
 
 	// 处理发送时间 - CL253使用 sendtime 字段
@@ -155,7 +146,7 @@ func (t *cl253Transformer) transformIntlSMS(
 	}
 
 	// 处理统一的接口字段 - 适配到CL253国际短信特定的key
-	if senderID := msg.GetExtraStringOrDefault(cl253SenderID, ""); senderID != "" {
+	if senderID := msg.GetExtraStringOrDefault(cl253SenderIDKey, ""); senderID != "" {
 		params["senderId"] = senderID
 	}
 	if templateID := msg.GetExtraStringOrDefault(msg.TemplateID, ""); templateID != "" {
@@ -164,7 +155,7 @@ func (t *cl253Transformer) transformIntlSMS(
 	if msg.UID != "" {
 		params["uid"] = msg.UID // CL253使用 uid
 	}
-	if tdFlag := msg.GetExtraStringOrDefault(cl253TDFlag, ""); tdFlag != "" {
+	if tdFlag := msg.GetExtraStringOrDefault(cl253TDFlagKey, ""); tdFlag != "" {
 		params["tdFlag"] = tdFlag
 	}
 
@@ -192,7 +183,7 @@ func (t *cl253Transformer) buildHeaders(userHeaders map[string]string) map[strin
 
 // handleCl253Response 处理 CL253 API 响应.
 func (t *cl253Transformer) handleCl253Response(statusCode int, body []byte) error {
-	if statusCode < 200 || statusCode >= 300 {
+	if statusCode < http.StatusOK || statusCode >= http.StatusMultipleChoices {
 		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
 	}
 	var result struct {

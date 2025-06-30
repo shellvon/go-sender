@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -213,27 +214,15 @@ func (t *yuntongxunTransformer) transformVoiceSMS(
 
 	// 构建请求体
 	body := map[string]interface{}{
-		"to":        strings.Join(msg.Mobiles, ","),
-		"appId":     account.Key,
-		"mediaTxt":  msg.Content,
-		"playTimes": msg.GetExtraStringOrDefault("playTimes", "3"),
-	}
-
-	// 可选参数
-	if v := msg.GetExtraStringOrDefault("mediaName", ""); v != "" {
-		body["mediaName"] = v
-	}
-	if v := msg.GetExtraStringOrDefault("displayNum", ""); v != "" {
-		body["displayNum"] = v
-	}
-	if v := msg.GetExtraStringOrDefault("respUrl", account.Webhook); v != "" {
-		body["respUrl"] = v
-	}
-	if v := msg.GetExtraStringOrDefault("userData", ""); v != "" {
-		body["userData"] = v
-	}
-	if v := msg.GetExtraStringOrDefault("maxCallTime", ""); v != "" {
-		body["maxCallTime"] = v
+		"to":          strings.Join(msg.Mobiles, ","),
+		"appId":       account.Key,
+		"mediaTxt":    msg.Content,
+		"playTimes":   msg.GetExtraStringOrDefault(yuntongxunPlayTimesKey, "3"),
+		"mediaName":   msg.GetExtraStringOrDefault(yuntongxunMediaNameKey, ""),
+		"displayNum":  msg.GetExtraStringOrDefault(yuntongxunDisplayNumKey, ""),
+		"respUrl":     utils.DefaultStringIfEmpty(msg.CallbackURL, account.Webhook),
+		"userData":    msg.GetExtraStringOrDefault(yuntongxunUserDataKey, ""),
+		"maxCallTime": msg.GetExtraStringOrDefault(yuntongxunMaxCallTimeKey, ""),
 	}
 
 	// 构建完整URL
@@ -260,7 +249,7 @@ func (t *yuntongxunTransformer) transformVoiceSMS(
 
 // handleYuntongxunResponse 处理云讯通API响应.
 func (t *yuntongxunTransformer) handleYuntongxunResponse(statusCode int, body []byte) error {
-	if statusCode < 200 || statusCode >= 300 {
+	if statusCode < http.StatusOK || statusCode >= http.StatusMultipleChoices {
 		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
 	}
 

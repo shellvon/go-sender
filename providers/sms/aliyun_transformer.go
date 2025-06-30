@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"net/http"
 	"net/url"
 	"sort"
 	"strings"
@@ -170,7 +171,7 @@ func (t *aliyunTransformer) validateMMSMessage(msg *Message) error {
 	}
 
 	// Validate fallback type if provided
-	if fallbackType := msg.GetExtraStringOrDefault(aliyunFallbackType, ""); fallbackType != "" {
+	if fallbackType := msg.GetExtraStringOrDefault(aliyunFallbackTypeKey, ""); fallbackType != "" {
 		//   - SMS：不支持卡片短信的号码，回落文本短信。
 		//   - DIGITALSMS：不支持卡片短信的号码，回落数字短信。
 		//   - NONE：不需要回落。
@@ -327,10 +328,10 @@ func (t *aliyunTransformer) transformSMS(
 		params["OutId"] = msg.UID
 	}
 
-	if v := msg.GetExtraStringOrDefault(aliyunSmsUpExtendCode, ""); v != "" {
+	if v := msg.GetExtraStringOrDefault(aliyunSmsUpExtendCodeKey, ""); v != "" {
 		params["SmsUpExtendCode"] = v
 	}
-	if v := msg.GetExtraStringOrDefault(aliyunOutID, ""); v != "" {
+	if v := msg.GetExtraStringOrDefault(aliyunOutIDKey, ""); v != "" {
 		params["OutId"] = v
 	}
 
@@ -398,19 +399,19 @@ func (t *aliyunTransformer) transformVoice(
 	}
 
 	// 语音短信可选参数
-	if v := msg.GetExtraStringOrDefault(aliyunCalledShowNumber, ""); v != "" {
+	if v := msg.GetExtraStringOrDefault(aliyunCalledShowNumberKey, ""); v != "" {
 		params["CalledShowNumber"] = v
 	}
-	if v := msg.GetExtraStringOrDefault(aliyunPlayTimes, "1"); v != "" {
+	if v := msg.GetExtraStringOrDefault(aliyunPlayTimesKey, "1"); v != "" {
 		params["PlayTimes"] = v
 	}
-	if v := msg.GetExtraStringOrDefault(aliyunVolume, "100"); v != "" {
+	if v := msg.GetExtraStringOrDefault(aliyunVolumeKey, "100"); v != "" {
 		params["Volume"] = v
 	}
-	if v := msg.GetExtraStringOrDefault(aliyunSpeed, "0"); v != "" {
+	if v := msg.GetExtraStringOrDefault(aliyunSpeedKey, "0"); v != "" {
 		params["Speed"] = v
 	}
-	if v := msg.GetExtraStringOrDefault(aliyunOutID, ""); v != "" {
+	if v := msg.GetExtraStringOrDefault(aliyunOutIDKey, ""); v != "" {
 		params["OutId"] = v
 	}
 
@@ -454,7 +455,7 @@ func (t *aliyunTransformer) getEndpoint(isIntl bool, account *core.Account) stri
 
 // handleAliyunResponse handles Aliyun API response.
 func (t *aliyunTransformer) handleAliyunResponse(statusCode int, body []byte) error {
-	if statusCode < 200 || statusCode >= 300 {
+	if statusCode < http.StatusOK || statusCode >= http.StatusMultipleChoices {
 		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
 	}
 

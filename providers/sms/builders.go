@@ -92,3 +92,9 @@ func Aliyun() *AliyunSMSBuilder {
 // func Cl253() *Cl253SMSBuilder {
 //     return NewCl253SMSBuilder()
 // }
+
+// WithTencentVoiceSdkAppID sets the Voice SdkAppId for Tencent voice SMS.
+// This should be used for voice SMS scenarios only.
+func WithTencentVoiceSdkAppID(appID string) MessageOption {
+	return WithExtra(tencentVoiceSdkAppIDKey, appID)
+}

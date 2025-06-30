@@ -72,9 +72,6 @@ func NewSMSBaoVoiceMessage(mobile string, code string, opts ...MessageOption) *M
 // 产品ID可在短信宝后台或联系客服获得,不填则默认使用通用短信产品
 // 文档
 //   - 国内短信: https://www.smsbao.com/openapi/213.html
-//
-// Alias: WithSMSBaoProductID
-// Equivalent to WithTemplateID.
 func WithSMSBaoProductID(productID string) MessageOption {
-	return WithTemplateID(productID)
+	return WithExtra(smsbaoProductIDKey, productID)
 }
