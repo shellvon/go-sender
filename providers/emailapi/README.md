@@ -1,3 +1,5 @@
+[⬅️ Back to Main README](../../README.md)
+
 # emailapi Provider (Experimental)
 
 > ⚠️ **This package is under active development. APIs are unstable and may change at any time. Use with caution in production!**

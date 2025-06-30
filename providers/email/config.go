@@ -5,6 +5,7 @@ import "github.com/shellvon/go-sender/core"
 // Account represents a single email account configuration.
 type Account struct {
 	Name     string `json:"name"`               // A unique name for the account.
+	Type     string `json:"type,omitempty"`     // Subprovider type identifier for account selection filtering
 	Host     string `json:"host"`               // SMTP server host.
 	Port     int    `json:"port"`               // SMTP server port.
 	Username string `json:"username"`           // SMTP username.

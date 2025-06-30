@@ -13,7 +13,7 @@ import (
 // Provider supports multiple accounts and strategy selection
 type Provider struct {
 	accounts []*Account
-	selector *utils.Selector[*Account]
+	strategy core.SelectionStrategy
 }
 
 var _ core.Provider = (*Provider)(nil)
@@ -31,19 +31,19 @@ func New(config Config) (*Provider, error) {
 	}
 
 	// Use common initialization logic
-	enabledAccounts, selector, err := utils.InitProvider(&config, accounts)
+	enabledAccounts, strategy, err := utils.InitProvider(&config, accounts)
 	if err != nil {
 		return nil, errors.New("no enabled email accounts found")
 	}
 
 	return &Provider{
 		accounts: enabledAccounts,
-		selector: selector,
+		strategy: strategy,
 	}, nil
 }
 
 // Send sends an email message
-func (p *Provider) Send(ctx context.Context, message core.Message) error {
+func (p *Provider) Send(ctx context.Context, message core.Message, opts *core.ProviderSendOptions) error {
 	emailMsg, ok := message.(*Message)
 	if !ok {
 		return core.NewParamError(fmt.Sprintf("invalid message type: expected *email.Message, got %T", message))
@@ -53,10 +53,26 @@ func (p *Provider) Send(ctx context.Context, message core.Message) error {
 		return err
 	}
 
-	account := p.selector.Select(ctx)
-	if account == nil {
+	// 转换为 Selectable 接口
+	selectables := make([]core.Selectable, len(p.accounts))
+	for i, account := range p.accounts {
+		selectables[i] = account
+	}
+
+	selected := utils.Select(ctx, selectables, p.strategy)
+	if selected == nil {
 		return errors.New("no available account")
 	}
+
+	// 找到对应的账号
+	var account *Account
+	for _, acc := range p.accounts {
+		if acc.GetName() == selected.GetName() {
+			account = acc
+			break
+		}
+	}
+
 	return p.doSendEmail(ctx, account, emailMsg)
 }
 
@@ -154,4 +170,9 @@ func (a *Account) GetWeight() int {
 
 func (a *Account) IsEnabled() bool {
 	return !a.Disabled
+}
+
+// GetType returns the subprovider type of this account
+func (a *Account) GetType() string {
+	return a.Type
 }

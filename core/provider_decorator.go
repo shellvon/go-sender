@@ -58,7 +58,9 @@ func (pd *ProviderDecorator) Send(ctx context.Context, message Message, opts ...
 
 	sendOpts := &SendOptions{}
 	for _, opt := range opts {
-		opt(sendOpts)
+		if opt != nil {
+			opt(sendOpts)
+		}
 	}
 
 	if sendOpts.Async {
@@ -81,7 +83,9 @@ func (pd *ProviderDecorator) executeWithMiddleware(ctx context.Context, message 
 		return ctx.Err()
 	}
 
-	pd.logger.Log(LevelDebug, "message", "provider send start", "message_id", message.MsgID(), "provider", pd.Provider.Name())
+	if pd.logger != nil {
+		pd.logger.Log(LevelDebug, "message", "provider send start", "message_id", message.MsgID(), "provider", pd.Provider.Name())
+	}
 
 	// Rate limiting
 	if pd.middleware != nil && pd.middleware.RateLimiter != nil && !opts.DisableRateLimiter {
@@ -118,7 +122,9 @@ func (pd *ProviderDecorator) processQueueItem(ctx context.Context, item *QueueIt
 	// Deserialize SendOptions and restore context
 	restoredCtx, opts, err := deserializeSendOptions(ctx, item.Metadata)
 	if err != nil {
-		pd.logger.Log(LevelWarn, "message", "deserialize send options failed", "error", err.Error())
+		if pd.logger != nil {
+			pd.logger.Log(LevelWarn, "message", "deserialize send options failed", "error", err.Error())
+		}
 		opts = &SendOptions{} // fallback
 		restoredCtx = ctx
 	}
@@ -161,7 +167,7 @@ func (pd *ProviderDecorator) sendAsync(ctx context.Context, message Message, opt
 		if opts.Callback != nil {
 			opts.Callback(err)
 		}
-		if err != nil {
+		if err != nil && pd.logger != nil {
 			pd.logger.Log(LevelError, "message", "async send failed", "message_id", message.MsgID(), "error", fmt.Sprintf("%v", err))
 		}
 	}()
@@ -193,7 +199,9 @@ func (pd *ProviderDecorator) sendWithRetry(ctx context.Context, message Message,
 		if retryPolicy.Filter == nil || !retryPolicy.Filter(attempt, err) {
 			break
 		}
-		pd.logger.Log(LevelWarn, "message", "retry filtered", "attempt", attempt, "error", err.Error())
+		if pd.logger != nil {
+			pd.logger.Log(LevelWarn, "message", "retry filtered", "attempt", attempt, "error", err.Error())
+		}
 
 		// If this is the last attempt, don't wait
 		if attempt == retryPolicy.MaxAttempts {
@@ -231,8 +239,13 @@ func (pd *ProviderDecorator) executeSend(ctx context.Context, message Message, o
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
+	// Convert SendOptions to ProviderSendOptions
+	providerOpts := &ProviderSendOptions{
+		HTTPClient: EnsureHTTPClient(opts.HTTPClient),
+	}
+
 	// Execute the actual send operation
-	err = pd.Provider.Send(ctx, message)
+	err = pd.Provider.Send(ctx, message, providerOpts)
 
 	return err
 }
@@ -240,28 +253,38 @@ func (pd *ProviderDecorator) executeSend(ctx context.Context, message Message, o
 // startQueueProcessor starts a goroutine to continuously dequeue and process messages.
 func (pd *ProviderDecorator) startQueueProcessor() {
 	if pd.middleware == nil || pd.middleware.Queue == nil {
-		pd.logger.Log(LevelInfo, "message", "queue processor not started", "message", "Queue processor not started: queue is not configured.")
+		if pd.logger != nil {
+			pd.logger.Log(LevelInfo, "message", "queue processor not started", "message", "Queue processor not started: queue is not configured.")
+		}
 		return
 	}
 
 	pd.workers.Add(1)
 	go func() {
 		defer pd.workers.Done()
-		pd.logger.Log(LevelInfo, "message", "queue processor started", "message", "Queue processor started")
+		if pd.logger != nil {
+			pd.logger.Log(LevelInfo, "message", "queue processor started", "message", "Queue processor started")
+		}
 
 		for {
 			select {
 			case <-pd.ctx.Done():
-				pd.logger.Log(LevelInfo, "message", "queue processor shutting down", "message", "Queue processor shutting down")
+				if pd.logger != nil {
+					pd.logger.Log(LevelInfo, "message", "queue processor shutting down", "message", "Queue processor shutting down")
+				}
 				return
 			default:
 				item, err := pd.middleware.Queue.Dequeue(pd.ctx)
 				if err != nil {
 					if err == context.Canceled {
-						pd.logger.Log(LevelInfo, "message", "queue dequeue cancelled", "message", "Queue dequeue cancelled")
+						if pd.logger != nil {
+							pd.logger.Log(LevelInfo, "message", "queue dequeue cancelled", "message", "Queue dequeue cancelled")
+						}
 						return
 					}
-					pd.logger.Log(LevelError, "message", "queue dequeue failed", "message", "Queue dequeue failed", "error", fmt.Sprintf("%v", err))
+					if pd.logger != nil {
+						pd.logger.Log(LevelError, "message", "queue dequeue failed", "message", "Queue dequeue failed", "error", fmt.Sprintf("%v", err))
+					}
 					time.Sleep(time.Second)
 					continue
 				}
@@ -298,7 +321,7 @@ func (pd *ProviderDecorator) Close() error {
 
 func (pd *ProviderDecorator) recordMetric(
 	operation string,
-	message Message,
+	_ Message,
 	success bool,
 	duration time.Duration,
 	queueLatency time.Duration,
@@ -309,7 +332,7 @@ func (pd *ProviderDecorator) recordMetric(
 	}
 	if pd.middleware != nil && pd.middleware.Metrics != nil {
 		pd.middleware.Metrics.RecordSendResult(MetricsData{
-			Provider:     string(pd.Provider.Name()),
+			Provider:     pd.Provider.Name(),
 			Success:      success,
 			Duration:     duration,
 			Operation:    operation,

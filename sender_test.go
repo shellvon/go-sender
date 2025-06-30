@@ -47,6 +47,9 @@ func (m *mockMessage) Validate() error {
 	return nil
 }
 
+func (m *mockMessage) GetAccountName() string     { return "" }
+func (m *mockMessage) SetAccountName(name string) {}
+
 // mockProvider 用于测试的 provider，实现 core.Provider
 
 type mockProvider struct {
@@ -64,7 +67,7 @@ func (m *mockProvider) Name() string {
 
 	return string(m.providerType)
 }
-func (m *mockProvider) Send(ctx context.Context, msg core.Message) error {
+func (m *mockProvider) Send(ctx context.Context, msg core.Message, opts *core.ProviderSendOptions) error {
 	if m.succeedOnce {
 		return nil
 	}
@@ -171,7 +174,7 @@ func TestSender_LoggerOutput(t *testing.T) {
 	s := NewSender(core.NewStdLogger(logger))
 	prov := &mockProvider{succeedOnce: true}
 	s.RegisterProvider("mock", prov, nil)
-	err := s.Send(context.Background(), &mockMessage{})
+	err := s.Send(context.Background(), &mockMessage{}, nil)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -190,9 +193,9 @@ func TestSender_RateLimiter(t *testing.T) {
 	prov := &mockProvider{succeedOnce: true}
 	s.RegisterProvider("mock", prov, nil)
 	// 第一次应通过
-	err1 := s.Send(context.Background(), &mockMessage{})
+	err1 := s.Send(context.Background(), &mockMessage{}, nil)
 	// 第二次应被限流
-	err2 := s.Send(context.Background(), &mockMessage{})
+	err2 := s.Send(context.Background(), &mockMessage{}, nil)
 	if err1 != nil {
 		t.Errorf("first send should succeed, got %v", err1)
 	}
@@ -216,7 +219,7 @@ func TestSender_RetryPolicy(t *testing.T) {
 	s.SetRetryPolicy(retry)
 	prov := &mockProvider{failMax: 3}
 	s.RegisterProvider("mock", prov, nil)
-	err := s.Send(context.Background(), &mockMessage{})
+	err := s.Send(context.Background(), &mockMessage{}, nil)
 	if err == nil {
 		t.Errorf("expected error after retries exhausted, got nil")
 	}
@@ -245,10 +248,10 @@ func TestSender_CircuitBreaker(t *testing.T) {
 	s.RegisterProvider("mock", prov, nil)
 	// 触发熔断
 	for i := 0; i < 3; i++ {
-		_ = s.Send(context.Background(), &mockMessage{})
+		_ = s.Send(context.Background(), &mockMessage{}, nil)
 	}
 	// 熔断后再请求应立即失败
-	err := s.Send(context.Background(), &mockMessage{})
+	err := s.Send(context.Background(), &mockMessage{}, nil)
 	if err == nil || !strings.Contains(err.Error(), "circuit breaker") {
 		t.Errorf("expected circuit breaker open error, got %v", err)
 	}
@@ -267,8 +270,8 @@ func TestSender_Metrics(t *testing.T) {
 	s.SetMetrics(mc)
 	prov := &mockProvider{failMax: 1}
 	s.RegisterProvider("mock", prov, nil)
-	_ = s.Send(context.Background(), &mockMessage{}) // fail
-	_ = s.Send(context.Background(), &mockMessage{}) // success
+	_ = s.Send(context.Background(), &mockMessage{}, nil) // fail
+	_ = s.Send(context.Background(), &mockMessage{}, nil) // success
 	total, success, failed := mc.GetStats("mock")
 	if total != 2 || success != 1 || failed != 1 {
 		t.Errorf("metrics not match, got total=%d, success=%d, failed=%d", total, success, failed)
@@ -324,8 +327,8 @@ func TestSender_MultiProvider(t *testing.T) {
 	prov2 := &mockProvider{succeedOnce: true, providerType: "mock2"}
 	s.RegisterProvider("mock1", prov1, nil)
 	s.RegisterProvider("mock2", prov2, nil)
-	_ = s.Send(context.Background(), &mockMessage{id: "id1", providerType: "mock1"})
-	_ = s.Send(context.Background(), &mockMessage{id: "id2", providerType: "mock2"})
+	_ = s.Send(context.Background(), &mockMessage{id: "id1", providerType: "mock1"}, nil)
+	_ = s.Send(context.Background(), &mockMessage{id: "id2", providerType: "mock2"}, nil)
 	total1, _, _ := mc.GetStats("mock1")
 	total2, _, _ := mc.GetStats("mock2")
 
@@ -346,7 +349,7 @@ func TestSender_ConcurrentSend(t *testing.T) {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			_ = s.Send(context.Background(), &mockMessage{id: fmt.Sprintf("id-%d", i)})
+			_ = s.Send(context.Background(), &mockMessage{id: fmt.Sprintf("id-%d", i)}, nil)
 		}(i)
 	}
 	wg.Wait()
@@ -393,7 +396,7 @@ func TestSender_MetricsOperation(t *testing.T) {
 	prov := &mockProvider{succeedOnce: true}
 	s.RegisterProvider("mock", prov, nil)
 	_ = s.Send(context.Background(), &mockMessage{providerType: "mock"}, core.WithSendAsync())
-	_ = s.Send(context.Background(), &mockMessage{providerType: "mock"})
+	_ = s.Send(context.Background(), &mockMessage{providerType: "mock"}, nil)
 	time.Sleep(10 * time.Millisecond) // 等待异步
 	mc.mu.Lock()
 	defer mc.mu.Unlock()
@@ -418,7 +421,7 @@ func TestSender_ContextTimeout(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
 	defer cancel()
 	time.Sleep(2 * time.Nanosecond) // 保证超时
-	err := s.Send(ctx, &mockMessage{providerType: "mock"})
+	err := s.Send(ctx, &mockMessage{providerType: "mock"}, nil)
 	if err == nil || !strings.Contains(err.Error(), "context deadline exceeded") {
 		t.Errorf("expected context deadline exceeded, got %v", err)
 	}

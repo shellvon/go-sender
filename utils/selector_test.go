@@ -27,18 +27,8 @@ func (m *MockSelectable) IsEnabled() bool {
 	return m.enabled
 }
 
-func TestNewSelector(t *testing.T) {
-	items := []*MockSelectable{
-		{name: "item1", weight: 1, enabled: true},
-		{name: "item2", weight: 2, enabled: true},
-		{name: "item3", weight: 3, enabled: false}, // disabled
-	}
-
-	strategy := core.NewWeightedStrategy()
-	selector := NewSelector(items, strategy)
-	assert.NotNil(t, selector)
-	assert.Equal(t, items, selector.items)
-	assert.Equal(t, strategy, selector.strategy)
+func (m *MockSelectable) GetType() string {
+	return ""
 }
 
 func TestSelector_Select(t *testing.T) {
@@ -46,6 +36,10 @@ func TestSelector_Select(t *testing.T) {
 		{name: "item1", weight: 1, enabled: true},
 		{name: "item2", weight: 2, enabled: true},
 		{name: "item3", weight: 3, enabled: false}, // disabled
+	}
+	selectables := make([]core.Selectable, len(items))
+	for i, v := range items {
+		selectables[i] = v
 	}
 
 	tests := []struct {
@@ -88,13 +82,12 @@ func TestSelector_Select(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			selector := NewSelector(items, tt.strategy)
 			ctx := context.Background()
 			if tt.ctxItemName != "" {
 				ctx = core.WithCtxItemName(ctx, tt.ctxItemName)
 			}
 
-			selected := selector.Select(ctx)
+			selected := Select(ctx, selectables, tt.strategy)
 			assert.NotNil(t, selected)
 
 			if tt.ctxItemName != "" {
@@ -115,23 +108,25 @@ func TestSelector_SelectWithContext(t *testing.T) {
 		{name: "item2", weight: 2, enabled: true},
 		{name: "item3", weight: 3, enabled: false},
 	}
+	selectables := make([]core.Selectable, len(items))
+	for i, v := range items {
+		selectables[i] = v
+	}
 
 	strategy := core.NewWeightedStrategy()
-	selector := NewSelector(items, strategy)
 
 	// Test with context that has item name
 	ctx := context.Background()
 	ctx = core.WithCtxItemName(ctx, "item1")
 
-	selected := selector.Select(ctx)
+	selected := Select(ctx, selectables, strategy)
 	assert.NotNil(t, selected)
 	assert.Equal(t, "item1", selected.GetName())
 }
 
 func TestSelector_SelectEmptyItems(t *testing.T) {
-	selector := NewSelector([]*MockSelectable{}, core.NewWeightedStrategy())
-
-	selected := selector.Select(context.Background())
+	selectables := []core.Selectable{}
+	selected := Select(context.Background(), selectables, core.NewWeightedStrategy())
 	assert.Nil(t, selected)
 }
 
@@ -141,16 +136,18 @@ func TestSelector_SelectAllDisabled(t *testing.T) {
 		{name: "item2", weight: 2, enabled: false},
 		{name: "item3", weight: 3, enabled: false},
 	}
-
-	selector := NewSelector(items, core.NewWeightedStrategy())
+	selectables := make([]core.Selectable, len(items))
+	for i, v := range items {
+		selectables[i] = v
+	}
 
 	// 当所有项都disabled时，应该返回零值
-	selected := selector.Select(context.Background())
+	selected := Select(context.Background(), selectables, core.NewWeightedStrategy())
 	assert.Nil(t, selected)
 
 	// 但指定名称时应该能选中
 	ctx := core.WithCtxItemName(context.Background(), "item1")
-	selected = selector.Select(ctx)
+	selected = Select(ctx, selectables, core.NewWeightedStrategy())
 	assert.NotNil(t, selected)
 	assert.Equal(t, "item1", selected.GetName())
 }

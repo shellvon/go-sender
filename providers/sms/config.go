@@ -25,9 +25,8 @@ const (
 // Config holds configuration for the SMS provider
 type Config struct {
 	core.BaseConfig
-	Providers         []SMSProvider     `json:"providers"`          // Multiple SMS providers configuration
-	Strategy          core.StrategyType `json:"strategy"`           // Selection strategy
-	DisableMiddleware bool              `json:"disable_middleware"` // Whether to disable middleware
+	Providers []SMSProvider     `json:"providers"` // Multiple SMS providers configuration
+	Strategy  core.StrategyType `json:"strategy"`  // Selection strategy
 }
 
 // SMSProvider represents a single SMS service provider configuration

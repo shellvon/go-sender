@@ -80,7 +80,7 @@ func TestTelegramProviderIntegration(t *testing.T) {
 	t.Run("Basic Text Message", func(t *testing.T) {
 		message := NewTextMessage(chatID, "🧪 集成测试: 基本文本消息")
 		t.Logf("📤 发送消息到 Chat ID: %s", chatID)
-		err := provider.Send(ctx, message)
+		err := provider.Send(ctx, message, nil)
 		if err != nil {
 			t.Errorf("❌ Failed to send basic text message: %v", err)
 		} else {
@@ -98,7 +98,7 @@ func TestTelegramProviderIntegration(t *testing.T) {
 				"• 支持 `代码`\n"+
 				"• 支持 [链接](https://telegram.org)",
 			WithParseMode("Markdown"))
-		err := provider.Send(ctx, message)
+		err := provider.Send(ctx, message, nil)
 		if err != nil {
 			t.Errorf("Failed to send formatted text message: %v", err)
 		} else {
@@ -116,7 +116,7 @@ func TestTelegramProviderIntegration(t *testing.T) {
 				"• 支持 <code>代码</code>"+
 				"• 支持 <a href=\"https://telegram.org\">链接</a>",
 			WithParseMode("HTML"))
-		err := provider.Send(ctx, message)
+		err := provider.Send(ctx, message, nil)
 		if err != nil {
 			t.Errorf("Failed to send HTML text message: %v", err)
 		} else {
@@ -131,7 +131,7 @@ func TestTelegramProviderIntegration(t *testing.T) {
 			WithDisableWebPreview(true),
 			WithSilent(true),
 			WithProtectContent(true))
-		err := provider.Send(ctx, message)
+		err := provider.Send(ctx, message, nil)
 		if err != nil {
 			t.Errorf("Failed to send text message with options: %v", err)
 		} else {
@@ -146,7 +146,7 @@ func TestTelegramProviderIntegration(t *testing.T) {
 			"https://picsum.photos/400/300", // 使用随机图片服务
 			WithCaption("🧪 集成测试: 图片消息\n这是一张测试图片"),
 			WithParseMode("Markdown"))
-		err := provider.Send(ctx, message)
+		err := provider.Send(ctx, message, nil)
 		if err != nil {
 			t.Errorf("Failed to send photo message: %v", err)
 		} else {
@@ -161,7 +161,7 @@ func TestTelegramProviderIntegration(t *testing.T) {
 			"https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf", // 测试PDF
 			WithCaption("🧪 集成测试: 文档消息\n这是一个测试PDF文档"),
 			WithParseMode("Markdown"))
-		err := provider.Send(ctx, message)
+		err := provider.Send(ctx, message, nil)
 		if err != nil {
 			t.Errorf("Failed to send document message: %v", err)
 		} else {
@@ -174,7 +174,7 @@ func TestTelegramProviderIntegration(t *testing.T) {
 	t.Run("Location Message", func(t *testing.T) {
 		message := NewLocationMessage(chatID, 40.7128, -74.0060, // 纽约坐标
 			WithSilent(true))
-		err := provider.Send(ctx, message)
+		err := provider.Send(ctx, message, nil)
 		if err != nil {
 			t.Errorf("Failed to send location message: %v", err)
 		} else {
@@ -188,7 +188,7 @@ func TestTelegramProviderIntegration(t *testing.T) {
 		message := NewContactMessage(chatID, "+1234567890", "Test User",
 			WithContactLastName("Integration"),
 			WithContactVCard("BEGIN:VCARD\nVERSION:3.0\nFN:Test User Integration\nTEL:+1234567890\nEND:VCARD"))
-		err := provider.Send(ctx, message)
+		err := provider.Send(ctx, message, nil)
 		if err != nil {
 			t.Errorf("Failed to send contact message: %v", err)
 		} else {
@@ -211,7 +211,7 @@ func TestTelegramProviderIntegration(t *testing.T) {
 			WithPollIsAnonymous(false),
 			WithPollType("regular"),
 			WithPollAllowsMultipleAnswers(false))
-		err := provider.Send(ctx, message)
+		err := provider.Send(ctx, message, nil)
 		if err != nil {
 			t.Errorf("Failed to send poll message: %v", err)
 		} else {
@@ -223,7 +223,7 @@ func TestTelegramProviderIntegration(t *testing.T) {
 	// 测试10: Dice 消息
 	t.Run("Dice Message", func(t *testing.T) {
 		message := NewDiceMessage(chatID, WithDiceEmoji("🎯"))
-		err := provider.Send(ctx, message)
+		err := provider.Send(ctx, message, nil)
 		if err != nil {
 			t.Errorf("Failed to send dice message: %v", err)
 		} else {
@@ -240,7 +240,7 @@ func TestTelegramProviderIntegration(t *testing.T) {
 			WithCaption("🧪 集成测试: 语音消息"),
 			WithParseMode("Markdown"),
 			WithVoiceDuration(3))
-		err := provider.Send(ctx, message)
+		err := provider.Send(ctx, message, nil)
 		if err != nil {
 			t.Logf("Voice message failed (URL might be inaccessible): %v", err)
 		} else {
@@ -257,7 +257,7 @@ func TestTelegramProviderIntegration(t *testing.T) {
 			WithVideoDuration(10),
 			WithVideoWidth(1280),
 			WithVideoHeight(720))
-		err := provider.Send(ctx, message)
+		err := provider.Send(ctx, message, nil)
 		if err != nil {
 			t.Logf("Video message failed (URL might be inaccessible): %v", err)
 		} else {
@@ -274,7 +274,7 @@ func TestTelegramProviderIntegration(t *testing.T) {
 			WithAnimationDuration(5),
 			WithAnimationWidth(480),
 			WithAnimationHeight(270))
-		err := provider.Send(ctx, message)
+		err := provider.Send(ctx, message, nil)
 		if err != nil {
 			t.Logf("Animation message failed (URL might be inaccessible): %v", err)
 		} else {
@@ -288,7 +288,7 @@ func TestTelegramProviderIntegration(t *testing.T) {
 		message := NewVideoNoteMessage(chatID, "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
 			WithVideoNoteDuration(5),
 			WithVideoNoteLength(360))
-		err := provider.Send(ctx, message)
+		err := provider.Send(ctx, message, nil)
 		if err != nil {
 			t.Logf("Video note message failed (URL might be inaccessible): %v", err)
 		} else {
@@ -305,7 +305,7 @@ func TestTelegramProviderIntegration(t *testing.T) {
 			WithAudioDuration(3),
 			WithAudioPerformer("Test Performer"),
 			WithAudioTitle("Test Audio"))
-		err := provider.Send(ctx, message)
+		err := provider.Send(ctx, message, nil)
 		if err != nil {
 			t.Logf("Audio message failed (URL might be inaccessible): %v", err)
 		} else {
@@ -346,7 +346,7 @@ func TestTelegramProviderIntegrationErrorCases(t *testing.T) {
 	// 测试1: 无效的聊天ID
 	t.Run("Invalid Chat ID", func(t *testing.T) {
 		message := NewTextMessage("invalid_chat_id", "This should fail")
-		err := provider.Send(ctx, message)
+		err := provider.Send(ctx, message, nil)
 		if err == nil {
 			t.Error("Expected error for invalid chat ID but got success")
 		} else {
@@ -357,7 +357,7 @@ func TestTelegramProviderIntegrationErrorCases(t *testing.T) {
 	// 测试2: 空文本
 	t.Run("Empty Text", func(t *testing.T) {
 		message := NewTextMessage("@test_channel", "")
-		err := provider.Send(ctx, message)
+		err := provider.Send(ctx, message, nil)
 		if err == nil {
 			t.Error("Expected error for empty text but got success")
 		} else {
@@ -368,7 +368,7 @@ func TestTelegramProviderIntegrationErrorCases(t *testing.T) {
 	// 测试3: 无效的图片URL
 	t.Run("Invalid Photo URL", func(t *testing.T) {
 		message := NewPhotoMessage("@test_channel", "https://invalid-url-that-does-not-exist.com/image.jpg")
-		err := provider.Send(ctx, message)
+		err := provider.Send(ctx, message, nil)
 		if err == nil {
 			t.Error("Expected error for invalid photo URL but got success")
 		} else {
@@ -428,7 +428,7 @@ func TestTelegramProviderIntegrationMultipleAccounts(t *testing.T) {
 	// 测试多账户发送
 	t.Run("Multiple Accounts", func(t *testing.T) {
 		message := NewTextMessage(chatID, "🧪 集成测试: 多账户配置测试")
-		err := provider.Send(ctx, message)
+		err := provider.Send(ctx, message, nil)
 		if err != nil {
 			t.Errorf("Failed to send message with multiple accounts: %v", err)
 		} else {

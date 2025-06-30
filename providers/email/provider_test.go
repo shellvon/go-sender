@@ -152,7 +152,7 @@ func TestEmailProvider_Send_InvalidMessageType(t *testing.T) {
 
 	// Test with wrong message type
 	wrongMessage := &mockMessage{}
-	err = provider.Send(context.Background(), wrongMessage)
+	err = provider.Send(context.Background(), wrongMessage, nil)
 	if err == nil {
 		t.Fatal("Expected error when sending wrong message type")
 	}

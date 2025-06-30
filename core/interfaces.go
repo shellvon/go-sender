@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"strconv"
 	"time"
 
@@ -92,7 +93,7 @@ type Message interface {
 
 // DefaultMessage provides a base implementation for Message with a unique id.
 type DefaultMessage struct {
-	id     string                 `json:"-"`
+	msgId  string                 // 可选，允许自定义消息ID，未设置时自动生成
 	Extras map[string]interface{} `json:"extras,omitempty"`
 }
 
@@ -103,21 +104,31 @@ type LoggerAware interface {
 
 // NewDefaultMessage creates a DefaultMessage with a new uuid.
 func NewDefaultMessage() DefaultMessage {
-	return DefaultMessage{id: uuid.NewString()}
+	return DefaultMessage{}
 }
 
 // MsgID returns the unique id of the message.
 func (m *DefaultMessage) MsgID() string {
-	if m.id == "" {
-		m.id = uuid.NewString()
+	if m.msgId == "" {
+		m.msgId = uuid.NewString()
 	}
-	return m.id
+	return m.msgId
 }
 
-// Provider is an interface for any notification service.
+// SubProviderType returns the sub-provider type, default implementation returns empty string
+// @deprecated: Use GetAccountName() instead
+func (m *DefaultMessage) SubProviderType() string {
+	return ""
+}
+
+// ProviderSendOptions defines per-request parameters for Provider.Send.
+type ProviderSendOptions struct {
+	HTTPClient *http.Client
+}
+
+// Provider is the interface that all providers must implement.
 type Provider interface {
-	// Send dispatches a message using the provider.
-	Send(ctx context.Context, message Message) error
+	Send(ctx context.Context, msg Message, opts *ProviderSendOptions) error
 	// Name returns the unique name of the provider.
 	Name() string
 }

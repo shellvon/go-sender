@@ -238,7 +238,7 @@ func TestServerChanProviderWithMultipleAccounts(t *testing.T) {
 			"这条消息将通过负载均衡发送到多个账号\n\n时间: "+time.Now().Format("2006-01-02 15:04:05"),
 		)
 
-		err := provider.Send(ctx, msg)
+		err := provider.Send(ctx, msg, nil)
 		if err != nil {
 			t.Errorf("Failed to send message with multiple accounts: %v", err)
 		} else {
@@ -291,7 +291,7 @@ func TestServerChanProviderErrorHandling(t *testing.T) {
 		ctx := context.Background()
 		msg := NewMessage("测试", "这是一条测试消息")
 
-		err = provider.Send(ctx, msg)
+		err = provider.Send(ctx, msg, nil)
 		if err == nil {
 			t.Error("Expected error for invalid sendkey, but got none")
 		} else {

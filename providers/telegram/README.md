@@ -1,3 +1,5 @@
+[⬅️ Back to Main README](../../README.md)
+
 # Telegram Provider
 
 This provider supports sending messages to Telegram chats, groups, and channels via the [Telegram Bot API](https://core.telegram.org/bots/api).

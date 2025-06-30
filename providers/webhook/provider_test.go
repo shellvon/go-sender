@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -32,14 +33,22 @@ func TestWebhookProviderWithJSONResponse(t *testing.T) {
 
 		// 读取请求体
 		var requestBody map[string]interface{}
-		if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
+		bodyBytes, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "Failed to read request body", http.StatusBadRequest)
+			return
+		}
+		fmt.Printf("DEBUG: Received request body: %s\n", string(bodyBytes))
+
+		if err := json.Unmarshal(bodyBytes, &requestBody); err != nil {
+			fmt.Printf("DEBUG: JSON unmarshal error: %v\n", err)
 			http.Error(w, "Invalid JSON", http.StatusBadRequest)
 			return
 		}
 
 		// 检查请求体是否包含必要的字段
 		if _, exists := requestBody["message"]; !exists {
-			// 返回错误响应
+			// 返回错误响应，但状态码为200，让响应验证处理业务逻辑错误
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK) // 状态码 200，但业务逻辑失败
 			json.NewEncoder(w).Encode(map[string]interface{}{
@@ -136,7 +145,7 @@ func TestWebhookProviderWithJSONResponse(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			err := provider.Send(ctx, tt.message)
+			err := provider.Send(ctx, tt.message, nil)
 
 			if tt.wantErr && err == nil {
 				t.Errorf("Expected error but got none")
@@ -212,7 +221,7 @@ func TestWebhookProviderWithCustomStatusCodes(t *testing.T) {
 
 	// 发送消息
 	ctx := context.Background()
-	err = provider.Send(ctx, message)
+	err = provider.Send(ctx, message, nil)
 
 	if err != nil {
 		t.Errorf("Expected success but got error: %v", err)
@@ -274,7 +283,7 @@ func TestWebhookProviderWithTextResponse(t *testing.T) {
 
 	// 发送消息
 	ctx := context.Background()
-	err = provider.Send(ctx, message)
+	err = provider.Send(ctx, message, nil)
 
 	if err != nil {
 		t.Errorf("Expected success but got error: %v", err)
@@ -342,7 +351,7 @@ func TestWebhookProviderWithErrorResponse(t *testing.T) {
 
 	// 发送消息，期望失败
 	ctx := context.Background()
-	err = provider.Send(ctx, message)
+	err = provider.Send(ctx, message, nil)
 
 	if err == nil {
 		t.Errorf("Expected error but got none")
@@ -402,7 +411,7 @@ func TestWebhookProviderWithoutValidation(t *testing.T) {
 
 	// 发送消息，应该成功（只检查状态码）
 	ctx := context.Background()
-	err = provider.Send(ctx, message)
+	err = provider.Send(ctx, message, nil)
 
 	if err != nil {
 		t.Errorf("Expected success but got error: %v", err)
@@ -497,7 +506,7 @@ func TestWebhookProviderWithDynamicURL(t *testing.T) {
 
 	// 发送消息
 	ctx := context.Background()
-	err = provider.Send(ctx, message)
+	err = provider.Send(ctx, message, nil)
 
 	if err != nil {
 		t.Errorf("Expected success but got error: %v", err)
@@ -573,7 +582,7 @@ func TestWebhookProviderWithQueryParamsOnly(t *testing.T) {
 
 	// 发送消息
 	ctx := context.Background()
-	err = provider.Send(ctx, message)
+	err = provider.Send(ctx, message, nil)
 
 	if err != nil {
 		t.Errorf("Expected success but got error: %v", err)
