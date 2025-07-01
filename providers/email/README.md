@@ -267,3 +267,56 @@ go test -v ./providers/email/
 
 - [go-mail](https://github.com/wneessen/go-mail): Modern, actively maintained email library
 - [go-sender/core](https://github.com/shellvon/go-sender): Core framework interfaces and utilities
+
+## Common SMTP Provider Settings & Official Documentation
+
+| Provider          | SMTP Server Address      | Port(s)      | Username/Description            | Password/Auth Method           | Official Documentation                                                                                                    |
+| ----------------- | ------------------------ | ------------ | ------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| Apple iCloud      | smtp.mail.me.com         | 587/465      | Apple ID email                  | Apple ID password/app password | [Apple Docs](https://support.apple.com/en-us/HT202304)                                                                    |
+| Gmail (Google)    | smtp.gmail.com           | 587/465      | Gmail address                   | App password/XOAUTH2           | [Gmail Docs](https://support.google.com/a/answer/176600?hl=en)                                                              |
+| Outlook/Office365 | smtp.office365.com       | 587          | Email address                   | Login password/XOAUTH2         | [Microsoft Docs](https://support.microsoft.com/zh-hk/office/outlook-com-%E7%9A%84-pop-imap-%E5%92%8C-smtp-%E8%A8%AD%E5%AE%9A-d088b986-291d-42b8-9564-9c414e2aa040) |
+| Alibaba Cloud     | smtp.mxhichina.com       | 465/25       | Email address                   | Login password                 | [Alibaba Docs](https://help.aliyun.com/document_detail/36576.html)                              |
+| Tencent Exmail    | smtp.exmail.qq.com       | 465/587      | Email address                   | Login password                 | [Tencent Docs](https://www.tencentcloud.com/document/product/1084/44458)                                     |
+| QQ Mail           | smtp.qq.com              | 465/587      | QQ number or full email address | Auth code                      | [QQ Mail Docs](https://service.mail.qq.com/detail/0/428)                                     |
+| 163 Mail          | smtp.163.com             | 465/994      | 163 email address               | Auth code                      | [163 Mail Docs](https://help.mail.163.com/faq.do?m=OTUw&id=MjQ5Nw==)                                                      |
+| SendGrid          | smtp.sendgrid.net        | 587/465      | apikey (literal string)         | API Key                        | [SendGrid Docs](https://docs.sendgrid.com/for-developers/sending-email/getting-started-smtp)                              |
+| Mailgun           | smtp.mailgun.org         | 587/465      | postmaster@yourdomain           | SMTP password                  | [Mailgun Docs](https://help.mailgun.com/hc/en-us/articles/203380100-How-Do-I-Use-Mailgun-SMTP-)                           |
+| Mailtrap          | sandbox.smtp.mailtrap.io | 2525/465/587 | Mailtrap username               | Mailtrap password              | [Mailtrap Docs](https://help.mailtrap.io/article/122-mailtrap-email-sending-smtp-integration)                                                                           |
+| Zoho Mail         | smtp.zoho.com            | 465/587      | Zoho email address              | Login password/app password    | [Zoho Docs](https://www.zoho.com/mail/help/zoho-smtp.html)                                                                |
+| Yandex            | smtp.yandex.com          | 465/587      | Yandex email address            | Login password                 | [Yandex Docs](https://yandex.com/support/mail/mail-clients/others.html)                                                   |
+
+### Example Configuration (SendGrid)
+
+```go
+config := email.Config{
+    Accounts: []email.Account{
+        {
+            Name:     "sendgrid",
+            Host:     "smtp.sendgrid.net",
+            Port:     587,
+            Username: "apikey", // literal string
+            Password: "<your_sendgrid_api_key>",
+            From:     "your@email.com",
+        },
+    },
+}
+```
+
+### Example Configuration (QQ Mail)
+
+```go
+config := email.Config{
+    Accounts: []email.Account{
+        {
+            Name:     "qq",
+            Host:     "smtp.qq.com",
+            Port:     465,
+            Username: "123456@qq.com",
+            Password: "<your_qq_email_auth_code>", // Get the auth code from QQ Mail settings
+            From:     "123456@qq.com",
+        },
+    },
+}
+```
+
+> For more provider settings, please refer to the table above and each provider's official documentation.
