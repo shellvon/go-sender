@@ -10,7 +10,7 @@
 
 ## 🚀 Project Roadmap
 
-See our [Project Roadmap & Task Tracking](https://github.com/your-org/go-sender/issues/1) for current priorities, planned features, and progress tracking.
+See our [Project Roadmap & Task Tracking](https://github.com/shellvon/go-sender/issues/1) for current priorities, planned features, and progress tracking.
 
 ## Why go-sender?
 
