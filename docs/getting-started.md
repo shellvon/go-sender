@@ -23,11 +23,11 @@ import (
 
 func main() {
     sender := sender.NewSender()
-    msg := sms.Aliyun().NewTextMessage(
-        []string{"13800138000"},
-        "Hello from go-sender!",
-        sms.WithAliyunTemplateCode("SMS_xxx"),
-    )
+    msg := sms.Aliyun().
+        To([]string{"13800138000"}).
+        Content("Hello from go-sender!").
+        TemplateCode("SMS_xxx").
+        Build()
     err := sender.Send(context.Background(), msg)
     if err != nil {
         panic(err)

@@ -11,40 +11,37 @@ package sms
 //
 // builder 仅支持 text（模板短信）类型。
 
-// NewHuaweiTextMessage 创建华为云模板短信消息（国内/国际均可）
-//
-// 示例：
-//
-//	msg := NewHuaweiTextMessage(
-//	         []string{"13800138000"},
-//	         "模板ID",
-//	         []string{"param1", "param2"},
-//	         "签名",
-//	         WithCallbackURL("https://callback.example.com"),
-//	         WithExtend("12345"),
-//	      )
-func NewHuaweiTextMessage(
-	mobiles []string,
-	templateID string,
-	paramsOrder []string,
-	sign string,
-	opts ...MessageOption,
-) *Message {
-	baseOpts := []MessageOption{
-		WithSubProvider(string(SubProviderHuawei)),
-		WithType(SMSText),
-		WithMobiles(mobiles),
-		WithTemplateID(templateID),
-		WithParamsOrder(paramsOrder),
-		WithSignName(sign),
-	}
-	baseOpts = append(baseOpts, opts...)
-	return NewMessageWithOptions(baseOpts...)
+// HuaweiSMSBuilder provides Huawei-specific SMS message creation.
+type HuaweiSMSBuilder struct {
+	*BaseBuilder
+
+	from string
 }
 
-// WithHuaweiFrom 设置发送方号码
-// 华为云短信服务中，from 字段用于指定发送方号码
-// 文档地址: https://support.huaweicloud.com/api-msgsms/sms_05_0002.html
-func WithHuaweiFrom(from string) MessageOption {
-	return WithExtra(huaweiFromKey, from)
+// newHuaweiSMSBuilder creates a new Huawei SMS builder.
+func newHuaweiSMSBuilder() *HuaweiSMSBuilder {
+	return &HuaweiSMSBuilder{
+		BaseBuilder: &BaseBuilder{subProvider: SubProviderHuawei},
+	}
+}
+
+// From sets the sender number for Huawei SMS.
+// 华为云短信服务中，from 字段用于指定发送方号码。
+//   - 文档地址: https://support.huaweicloud.com/api-msgsms/sms_05_0002.html
+func (b *HuaweiSMSBuilder) From(from string) *HuaweiSMSBuilder {
+	b.from = from
+	return b
+}
+
+// Build constructs the Huawei SMS message with all the configured options.
+func (b *HuaweiSMSBuilder) Build() *Message {
+	msg := b.BaseBuilder.Build()
+	extra := map[string]interface{}{}
+	if b.from != "" {
+		extra[huaweiFromKey] = b.from
+	}
+	if len(extra) > 0 {
+		msg.Extras = extra
+	}
+	return msg
 }

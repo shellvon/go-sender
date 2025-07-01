@@ -6,9 +6,9 @@ Explore real-world usage patterns with go-sender.
 
 ```go
 // Try SMS, then fallback to WeComBot if SMS fails
-err := sender.SendVia("aliyun", msg)
+err := sender.SendVia("aliyun-account-1", msg)
 if err != nil {
-    _ = sender.SendVia("wecombot", msg)
+    _ = sender.SendVia("aliyun-account-2", msg)
 }
 ```
 
@@ -16,7 +16,10 @@ if err != nil {
 
 ```go
 for _, mobile := range mobiles {
-    msg := sms.Aliyun().NewTextMessage([]string{mobile}, "Hello", ...)
+    msg := sms.Aliyun().
+        To([]string{mobile}).
+        Content("Hello").
+        Build()
     _ = sender.Send(ctx, msg)
 }
 ```
@@ -39,8 +42,8 @@ sender.Send(ctx, msg, core.WithSendHTTPClient(myClient))
 ```go
 // Use a strategy to select provider based on region or message type
 if isInternational(mobile) {
-    sender.SendVia("yunpian", msg)
+    sender.SendVia("yunpian-account", msg)
 } else {
-    sender.SendVia("aliyun", msg)
+    sender.SendVia("aliyun-account", msg)
 }
 ```

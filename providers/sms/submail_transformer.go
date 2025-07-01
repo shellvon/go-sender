@@ -278,7 +278,7 @@ func (t *submailTransformer) addCommonParams(params map[string]string, msg *Mess
 //   - https://www.mysubmail.com/documents/pdxzv1
 func (t *submailTransformer) calculateSignature(account *core.Account, params map[string]string) string {
 	// 获取签名类型，默认为md5
-	signType := "md5"
+	signType := submailDefaultSignType
 	// 或者从消息的extras中获取
 	if msgSignType := params[submailTagKey]; msgSignType != "" {
 		signType = msgSignType

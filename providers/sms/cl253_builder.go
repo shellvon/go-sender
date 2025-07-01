@@ -1,9 +1,5 @@
 package sms
 
-import (
-	"strconv"
-)
-
 // @ProviderName: Cl253 (Chuanglan) / 创蓝253
 // @Website: https://www.253.com
 // @APIDoc: https://www.253.com/api
@@ -19,57 +15,62 @@ import (
 //
 // 本 builder 仅支持 text（普通短信）类型。
 
-// NewCL253TextMessage 创建 CL253 普通短信消息
-//
-// 示例：
-//
-//	msg := NewCL253TextMessage(
-//	         []string{"13800138000"},
-//	         "您的验证码是1234",
-//	         "签名",
-//	         WithCL253Report(true),
-//	         WithCL253CallbackUrl("https://callback.example.com"),
-//	      )
-func NewCL253TextMessage(mobiles []string, content, sign string, opts ...MessageOption) *Message {
-	baseOpts := []MessageOption{
-		WithSubProvider(string(SubProviderCl253)),
-		WithType(SMSText),
-		WithMobiles(mobiles),
-		WithContent(content),
-		WithSignName(sign),
+// Cl253SMSBuilder provides CL253-specific SMS message creation.
+type Cl253SMSBuilder struct {
+	*BaseBuilder
+
+	senderID string
+	tdFlag   int    // 退订开启标识，1 开启；0 或 null 关闭
+	report   string // 状态报告参数
+}
+
+// newCl253SMSBuilder creates a new CL253 SMS builder.
+func newCl253SMSBuilder() *Cl253SMSBuilder {
+	return &Cl253SMSBuilder{
+		BaseBuilder: &BaseBuilder{subProvider: SubProviderCl253},
 	}
-	baseOpts = append(baseOpts, opts...)
-	return NewMessageWithOptions(baseOpts...)
 }
 
-// WithCL253Report 设置是否需要状态报告
-// CL253短信服务中，report 字段用于指定是否需要状态报告
-// 如您需要状态回执，则需要传"true",不传默认为"false"，则无法获取状态回执。
+// SenderID sets the sender ID for CL253 international SMS.
+// 用户收到短信之后显示的发件人，国内不支持自定义，国外支持，但是需要提前和运营商沟通注册，具体请与 TIG 对接人员确定。
+//   - 国际短信 API: https://doc.chuanglan.com/document/O58743GF76M7754H
 //
+// 此参数仅国际短信支持.
+func (b *Cl253SMSBuilder) SenderID(id string) *Cl253SMSBuilder {
+	b.senderID = id
+	return b
+}
+
+// TDFlag sets the international SMS TD flag for CL253.
+// 退订开启标识，1 开启；0 或 null 关闭。
+//   - 国际短信 API: https://doc.chuanglan.com/document/O58743GF76M7754H
+//
+// 此参数仅国际短信支持.
+func (b *Cl253SMSBuilder) TDFlag(flag int) *Cl253SMSBuilder {
+	b.tdFlag = flag
+	return b
+}
+
+// Report sets the report parameter for CL253 SMS.
+// 状态报告参数，用于接收短信发送状态回调。
 //   - 国内短信 API: https://doc.chuanglan.com/document/HAQYSZKH9HT5Z50L
-//   - 国际短信 API: https://doc.chuanglan.com/document/O58743GF76M7754H
-//
-// 文档地址: https://www.cl253.com/api/send
-func WithCL253Report(report bool) MessageOption {
-	return WithExtra(cl253ReportKey, strconv.FormatBool(report))
+func (b *Cl253SMSBuilder) Report(report string) *Cl253SMSBuilder {
+	b.report = report
+	return b
 }
 
-// WithCL253SenderID 设置发件人ID
-// 用户收到短信之后显示的发件人，国内不支持自定义，国外支持，但是需要提前和运营商沟通注册，具体请与 TIG 对接人员确定
-//
-//   - 国际短信 API: https://doc.chuanglan.com/document/O58743GF76M7754H
-//
-// 此参数仅国际短信支持.
-func WithCL253SenderID(senderID string) MessageOption {
-	return WithExtra(cl253SenderIDKey, senderID)
-}
-
-// WithCL253TdFlag 设置国际短信的 TD 标志
-// 退订开启标识，1 开启；0 或 null 关闭
-//
-//   - 国际短信 API: https://doc.chuanglan.com/document/O58743GF76M7754H
-//
-// 此参数仅国际短信支持.
-func WithCL253TdFlag(tdFlag string) MessageOption {
-	return WithExtra(cl253TDFlagKey, tdFlag)
+func (b *Cl253SMSBuilder) Build() *Message {
+	msg := b.BaseBuilder.Build()
+	extra := map[string]interface{}{}
+	if b.senderID != "" {
+		extra[cl253SenderIDKey] = b.senderID
+	}
+	extra[cl253TDFlagKey] = b.tdFlag
+	if b.report != "" {
+		extra[cl253ReportKey] = b.report
+	}
+	if len(extra) > 0 {
+		msg.Extras = extra
+	}
+	return msg
 }

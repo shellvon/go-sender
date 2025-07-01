@@ -9,21 +9,12 @@ package sms
 //
 // builder 仅支持 text（普通短信）类型。
 
-// NewUcpTextMessage 创建UCP短信消息
-//
-// 参数：
-//   - mobiles: 手机号列表
-//   - templateID: 模板ID
-//   - paramsOrder: 模板参数顺序
-//   - opts: 其他可选参数
-func NewUcpTextMessage(mobiles []string, templateID string, paramsOrder []string, opts ...MessageOption) *Message {
-	baseOpts := []MessageOption{
-		WithSubProvider(string(SubProviderUcp)),
-		WithType(SMSText),
-		WithMobiles(mobiles),
-		WithTemplateID(templateID),
-		WithParamsOrder(paramsOrder),
+type UcpSMSBuilder struct {
+	BaseSMSBuilder
+}
+
+func newUcpSMSBuilder() *UcpSMSBuilder {
+	return &UcpSMSBuilder{
+		BaseSMSBuilder: BaseSMSBuilder{subProvider: SubProviderUcp},
 	}
-	baseOpts = append(baseOpts, opts...)
-	return NewMessageWithOptions(baseOpts...)
 }

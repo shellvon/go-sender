@@ -10,40 +10,82 @@ package sms
 //
 // builder 仅支持 text（普通短信）类型。
 
-// NewYuntongxunTextMessage creates a new Yuntongxun text SMS message.
-func NewYuntongxunTextMessage(mobiles []string, content, sign string, opts ...MessageOption) *Message {
-	baseOpts := []MessageOption{
-		WithSubProvider(string(SubProviderYuntongxun)),
-		WithType(SMSText),
-		WithMobiles(mobiles),
-		WithContent(content),
-		WithSignName(sign),
+type YuntongxunSMSBuilder struct {
+	*BaseBuilder
+
+	playTimes   string
+	mediaName   string
+	displayNum  string
+	userData    string
+	maxCallTime string
+}
+
+func newYuntongxunSMSBuilder() *YuntongxunSMSBuilder {
+	return &YuntongxunSMSBuilder{
+		BaseBuilder: &BaseBuilder{subProvider: SubProviderYuntongxun},
 	}
-	baseOpts = append(baseOpts, opts...)
-	return NewMessageWithOptions(baseOpts...)
 }
 
-// WithYuntongxunPlayTimes sets the playTimes field for YunTongXun voice SMS.
-func WithYuntongxunPlayTimes(playTimes string) MessageOption {
-	return WithExtra(yuntongxunPlayTimesKey, playTimes)
+// PlayTimes sets the playTimes field for YunTongXun voice SMS.
+// 语音短信播放次数。
+//   - https://www.yuntongxun.com/doc/rest/sms/3_2_2_1.html
+func (b *YuntongxunSMSBuilder) PlayTimes(times string) *YuntongxunSMSBuilder {
+	b.playTimes = times
+	return b
 }
 
-// WithYuntongxunMediaName sets the mediaName field for YunTongXun voice SMS.
-func WithYuntongxunMediaName(mediaName string) MessageOption {
-	return WithExtra(yuntongxunMediaNameKey, mediaName)
+// MediaName sets the mediaName field for YunTongXun voice SMS.
+// 语音文件名称。
+//   - https://www.yuntongxun.com/doc/rest/sms/3_2_2_1.html
+func (b *YuntongxunSMSBuilder) MediaName(name string) *YuntongxunSMSBuilder {
+	b.mediaName = name
+	return b
 }
 
-// WithYuntongxunDisplayNum sets the displayNum field for YunTongXun voice SMS.
-func WithYuntongxunDisplayNum(displayNum string) MessageOption {
-	return WithExtra(yuntongxunDisplayNumKey, displayNum)
+// DisplayNum sets the displayNum field for YunTongXun voice SMS.
+// 显示号码。
+//   - https://www.yuntongxun.com/doc/rest/sms/3_2_2_1.html
+func (b *YuntongxunSMSBuilder) DisplayNum(num string) *YuntongxunSMSBuilder {
+	b.displayNum = num
+	return b
 }
 
-// WithYuntongxunUserData sets the userData field for YunTongXun voice SMS.
-func WithYuntongxunUserData(userData string) MessageOption {
-	return WithExtra(yuntongxunUserDataKey, userData)
+// UserData sets the userData field for YunTongXun voice SMS.
+// 用户数据。
+//   - https://www.yuntongxun.com/doc/rest/sms/3_2_2_1.html
+func (b *YuntongxunSMSBuilder) UserData(data string) *YuntongxunSMSBuilder {
+	b.userData = data
+	return b
 }
 
-// WithYuntongxunMaxCallTime sets the maxCallTime field for YunTongXun voice SMS.
-func WithYuntongxunMaxCallTime(maxCallTime string) MessageOption {
-	return WithExtra(yuntongxunMaxCallTimeKey, maxCallTime)
+// MaxCallTime sets the maxCallTime field for YunTongXun voice SMS.
+// 最大通话时长。
+//   - https://www.yuntongxun.com/doc/rest/sms/3_2_2_1.html
+func (b *YuntongxunSMSBuilder) MaxCallTime(time string) *YuntongxunSMSBuilder {
+	b.maxCallTime = time
+	return b
+}
+
+func (b *YuntongxunSMSBuilder) Build() *Message {
+	msg := b.BaseBuilder.Build()
+	extra := map[string]interface{}{}
+	if b.playTimes != "" {
+		extra[yuntongxunPlayTimesKey] = b.playTimes
+	}
+	if b.mediaName != "" {
+		extra[yuntongxunMediaNameKey] = b.mediaName
+	}
+	if b.displayNum != "" {
+		extra[yuntongxunDisplayNumKey] = b.displayNum
+	}
+	if b.userData != "" {
+		extra[yuntongxunUserDataKey] = b.userData
+	}
+	if b.maxCallTime != "" {
+		extra[yuntongxunMaxCallTimeKey] = b.maxCallTime
+	}
+	if len(extra) > 0 {
+		msg.Extras = extra
+	}
+	return msg
 }

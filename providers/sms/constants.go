@@ -17,6 +17,9 @@ const (
 	// aliyunVolumeKey is the key for Aliyun volume.
 	aliyunVolumeKey = "Volume"
 
+	// aliyunDefaultVolume is the default volume for Aliyun voice calls (0-100).
+	aliyunDefaultVolume = 100
+
 	// aliyunSpeedKey is the key for Aliyun speed.
 	aliyunSpeedKey = "Speed"
 
@@ -61,6 +64,12 @@ const (
 
 	// tencentVoiceSdkAppIDKey is the key for Tencent Voice SdkAppId (for voice SMS).
 	tencentVoiceSdkAppIDKey = "VoiceSdkAppId"
+
+	// tencentDefaultRegion is the default region for Tencent SMS.
+	tencentDefaultRegion = "ap-guangzhou"
+
+	// tencentDefaultPlayTimes is the default play times for Tencent voice SMS.
+	tencentDefaultPlayTimes = 2
 )
 
 // CL253 specific constants.
@@ -95,6 +104,9 @@ const (
 	submailSenderKey = "sender"
 	// submailSignTypeKey is the key for Submail signature type (optional: md5 (default), sha1, normal).
 	submailSignTypeKey = "sign_type"
+
+	// submailDefaultSignType is the default sign type for Submail SMS.
+	submailDefaultSignType = "md5"
 )
 
 // Volc specific constants.
@@ -129,4 +141,10 @@ const (
 
 	// yuntongxunMaxCallTimeKey is the key for YunTongXun max call time.
 	yuntongxunMaxCallTimeKey = "maxCallTime"
+)
+
+// Luosimao specific constants.
+const (
+	// luosimaoScheduledAtKey is the key for Luosimao scheduled at.
+	luosimaoScheduledAtKey = "time"
 )

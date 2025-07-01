@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -382,7 +383,12 @@ func (t *aliyunTransformer) transformVoice(
 	}
 
 	params := map[string]string{
-		"CalledNumber": msg.Mobiles[0],
+		"CalledNumber":     msg.Mobiles[0],
+		"CalledShowNumber": msg.GetExtraStringOrDefault(aliyunCalledShowNumberKey, ""),
+		"PlayTimes":        strconv.Itoa(msg.GetExtraIntOrDefault(aliyunPlayTimesKey, 1)),
+		"Volume":           strconv.Itoa(msg.GetExtraIntOrDefault(aliyunVolumeKey, aliyunDefaultVolume)),
+		"Speed":            strconv.Itoa(msg.GetExtraIntOrDefault(aliyunSpeedKey, 0)),
+		"OutId":            msg.GetExtraStringOrDefault(aliyunOutIDKey, ""),
 	}
 
 	// 根据消息类型选择API和参数
@@ -396,23 +402,6 @@ func (t *aliyunTransformer) transformVoice(
 	} else {
 		// 通知类消息：使用Voice API
 		params["VoiceCode"] = msg.TemplateID
-	}
-
-	// 语音短信可选参数
-	if v := msg.GetExtraStringOrDefault(aliyunCalledShowNumberKey, ""); v != "" {
-		params["CalledShowNumber"] = v
-	}
-	if v := msg.GetExtraStringOrDefault(aliyunPlayTimesKey, "1"); v != "" {
-		params["PlayTimes"] = v
-	}
-	if v := msg.GetExtraStringOrDefault(aliyunVolumeKey, "100"); v != "" {
-		params["Volume"] = v
-	}
-	if v := msg.GetExtraStringOrDefault(aliyunSpeedKey, "0"); v != "" {
-		params["Speed"] = v
-	}
-	if v := msg.GetExtraStringOrDefault(aliyunOutIDKey, ""); v != "" {
-		params["OutId"] = v
 	}
 
 	// 根据消息类型设置不同的action

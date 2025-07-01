@@ -31,30 +31,32 @@ All SMS providers support the following message types:
 - **Voice SMS**: Voice messages (supported by most providers)
 - **MMS**: Multimedia messages (supported by some providers)
 
-## Quick Start
+## Quick Start (Chainable Builder Style)
 
 ```go
 import "github.com/shellvon/go-sender/providers/sms"
 
-// Create a text message using Aliyun
-msg := sms.Aliyun().NewTextMessage(
-    []string{"13800138000"},
-    "Your verification code is: 1234",
-)
+// Aliyun SMS Example
+msg := sms.Aliyun().
+    To([]string{"13800138000"}).
+    Content("Your verification code is: 1234").
+    TemplateCode("SMS_123456").
+    Build()
 
-// Create a voice message
-msg := sms.Aliyun().NewVoiceMessage(
-    []string{"13800138000"},
-    "Your verification code is: 1234",
-)
+// Tencent SMS Example
+msg := sms.Tencent().
+    To([]string{"13800138000"}).
+    Content("Your code is: 5678").
+    TemplateID("123456").
+    Sign("YourSign").
+    Build()
 
-// Create a template message
-msg := sms.Aliyun().NewTextMessage(
-    []string{"13800138000"},
-    "",
-    sms.WithTemplateID("SMS_123456"),
-    sms.WithTemplateParams(map[string]string{"code": "1234"}),
-)
+// CL253 Example (with platform-specific params)
+msg := sms.CL253().
+    To([]string{"13800138000"}).
+    Content("Test message").
+    TDFlag(1). // int, see CL253 API doc
+    Build()
 ```
 
 ## Configuration
@@ -69,6 +71,20 @@ Each SMS provider requires specific configuration including API credentials, end
 - **Callback support**: Receive delivery status notifications
 - **Batch sending**: Send messages to multiple recipients
 - **Error handling**: Comprehensive error handling and retry mechanisms
+
+## SendVia Usage
+
+- `SendVia` is used to specify the account for sending (e.g., different sub-accounts or API keys for the same provider).
+- It cannot be used to send the same message object across different message types or providers.
+- Example:
+
+```go
+// Correct usage: specify account for the same message type
+err := sender.SendVia("aliyun-account-1", msg)
+if err != nil {
+    _ = sender.SendVia("aliyun-account-2", msg)
+}
+```
 
 ## Development Status
 

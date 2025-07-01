@@ -12,22 +12,14 @@ package sms
 //
 // builder 仅支持 text（普通短信）类型。
 
-// NewJuheTextMessage 创建聚合短信消息
-//
-// 参数：
-//
-//	mobiles: 接收短信的手机号列表，支持一个或多个手机号
-//	content: 短信内容（如验证码等）
-//	sign:    短信签名
-//	opts:    其他可选参数（如模板ID、回调地址、扩展码等）
-func NewJuheTextMessage(mobiles []string, content, sign string, opts ...MessageOption) *Message {
-	baseOpts := []MessageOption{
-		WithSubProvider(string(SubProviderJuhe)),
-		WithType(SMSText),
-		WithMobiles(mobiles),
-		WithContent(content),
-		WithSignName(sign),
+// JuheSMSBuilder provides Juhe-specific SMS message creation.
+type JuheSMSBuilder struct {
+	BaseSMSBuilder
+}
+
+// newJuheSMSBuilder creates a new Juhe SMS builder.
+func newJuheSMSBuilder() *JuheSMSBuilder {
+	return &JuheSMSBuilder{
+		BaseSMSBuilder: BaseSMSBuilder{subProvider: SubProviderJuhe},
 	}
-	baseOpts = append(baseOpts, opts...)
-	return NewMessageWithOptions(baseOpts...)
 }
