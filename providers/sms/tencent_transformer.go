@@ -32,7 +32,6 @@ const (
 	tencentAction            = "SendSms"
 	tencentVoiceAction       = "SendCodeVoice"
 	tencentVoiceNotifyAction = "SendVoice"
-	tencentDefaultRegion     = "ap-guangzhou"
 	tencentTimeout           = 30 * time.Second
 )
 
@@ -195,7 +194,7 @@ func (t *tencentTransformer) transformVoiceSMS(
 		params["VoiceId"] = msg.TemplateID
 		params["TemplateParamSet"] = msg.ParamsOrder
 	}
-	if playTimes := msg.GetExtraStringOrDefault(tencentPlayTimesKey, "2"); playTimes != "" {
+	if playTimes := msg.GetExtraIntOrDefault(tencentPlayTimesKey, tencentDefaultPlayTimes); playTimes != 0 {
 		params["PlayTimes"] = playTimes
 	}
 

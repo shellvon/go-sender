@@ -23,7 +23,7 @@ sender.RegisterProvider("custom", &CustomProvider{})
 
 ## Custom Middleware
 
-Implement the Middleware interface to add cross-cutting features:
+支持设置指定的中间件，实现 Middleware 接口即可：
 
 ```go
 type MyMiddleware struct{}

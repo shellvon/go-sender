@@ -28,11 +28,11 @@ import (
 
 func main() {
     sender := sender.NewSender()
-    msg := sms.Aliyun().NewTextMessage(
-        []string{"***REMOVED***"},
-        "Hello from go-sender!",
-        sms.WithAliyunTemplateCode("SMS_xxx"),
-    )
+    msg := sms.Aliyun().
+        To([]string{"***REMOVED***"}).
+        Content("Hello from go-sender!").
+        TemplateCode("SMS_xxx").
+        Build()
     if err := sender.Send(context.Background(), msg); err != nil {
         panic(err)
     }

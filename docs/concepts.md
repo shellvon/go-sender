@@ -9,6 +9,7 @@ The main entry point for all message sending.
 - Manages all providers and middleware.
 - Exposes `Send` and `SendVia` methods for sending messages.
 - Handles middleware chains transparently.
+- `SendVia` is only for specifying the account to send with (e.g., different sub-accounts or API keys for the same provider), and cannot be used to send the same message object across different message types or providers.
 
 ## Provider
 
@@ -23,7 +24,7 @@ A data structure representing what you want to send.
 
 - Different providers may have different message types (SMS, Email, IM, etc.).
 - All messages support common fields: content, recipients, template, etc.
-- Message options allow for flexible configuration.
+- Message configuration is now done via chainable builder methods for type safety and clarity.
 
 ## Middleware
 

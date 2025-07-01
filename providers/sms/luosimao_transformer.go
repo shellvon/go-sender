@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/utils"
@@ -155,7 +156,8 @@ func (t *luosimaoTransformer) transformBatchSMS(
 	params.Set("mobile_list", strings.Join(msg.Mobiles, ","))
 	params.Set("message", utils.AddSignature(msg.Content, msg.SignName))
 	if msg.ScheduledAt != nil {
-		params.Set("time", msg.GetScheduledTimeForPlatform(string(SubProviderLuosimao)))
+		// 定时发送的时间，定时的发送任务可以在发送前10分钟在发送历史界面进行取消（仅限提交当天）, 格式为 YYYY-MM-DD HH:MM:SS
+		params.Set(luosimaoScheduledAtKey, msg.ScheduledAt.Format(time.DateTime))
 	}
 	return t.buildLuosimaoRequestSpec(ctx, params, requestURL, account)
 }

@@ -14,56 +14,63 @@ package sms
 //
 // builder 支持 text（国内/国际，模板/非模板，单发/群发）、voice（语音）、mms（彩信）类型。
 
-// NewSubmailTextMessage 创建赛邮短信消息.
-func NewSubmailTextMessage(mobiles []string, content, sign string, opts ...MessageOption) *Message {
-	baseOpts := []MessageOption{
-		WithSubProvider(string(SubProviderSubmail)),
-		WithType(SMSText),
-		WithMobiles(mobiles),
-		WithContent(content),
-		WithSignName(sign),
+type SubmailSMSBuilder struct {
+	*BaseBuilder
+
+	tag      string
+	sender   string
+	signType string
+}
+
+func newSubmailSMSBuilder() *SubmailSMSBuilder {
+	return &SubmailSMSBuilder{
+		BaseBuilder: &BaseBuilder{subProvider: SubProviderSubmail},
+		signType:    submailDefaultSignType,
 	}
-	baseOpts = append(baseOpts, opts...)
-	return NewMessageWithOptions(baseOpts...)
 }
 
-// NewSubmailVoiceMessage 创建赛邮语音消息.
-func NewSubmailVoiceMessage(mobiles []string, content string, opts ...MessageOption) *Message {
-	baseOpts := []MessageOption{
-		WithSubProvider(string(SubProviderSubmail)),
-		WithType(Voice),
-		WithMobiles(mobiles),
-		WithContent(content),
+// Tag sets the tag for Submail SMS.
+// 消息标签（用于消息追踪，最大32字符）。
+//   - https://www.mysubmail.com/documents/FppOR3
+func (b *SubmailSMSBuilder) Tag(tag string) *SubmailSMSBuilder {
+	b.tag = tag
+	return b
+}
+
+// Sender sets the sender identifier for Submail SMS.
+// 主要用于国际短信，可选字段。
+//   - https://www.mysubmail.com/documents/3UQA3
+func (b *SubmailSMSBuilder) Sender(sender string) *SubmailSMSBuilder {
+	b.sender = sender
+	return b
+}
+
+// SignType sets the signature type for Submail SMS.
+//   - md5 (default)
+//   - sha1
+//   - normal
+//
+// Docs:
+//   - https://www.mysubmail.com/documents/FppOR3
+func (b *SubmailSMSBuilder) SignType(signType string) *SubmailSMSBuilder {
+	b.signType = signType
+	return b
+}
+
+func (b *SubmailSMSBuilder) Build() *Message {
+	msg := b.BaseBuilder.Build()
+	extra := map[string]interface{}{}
+	if b.tag != "" {
+		extra[submailTagKey] = b.tag
 	}
-	baseOpts = append(baseOpts, opts...)
-	return NewMessageWithOptions(baseOpts...)
-}
-
-// NewSubmailMMSMessage 创建赛邮彩信消息.
-func NewSubmailMMSMessage(mobiles []string, opts ...MessageOption) *Message {
-	baseOpts := []MessageOption{
-		WithSubProvider(string(SubProviderSubmail)),
-		WithType(MMS),
-		WithMobiles(mobiles),
+	if b.sender != "" {
+		extra[submailSenderKey] = b.sender
 	}
-	baseOpts = append(baseOpts, opts...)
-	return NewMessageWithOptions(baseOpts...)
-}
-
-// WithSubmailTag 设置标签
-// 用于消息追踪，最大32个字符.
-func WithSubmailTag(tag string) MessageOption {
-	return WithExtra(submailTagKey, tag)
-}
-
-// WithSubmailSender 设置发送方标识
-// 主要用于国际短信，可选字段.
-func WithSubmailSender(sender string) MessageOption {
-	return WithExtra(submailSenderKey, sender)
-}
-
-// WithSubmailSignType 设置签名类型
-// 可选值：md5（默认）、sha1、normal.
-func WithSubmailSignType(signType string) MessageOption {
-	return WithExtra(submailSignTypeKey, signType)
+	if b.signType != "" {
+		extra[submailSignTypeKey] = b.signType
+	}
+	if len(extra) > 0 {
+		msg.Extras = extra
+	}
+	return msg
 }

@@ -25,7 +25,7 @@ sender.SetRateLimiter(limiter)
 
 ## Custom Middleware
 
-You can implement your own middleware by following the Middleware interface.
+支持设置指定的中间件，实现 Middleware 接口即可。
 
 ---
 
