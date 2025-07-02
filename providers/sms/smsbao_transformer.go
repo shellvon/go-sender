@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/shellvon/go-sender/core"
@@ -27,8 +28,8 @@ import (
 // transformer 支持文本短信（国内/国际）和语音验证码。
 
 const (
-	smsbaoDefaultEndpoint = "api.smsbao.com"
-	maxMobilesPerRequest  = 99
+	smsbaoDefaultBaseURI = "https://api.smsbao.com"
+	maxMobilesPerRequest = 99
 )
 
 // smsbaoTransformer implements HTTPRequestTransformer for Smsbao
@@ -100,17 +101,6 @@ func (t *smsbaoTransformer) validateMessage(msg *Message) error {
 	return nil
 }
 
-// getBaseDomain 获取基础域名，优先使用account配置的endpoint.
-func (t *smsbaoTransformer) getBaseDomain(account *core.Account, isIntl bool) string {
-	if isIntl && account.IntlEndpoint != "" {
-		return account.IntlEndpoint
-	}
-	if account.Endpoint != "" {
-		return account.Endpoint
-	}
-	return smsbaoDefaultEndpoint
-}
-
 // transformTextSMS 构造文本短信 HTTP 请求
 //   - 国内短信: https://www.smsbao.com/openapi/213.html
 //   - 国际短信: https://www.smsbao.com/openapi/299.html
@@ -120,7 +110,7 @@ func (t *smsbaoTransformer) transformTextSMS(
 	msg *Message,
 	account *core.Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
-	if account == nil || account.Key == "" || account.Secret == "" {
+	if account == nil || account.APIKey == "" || account.APISecret == "" {
 		return nil, nil, errors.New("smsbao account Key(username) and Secret(password) are required")
 	}
 	mobiles := strings.Join(msg.Mobiles, ",")
@@ -128,8 +118,8 @@ func (t *smsbaoTransformer) transformTextSMS(
 
 	// 构建查询参数
 	queryParams := map[string]string{
-		"u": account.Key,
-		"p": utils.MD5Hex(account.Secret),
+		"u": account.APIKey,
+		"p": utils.MD5Hex(account.APISecret),
 		"m": mobiles,
 		"c": content,
 		"g": msg.GetExtraStringOrDefault(smsbaoProductIDKey, ""),
@@ -141,11 +131,10 @@ func (t *smsbaoTransformer) transformTextSMS(
 	} else {
 		apiPath = "/sms"
 	}
-	baseDomain := t.getBaseDomain(account, msg.IsIntl())
 
 	return &core.HTTPRequestSpec{
-		Method:      "GET",
-		URL:         "https://" + baseDomain + apiPath,
+		Method:      http.MethodGet,
+		URL:         fmt.Sprintf("%s%s", smsbaoDefaultBaseURI, apiPath),
 		QueryParams: queryParams,
 	}, handleSMSBaoResponse, nil
 }
@@ -160,22 +149,21 @@ func (t *smsbaoTransformer) transformVoiceSMS(
 	msg *Message,
 	account *core.Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
-	if account == nil || account.Key == "" || account.Secret == "" {
+	if account == nil || account.APIKey == "" || account.APISecret == "" {
 		return nil, nil, errors.New("smsbao account Key(username) and Secret(password) are required")
 	}
 
 	// 构建查询参数
 	queryParams := map[string]string{
-		"u": account.Key,
-		"p": utils.MD5Hex(account.Secret),
+		"u": account.APIKey,
+		"p": utils.MD5Hex(account.APISecret),
 		"m": msg.Mobiles[0],
 		"c": msg.Content,
 	}
 
-	baseDomain := t.getBaseDomain(account, false) // 语音仅支持国内
 	return &core.HTTPRequestSpec{
-		Method:      "GET",
-		URL:         "http://" + baseDomain + "/voice",
+		Method:      http.MethodGet,
+		URL:         fmt.Sprintf("%s/voice", smsbaoDefaultBaseURI),
 		QueryParams: queryParams,
 	}, handleSMSBaoResponse, nil
 }

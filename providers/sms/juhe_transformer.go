@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/utils"
@@ -28,9 +28,7 @@ import (
 // transformer 支持国内短信、国际短信、彩信/视频短信。
 
 const (
-	juheDefaultEndpoint     = "v.juhe.cn"
-	juheDefaultIntlEndpoint = "v.juhe.cn"
-	juheTimeout             = 30 * time.Second
+	juheDefaultBaseURI = "https//v.juhe.cn"
 )
 
 type juheTransformer struct{}
@@ -90,19 +88,16 @@ func (t *juheTransformer) transformDomesticSMS(
 	params.Set("mobile", msg.Mobiles[0])
 	params.Set("tpl_id", msg.TemplateID)
 	params.Set("tpl_value", t.buildTemplateValue(msg.TemplateParams))
-	params.Set("key", account.Key)
+	params.Set("key", account.APIKey)
 	params.Set("ext", msg.Extend)
 	body := []byte(params.Encode())
-	endpoint := account.Endpoint
-	if endpoint == "" {
-		endpoint = juheDefaultEndpoint
-	}
+
 	reqSpec := &core.HTTPRequestSpec{
-		Method:   "POST",
-		URL:      "http://" + endpoint + "/sms/send",
+		Method:   http.MethodPost,
+		URL:      juheDefaultBaseURI + "/sms/send",
 		Headers:  map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
 		Body:     body,
-		BodyType: "form",
+		BodyType: core.BodyTypeForm,
 	}
 	return reqSpec, t.handleJuheResponse, nil
 }
@@ -119,18 +114,15 @@ func (t *juheTransformer) transformIntlSMS(
 	params.Set("areaNum", strconv.Itoa(msg.RegionCode))
 	params.Set("tpl_id", msg.TemplateID)
 	params.Set("tpl_value", t.buildTemplateValue(msg.TemplateParams))
-	params.Set("key", account.Key)
+	params.Set("key", account.APIKey)
 	body := []byte(params.Encode())
-	endpoint := account.IntlEndpoint
-	if endpoint == "" {
-		endpoint = juheDefaultIntlEndpoint
-	}
+
 	reqSpec := &core.HTTPRequestSpec{
-		Method:   "POST",
-		URL:      "http://" + endpoint + "/smsInternational/send",
+		Method:   http.MethodPost,
+		URL:      juheDefaultBaseURI + "/smsInternational/send",
 		Headers:  map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
 		Body:     body,
-		BodyType: "form",
+		BodyType: core.BodyTypeForm,
 	}
 	return reqSpec, t.handleJuheResponse, nil
 }
@@ -145,19 +137,15 @@ func (t *juheTransformer) transformMMSSMS(
 	params := url.Values{}
 	params.Set("mobile", strings.Join(msg.Mobiles, ","))
 	params.Set("tpl_id", msg.TemplateID)
-	params.Set("key", account.Key)
+	params.Set("key", account.APIKey)
 
 	body := []byte(params.Encode())
-	endpoint := account.Endpoint
-	if endpoint == "" {
-		endpoint = juheDefaultEndpoint
-	}
 	reqSpec := &core.HTTPRequestSpec{
-		Method:   "POST",
-		URL:      "http://" + endpoint + "/caixinv2/send",
+		Method:   http.MethodPost,
+		URL:      juheDefaultBaseURI + "/caixinv2/send",
 		Headers:  map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
 		Body:     body,
-		BodyType: "form",
+		BodyType: core.BodyTypeForm,
 	}
 	return reqSpec, t.handleJuheResponse, nil
 }

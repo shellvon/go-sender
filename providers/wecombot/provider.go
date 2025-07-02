@@ -70,7 +70,7 @@ func (p *Provider) UploadMedia(
 	// Build upload URL
 	uploadURL := fmt.Sprintf(
 		"https://qyapi.weixin.qq.com/cgi-bin/webhook/upload_media?key=%s&type=file",
-		selectedAccount.Key,
+		selectedAccount.APIKey,
 	)
 
 	// Create multipart form with custom reader

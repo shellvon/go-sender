@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -26,10 +27,8 @@ import (
 // transformer 仅支持 text（模板短信）类型。
 
 const (
-	huaweiEndpoint     = "https://api.rtc.huaweicloud.com:10443"
-	huaweiEndpointPath = "/sms/batchSendSms/v1"
-	huaweiSuccessCode  = "000000"
-	huaweiTimeout      = 30 * time.Second
+	huaweiAPIPath     = "https://api.rtc.huaweicloud.com:10443/sms/batchSendSms/v1"
+	huaweiSuccessCode = "000000"
 )
 
 // huaweiTransformer implements HTTPRequestTransformer for Huawei Cloud SMS.
@@ -104,7 +103,7 @@ func (t *huaweiTransformer) transformSMS(
 	}
 	// 构建参数，注释与每个参数紧密对应
 	params := url.Values{}
-	params.Set("from", msg.GetExtraStringOrDefault(huaweiFromKey, account.From))
+	params.Set("from", msg.GetExtraStringOrDefault(huaweiFromKey, ""))
 	params.Set("to", strings.Join(formattedMobiles, ","))
 	params.Set("templateId", msg.TemplateID)
 	params.Set("templateParas", paras)
@@ -118,27 +117,23 @@ func (t *huaweiTransformer) transformSMS(
 	// 如果设置了该字段，则该消息的状态报告将通过"接收状态报告"接口直接通知客户。
 	// 如果未设置该字段，则短信平台收到运营商短信中心返回的状态报告不会推送给客户，该状态报告将在短信平台中保存1个小时，超时后系统会自动删除。
 	// 回调地址推荐使用域名。
-	params.Set("statusCallback", utils.DefaultStringIfEmpty(msg.CallbackURL, account.Webhook))
+	params.Set("statusCallback", msg.CallbackURL)
 	// 扩展参数，在状态报告中会原样返回。
 	// 不允许赋空值，不允许携带以下字符："{","}"（即大括号）。
 	params.Set("extend", msg.Extend)
 
 	body := []byte(params.Encode())
 
-	appKey := account.Key
-	appSecret := account.Secret
+	appKey := account.APIKey
+	appSecret := account.APISecret
 
-	endpoint := t.getHuaweiEndpoint(account.Endpoint)
-	if msg.IsIntl() {
-		endpoint = t.getHuaweiEndpoint(account.IntlEndpoint)
-	}
 	headers := t.buildHeaders(appKey, appSecret)
 	reqSpec := &core.HTTPRequestSpec{
-		Method:   "POST",
-		URL:      endpoint,
+		Method:   http.MethodPost,
+		URL:      huaweiAPIPath,
 		Headers:  headers,
 		Body:     body,
-		BodyType: "form",
+		BodyType: core.BodyTypeForm,
 	}
 	return reqSpec, t.handleHuaweiResponse, nil
 }
@@ -150,14 +145,6 @@ func (t *huaweiTransformer) formatHuaweiPhoneNumber(mobile string, regionCode in
 		regionCode = 86
 	}
 	return fmt.Sprintf("+%d%s", regionCode, mobile)
-}
-
-// getHuaweiEndpoint returns the full endpoint URL.
-func (t *huaweiTransformer) getHuaweiEndpoint(endpoint string) string {
-	if endpoint == "" {
-		endpoint = huaweiEndpoint
-	}
-	return strings.TrimRight(endpoint, "/") + huaweiEndpointPath
 }
 
 // buildHeaders 构建华为云短信请求头.

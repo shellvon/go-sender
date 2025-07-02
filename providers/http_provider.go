@@ -181,13 +181,21 @@ func (p *HTTPProvider[T]) executeHTTPRequest(
 
 	// Set request body based on body type
 	switch reqSpec.BodyType {
-	case "json":
+	case core.BodyTypeJSON:
 		httpOpts.JSON = reqSpec.Body
-	case "form":
-		// Convert []byte to form data, simplified handling
+	case core.BodyTypeForm:
 		httpOpts.Raw = reqSpec.Body
-	case "raw":
+		httpOpts.Headers["Content-Type"] = "application/x-www-form-urlencoded; charset=utf-8"
+	case core.BodyTypeRaw:
 		httpOpts.Raw = reqSpec.Body
+	case core.BodyTypeNone:
+		httpOpts.Raw = nil
+	case core.BodyTypeText:
+		httpOpts.Raw = reqSpec.Body
+		httpOpts.Headers["Content-Type"] = "text/plain; charset=utf-8"
+	case core.BodyTypeXML:
+		httpOpts.Raw = reqSpec.Body
+		httpOpts.Headers["Content-Type"] = "application/xml; charset=utf-8"
 	default:
 		// Auto-detect, default to JSON
 		httpOpts.JSON = reqSpec.Body

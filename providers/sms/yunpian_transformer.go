@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"sort"
 	"strconv"
@@ -110,14 +111,14 @@ func (t *yunpianTransformer) transformSingleSMS(
 	msg *Message,
 	account *core.Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
-	endpoint := t.yunpianEndpoint("sms", "/v2/sms/single_send.json", account.Endpoint)
+	endpoint := t.yunpianEndpoint("sms", "/v2/sms/single_send.json")
 	params := map[string]string{
-		"apikey":       account.Secret,
+		"apikey":       account.APISecret,
 		"mobile":       msg.Mobiles[0],
 		"text":         utils.AddSignature(msg.Content, msg.SignName),
 		"extend":       msg.Extend,
 		"uid":          msg.UID,
-		"callback_url": utils.DefaultStringIfEmpty(msg.CallbackURL, account.Webhook),
+		"callback_url": msg.CallbackURL,
 		"register":     strconv.FormatBool(msg.GetExtraBoolOrDefault(yunpianRegisterKey, false)),
 		"mobile_stat":  strconv.FormatBool(msg.GetExtraBoolOrDefault(yunpianMobileStatKey, false)),
 	}
@@ -130,14 +131,14 @@ func (t *yunpianTransformer) transformBatchSMS(
 	msg *Message,
 	account *core.Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
-	endpoint := t.yunpianEndpoint("sms", "/v2/sms/batch_send.json", account.Endpoint)
+	endpoint := t.yunpianEndpoint("sms", "/v2/sms/batch_send.json")
 	params := map[string]string{
-		"apikey":       account.Secret,
+		"apikey":       account.APISecret,
 		"mobile":       strings.Join(msg.Mobiles, ","),
 		"text":         utils.AddSignature(msg.Content, msg.SignName),
 		"extend":       msg.Extend,
 		"uid":          msg.UID,
-		"callback_url": utils.DefaultStringIfEmpty(msg.CallbackURL, account.Webhook),
+		"callback_url": msg.CallbackURL,
 		"register":     strconv.FormatBool(msg.GetExtraBoolOrDefault(yunpianRegisterKey, false)),
 		"mobile_stat":  strconv.FormatBool(msg.GetExtraBoolOrDefault(yunpianMobileStatKey, false)),
 	}
@@ -150,15 +151,15 @@ func (t *yunpianTransformer) transformTplSMS(
 	msg *Message,
 	account *core.Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
-	endpoint := t.yunpianEndpoint("sms", "/v2/sms/tpl_single_send.json", account.Endpoint)
+	endpoint := t.yunpianEndpoint("sms", "/v2/sms/tpl_single_send.json")
 	params := map[string]string{
-		"apikey":       account.Secret,
+		"apikey":       account.APISecret,
 		"mobile":       msg.Mobiles[0],
 		"tpl_id":       msg.TemplateID,
 		"tpl_value":    t.buildTemplateValue(msg.TemplateParams),
 		"extend":       msg.Extend,
 		"uid":          msg.UID,
-		"callback_url": utils.DefaultStringIfEmpty(msg.CallbackURL, account.Webhook),
+		"callback_url": msg.CallbackURL,
 	}
 
 	return t.buildRequest(endpoint, params)
@@ -169,15 +170,15 @@ func (t *yunpianTransformer) transformTplBatchSMS(
 	msg *Message,
 	account *core.Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
-	endpoint := t.yunpianEndpoint("sms", "/v2/sms/tpl_batch_send.json", account.Endpoint)
+	endpoint := t.yunpianEndpoint("sms", "/v2/sms/tpl_batch_send.json")
 	params := map[string]string{
-		"apikey":       account.Secret,
+		"apikey":       account.APISecret,
 		"mobile":       strings.Join(msg.Mobiles, ","),
 		"tpl_id":       msg.TemplateID,
 		"tpl_value":    t.buildTemplateValue(msg.TemplateParams),
 		"extend":       msg.Extend,
 		"uid":          msg.UID,
-		"callback_url": utils.DefaultStringIfEmpty(msg.CallbackURL, account.Webhook),
+		"callback_url": msg.CallbackURL,
 	}
 
 	return t.buildRequest(endpoint, params)
@@ -188,14 +189,14 @@ func (t *yunpianTransformer) transformIntlSMS(
 	msg *Message,
 	account *core.Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
-	endpoint := t.yunpianEndpoint("sms", "/v2/sms/single_send.json", account.IntlEndpoint)
+	endpoint := t.yunpianEndpoint("sms", "/v2/sms/single_send.json")
 	params := map[string]string{
-		"apikey":       account.Secret,
+		"apikey":       account.APISecret,
 		"mobile":       fmt.Sprintf("+%d%s", msg.RegionCode, msg.Mobiles[0]),
 		"text":         utils.AddSignature(msg.Content, msg.SignName),
 		"extend":       msg.Extend,
 		"uid":          msg.UID,
-		"callback_url": utils.DefaultStringIfEmpty(msg.CallbackURL, account.Webhook),
+		"callback_url": msg.CallbackURL,
 	}
 
 	return t.buildRequest(endpoint, params)
@@ -206,14 +207,14 @@ func (t *yunpianTransformer) transformVoiceSMS(
 	msg *Message,
 	account *core.Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
-	endpoint := t.yunpianEndpoint("voice", "/v2/voice/send.json", account.Endpoint)
+	endpoint := t.yunpianEndpoint("voice", "/v2/voice/send.json")
 	params := map[string]string{
-		"apikey":       account.Secret,
+		"apikey":       account.APISecret,
 		"mobile":       msg.Mobiles[0],
 		"code":         msg.Content,
 		"extend":       msg.Extend,
 		"uid":          msg.UID,
-		"callback_url": utils.DefaultStringIfEmpty(msg.CallbackURL, account.Webhook),
+		"callback_url": msg.CallbackURL,
 	}
 
 	return t.buildRequest(endpoint, params)
@@ -224,26 +225,23 @@ func (t *yunpianTransformer) transformMMSSMS(
 	msg *Message,
 	account *core.Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
-	endpoint := t.yunpianEndpoint("vsms", "/v2/vsms/tpl_batch_send.json", account.Endpoint)
+	endpoint := t.yunpianEndpoint("vsms", "/v2/vsms/tpl_batch_send.json")
 	params := map[string]string{
-		"apikey":       account.Secret,
+		"apikey":       account.APISecret,
 		"mobile":       strings.Join(msg.Mobiles, ","),
 		"tpl_id":       msg.TemplateID,
 		"tpl_value":    t.buildTemplateValue(msg.TemplateParams),
 		"extend":       msg.Extend,
 		"uid":          msg.UID,
-		"callback_url": utils.DefaultStringIfEmpty(msg.CallbackURL, account.Webhook),
+		"callback_url": msg.CallbackURL,
 	}
 
 	return t.buildRequest(endpoint, params)
 }
 
-// yunpianEndpoint 统一生成云片 API endpoint，支持可选自定义域名.
-func (t *yunpianTransformer) yunpianEndpoint(service, path string, domainOverride string) string {
+// yunpianEndpoint 统一生成云片 API.
+func (t *yunpianTransformer) yunpianEndpoint(service, path string) string {
 	domain := fmt.Sprintf("%s.yunpian.com", service)
-	if domainOverride != "" {
-		domain = domainOverride
-	}
 	return fmt.Sprintf("https://%s%s", domain, path)
 }
 
@@ -259,11 +257,11 @@ func (t *yunpianTransformer) buildRequest(
 	body := []byte(values.Encode())
 
 	return &core.HTTPRequestSpec{
-		Method:   "POST",
+		Method:   http.MethodPost,
 		URL:      endpoint,
 		Headers:  map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
 		Body:     body,
-		BodyType: "form",
+		BodyType: core.BodyTypeForm,
 	}, t.handleYunpianResponse, nil
 }
 

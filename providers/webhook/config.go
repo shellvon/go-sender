@@ -34,7 +34,7 @@ type ResponseConfig struct {
 	ValidateResponse bool `json:"validate_response,omitempty"` // Whether to validate response body
 
 	// Response parsing
-	ResponseType string `json:"response_type,omitempty"` // "json", "text", "xml", "none"
+	ResponseType core.BodyType `json:"response_type,omitempty"` // "json", "text", "xml", "none"
 
 	// JSON response validation (when ResponseType is "json")
 	SuccessField string `json:"success_field,omitempty"` // Field name indicating success (e.g., "success", "ok")

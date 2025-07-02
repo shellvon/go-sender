@@ -76,39 +76,12 @@ func (t *smsTransformer) Transform(
 
 // New creates a new SMS provider instance.
 func New(config Config) (*Provider, error) {
-	if !config.IsConfigured() {
-		return nil, errors.New("SMS provider is not configured or is disabled")
-	}
-
-	accounts := make([]*core.Account, len(config.Providers))
-	for i, p := range config.Providers {
-		accounts[i] = &core.Account{
-			Name:         p.Name,
-			Weight:       p.Weight,
-			Disabled:     p.Disabled,
-			Endpoint:     p.Endpoint,
-			IntlEndpoint: p.IntlEndpoint,
-			Key:          p.AppID,
-			Secret:       p.AppSecret,
-			From:         p.Channel,  // 通道号/签名
-			Webhook:      p.Callback, // 回调地址
-			Type:         p.Type,
-		}
-	}
-
-	enabledAccounts, _, err := utils.InitProvider(&config, accounts)
-	if err != nil {
-		return nil, errors.New("no enabled SMS accounts found")
-	}
-
-	strategy := utils.GetStrategy(config.Strategy)
-
 	// 创建泛型 provider
 	httpProvider := providers.NewHTTPProvider(
 		string(core.ProviderTypeSMS),
-		enabledAccounts,
+		config.Accounts,
 		&smsTransformer{},
-		strategy,
+		utils.GetStrategy(config.Strategy),
 	)
 
 	return &Provider{

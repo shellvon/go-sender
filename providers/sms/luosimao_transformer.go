@@ -23,6 +23,11 @@ import (
 //
 // transformer 仅支持 text（普通短信）类型。
 
+const (
+	luosimaoSmsDefaultBaseURI   = "https://sms-api.luosimao.com"
+	luosimaoVoiceDefaultBaseURI = "https://voice-api.luosimao.com"
+)
+
 type luosimaoTransformer struct{}
 
 func init() {
@@ -108,7 +113,7 @@ func (t *luosimaoTransformer) buildLuosimaoRequestSpec(
 	account *core.Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	body := []byte(params.Encode())
-	authHeader := "Basic " + utils.Base64EncodeBytes([]byte("api:key-"+account.Secret))
+	authHeader := "Basic " + utils.Base64EncodeBytes([]byte("api:key-"+account.APISecret))
 	reqSpec := &core.HTTPRequestSpec{
 		Method:   "POST",
 		URL:      requestURL,
@@ -126,15 +131,10 @@ func (t *luosimaoTransformer) transformSingleSMS(
 	msg *Message,
 	account *core.Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
-	endpoint := account.Endpoint
-	if endpoint == "" {
-		endpoint = "sms-api.luosimao.com"
-	}
-	requestURL := "https://" + endpoint + "/v1/send.json"
 	params := url.Values{}
 	params.Set("mobile", msg.Mobiles[0])
 	params.Set("message", utils.AddSignature(msg.Content, msg.SignName))
-	return t.buildLuosimaoRequestSpec(ctx, params, requestURL, account)
+	return t.buildLuosimaoRequestSpec(ctx, params, fmt.Sprintf("%s/v1/send.json", luosimaoSmsDefaultBaseURI), account)
 }
 
 // transformBatchSMS 构造批量短信 HTTP 请求
@@ -147,11 +147,6 @@ func (t *luosimaoTransformer) transformBatchSMS(
 	msg *Message,
 	account *core.Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
-	endpoint := account.Endpoint
-	if endpoint == "" {
-		endpoint = "sms-api.luosimao.com"
-	}
-	requestURL := "https://" + endpoint + "/v1/send_batch.json"
 	params := url.Values{}
 	params.Set("mobile_list", strings.Join(msg.Mobiles, ","))
 	params.Set("message", utils.AddSignature(msg.Content, msg.SignName))
@@ -159,7 +154,12 @@ func (t *luosimaoTransformer) transformBatchSMS(
 		// 定时发送的时间，定时的发送任务可以在发送前10分钟在发送历史界面进行取消（仅限提交当天）, 格式为 YYYY-MM-DD HH:MM:SS
 		params.Set(luosimaoScheduledAtKey, msg.ScheduledAt.Format(time.DateTime))
 	}
-	return t.buildLuosimaoRequestSpec(ctx, params, requestURL, account)
+	return t.buildLuosimaoRequestSpec(
+		ctx,
+		params,
+		fmt.Sprintf("%s/v1/send_batch.json", luosimaoSmsDefaultBaseURI),
+		account,
+	)
 }
 
 // transformVoiceSMS 构造语音验证码 HTTP 请求
@@ -169,15 +169,15 @@ func (t *luosimaoTransformer) transformVoiceSMS(
 	msg *Message,
 	account *core.Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
-	endpoint := account.Endpoint
-	if endpoint == "" {
-		endpoint = "voice-api.luosimao.com"
-	}
-	requestURL := "https://" + endpoint + "/v1/verify.json"
 	params := url.Values{}
 	params.Set("mobile", msg.Mobiles[0])
 	params.Set("code", msg.Content)
-	return t.buildLuosimaoRequestSpec(ctx, params, requestURL, account)
+	return t.buildLuosimaoRequestSpec(
+		ctx,
+		params,
+		fmt.Sprintf("%s/v1/verify.json", luosimaoVoiceDefaultBaseURI),
+		account,
+	)
 }
 
 // handleLuosimaoResponse 处理螺丝帽 API 响应

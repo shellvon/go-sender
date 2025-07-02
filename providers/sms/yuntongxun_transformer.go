@@ -96,8 +96,8 @@ func (t *yuntongxunTransformer) transformDomesticSMS(
 	account *core.Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	datetime := time.Now().Format("20060102150405")
-	accountSid := account.From
-	accountToken := account.Secret
+	accountSid := account.APIKey
+	accountToken := account.APISecret
 
 	// 生成签名
 	sig := strings.ToUpper(utils.MD5Hex(accountSid + accountToken + datetime))
@@ -112,16 +112,13 @@ func (t *yuntongxunTransformer) transformDomesticSMS(
 	// 构建请求体
 	data := map[string]interface{}{
 		"to":         strings.Join(msg.Mobiles, ","),
-		"appId":      account.Key,
+		"appId":      account.APIKey,
 		"templateId": msg.TemplateID,
 		"datas":      msg.ParamsOrder,
 	}
 
 	// 构建完整URL
-	endpoint := account.Endpoint
-	if endpoint == "" {
-		endpoint = cloopenEndpoint
-	}
+	endpoint := cloopenEndpoint
 	url := fmt.Sprintf("https://%s/%s/Accounts/%s/SMS/TemplateSMS?sig=%s",
 		endpoint, "2013-12-26", accountSid, sig)
 
@@ -145,8 +142,8 @@ func (t *yuntongxunTransformer) transformIntlSMS(
 	account *core.Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	datetime := time.Now().Format("20060102150405")
-	accountSid := account.From
-	accountToken := account.Secret
+	accountSid := account.APIKey
+	accountToken := account.APISecret
 
 	// 生成签名
 	sig := strings.ToUpper(utils.MD5Hex(accountSid + accountToken + datetime))
@@ -162,14 +159,11 @@ func (t *yuntongxunTransformer) transformIntlSMS(
 	data := map[string]interface{}{
 		"mobile":  strings.Join(msg.Mobiles, ","),
 		"content": utils.AddSignature(msg.Content, msg.SignName),
-		"appId":   account.Key,
+		"appId":   account.APIKey,
 	}
 
 	// 构建完整URL
-	endpoint := account.IntlEndpoint
-	if endpoint == "" {
-		endpoint = cloopenEndpoint
-	}
+	endpoint := cloopenEndpoint
 	url := fmt.Sprintf("https://%s/%s/account/%s/international/send?sig=%s",
 		endpoint, "v2", accountSid, sig)
 
@@ -198,8 +192,8 @@ func (t *yuntongxunTransformer) transformVoiceSMS(
 	}
 
 	datetime := time.Now().Format("20060102150405")
-	accountSid := account.From
-	accountToken := account.Secret
+	accountSid := account.APIKey
+	accountToken := account.APISecret
 
 	// 生成签名
 	sig := strings.ToUpper(utils.MD5Hex(accountSid + accountToken + datetime))
@@ -214,21 +208,18 @@ func (t *yuntongxunTransformer) transformVoiceSMS(
 	// 构建请求体
 	body := map[string]interface{}{
 		"to":          strings.Join(msg.Mobiles, ","),
-		"appId":       account.Key,
+		"appId":       account.APIKey,
 		"mediaTxt":    msg.Content,
 		"playTimes":   msg.GetExtraStringOrDefault(yuntongxunPlayTimesKey, "3"),
 		"mediaName":   msg.GetExtraStringOrDefault(yuntongxunMediaNameKey, ""),
 		"displayNum":  msg.GetExtraStringOrDefault(yuntongxunDisplayNumKey, ""),
-		"respUrl":     utils.DefaultStringIfEmpty(msg.CallbackURL, account.Webhook),
+		"respUrl":     msg.CallbackURL,
 		"userData":    msg.GetExtraStringOrDefault(yuntongxunUserDataKey, ""),
 		"maxCallTime": msg.GetExtraStringOrDefault(yuntongxunMaxCallTimeKey, ""),
 	}
 
 	// 构建完整URL
-	endpoint := account.Endpoint
-	if endpoint == "" {
-		endpoint = cloopenEndpoint
-	}
+	endpoint := cloopenEndpoint
 	url := fmt.Sprintf("https://%s/%s/Accounts/%s/Calls/VoiceNotify?sig=%s",
 		endpoint, "2013-12-26", accountSid, sig)
 

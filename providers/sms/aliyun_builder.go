@@ -4,6 +4,7 @@ package sms
 type AliyunSMSBuilder struct {
 	*BaseBuilder
 
+	region               string
 	calledShowNumber     string
 	playTimes            int
 	volume               int
@@ -126,6 +127,36 @@ func (b *AliyunSMSBuilder) CardObjects(objs string) *AliyunSMSBuilder {
 	return b
 }
 
+// Region 设置阿里云短信的区域, 默认值为 cn-hangzhou。
+// https://help.aliyun.com/zh/sms/developer-reference/api-dysmsapi-2017-05-25-endpoint
+// 该值影响当次发放的服务接入点
+// 阿里云短信的区域。取值：
+//
+// 亚太:
+//   - cn-hangzhou: 中国大陆(默认)
+//   - cn-shanghai: 中国上海
+//   - cn-beijing: 中国北京
+//   - cn-guangzhou: 中国广州
+//   - cn-chengdu: 中国成都
+//   - ap-southeast-1 新加坡
+//   - ap-southeast-5 印度尼西亚（雅加达）
+//   - cn-hongkong 中国香港
+//
+// 欧洲:
+//   - eu-central-1 德国
+//
+// 行业云:
+//   - cn-beijing-finance-1	 华北2 金融云（邀测）
+//   - cn-hangzhou-finance	华东1 金融云
+//   - cn-shanghai-finance-1 华东2 金融云
+//   - cn-shenzhen-finance-1 华南1 金融云
+//
+// 对于语音短信，无论设置哪一个区域，目前都是固定值。
+func (b *AliyunSMSBuilder) Region(region string) *AliyunSMSBuilder {
+	b.region = region
+	return b
+}
+
 func (b *AliyunSMSBuilder) Build() *Message {
 	msg := b.BaseBuilder.Build()
 	// 阿里云专属参数写入Extras
@@ -165,6 +196,9 @@ func (b *AliyunSMSBuilder) Build() *Message {
 	}
 	if b.cardObjects != "" {
 		extra[aliyunCardObjectsKey] = b.cardObjects
+	}
+	if b.region != "" {
+		extra[aliyunRegionKey] = b.region
 	}
 	if len(extra) > 0 {
 		msg.Extras = extra

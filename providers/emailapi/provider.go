@@ -80,39 +80,13 @@ func New(config Config) (*Provider, error) {
 		return nil, errors.New("emailapi provider is not configured or is disabled")
 	}
 
-	// Convert config accounts to core.Account
-	accounts := make([]*core.Account, len(config.Accounts))
-	for i, acc := range config.Accounts {
-		accounts[i] = &core.Account{
-			Name:         acc.Name,
-			Key:          acc.APIKey,
-			Secret:       acc.APISecret,
-			From:         acc.From,
-			Endpoint:     acc.Domain,
-			IntlEndpoint: "",               // EmailAPI doesn't have international endpoints
-			Webhook:      "",               // EmailAPI doesn't have webhook field
-			Type:         string(acc.Type), // Sub-provider type
-			Weight:       acc.Weight,
-			Disabled:     acc.Disabled,
-		}
-	}
-
-	enabledAccounts, _, err := utils.InitProvider(&config, accounts)
-	if err != nil {
-		return nil, errors.New("no enabled emailapi accounts found")
-	}
-
-	// Create strategy
-	strategy := utils.GetStrategy(config.Strategy)
-
 	// Create generic provider
 	httpProvider := providers.NewHTTPProvider(
 		string(core.ProviderTypeEmailAPI),
-		enabledAccounts,
+		config.Accounts,
 		&emailAPITransformer{},
-		strategy,
+		utils.GetStrategy(config.Strategy),
 	)
-
 	return &Provider{
 		HTTPProvider: httpProvider,
 	}, nil

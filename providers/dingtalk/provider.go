@@ -20,24 +20,11 @@ func New(config Config) (*Provider, error) {
 	if !config.IsConfigured() {
 		return nil, errors.New("dingtalk provider is not configured or is disabled")
 	}
-
-	accounts := make([]*core.Account, len(config.Accounts))
-	for i := range config.Accounts {
-		accounts[i] = &config.Accounts[i]
-	}
-
-	enabledAccounts, _, err := utils.InitProvider(&config, accounts)
-	if err != nil {
-		return nil, errors.New("no enabled dingtalk accounts found")
-	}
-
-	// Get strategy
 	strategy := utils.GetStrategy(config.GetStrategy())
 
-	// Create generic provider with transformer from transformer.go
 	httpProvider := providers.NewHTTPProvider(
 		string(core.ProviderTypeDingtalk),
-		enabledAccounts,
+		config.Accounts,
 		newDingTalkTransformer(),
 		strategy,
 	)

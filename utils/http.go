@@ -71,6 +71,7 @@ func DoRequest(ctx context.Context, requestURL string, options HTTPRequestOption
 	}
 
 	reqBody, contentType, err := buildRequestBody(options)
+
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to build request body: %w", err)
 	}

@@ -32,7 +32,7 @@ func TestAliyunTransformer_Transform_Text(t *testing.T) {
 	tr := mustGetAliyunTransformer(t)
 	msg := sms.Aliyun().To("***REMOVED***").Content("hi").SignName("sign").Build()
 	msg.Type = sms.SMSText
-	acc := &core.Account{Key: "ak", Secret: "sk"}
+	acc := &core.Account{APIKey: "ak", APISecret: "sk"}
 	spec, handler, err := tr.Transform(context.Background(), msg, acc)
 	if err != nil {
 		t.Fatalf("Transform failed: %v", err)
@@ -46,7 +46,7 @@ func TestAliyunTransformer_Transform_UnsupportedType(t *testing.T) {
 	tr := mustGetAliyunTransformer(t)
 	msg := sms.Aliyun().To("***REMOVED***").Content("hi").SignName("sign").Build()
 	msg.Type = 99 // 非法类型
-	acc := &core.Account{Key: "ak", Secret: "sk"}
+	acc := &core.Account{APIKey: "ak", APISecret: "sk"}
 	_, _, err := tr.Transform(context.Background(), msg, acc)
 	if err == nil {
 		t.Error("Transform should fail for unsupported type")
@@ -58,7 +58,7 @@ func TestAliyunTransformer_Transform_TextWithVoiceParam(t *testing.T) {
 	aliyunBuilder.Type(sms.SMSText).To("***REMOVED***").Content("hi").SignName("sign")
 	msg := aliyunBuilder.Volume(80).Build()
 	tr := mustGetAliyunTransformer(t)
-	acc := &core.Account{Key: "ak", Secret: "sk"}
+	acc := &core.Account{APIKey: "ak", APISecret: "sk"}
 	_, _, err := tr.Transform(context.Background(), msg, acc)
 	if err == nil {
 		t.Error("Transform should fail: Volume is only applicable to voice messages")
@@ -70,7 +70,7 @@ func TestAliyunTransformer_Transform_VoiceWithVoiceParam(t *testing.T) {
 	aliyunBuilder.Type(sms.Voice).To("***REMOVED***").Content("hi").SignName("sign")
 	msg := aliyunBuilder.Volume(80).Build()
 	tr := mustGetAliyunTransformer(t)
-	acc := &core.Account{Key: "ak", Secret: "sk"}
+	acc := &core.Account{APIKey: "ak", APISecret: "sk"}
 	spec, handler, err := tr.Transform(context.Background(), msg, acc)
 	if err != nil {
 		t.Fatalf("Transform failed for voice: %v", err)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"regexp"
 	"strings"
 
@@ -46,17 +47,17 @@ func (t *serverchanTransformer) Transform(
 	if !ok {
 		return nil, nil, fmt.Errorf("unsupported message type for serverchan transformer: %T", msg)
 	}
-	apiURL := t.buildAPIURL(account.Key)
+	apiURL := t.buildAPIURL(account.APIKey)
 	body, err := json.Marshal(scMsg)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to marshal serverchan payload: %w", err)
 	}
 	reqSpec := &core.HTTPRequestSpec{
-		Method:   "POST",
+		Method:   http.MethodPost,
 		URL:      apiURL,
 		Headers:  map[string]string{"Content-Type": "application/json"},
 		Body:     body,
-		BodyType: "json",
+		BodyType: core.BodyTypeJSON,
 	}
 	return reqSpec, t.handleServerChanResponse, nil
 }

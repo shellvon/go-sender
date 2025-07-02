@@ -43,6 +43,9 @@ const (
 
 	// aliyunCardObjectsKey is the key for Aliyun card objects.
 	aliyunCardObjectsKey = "CardObjects"
+
+	// aliyunRegionKey is the key for Aliyun region.
+	aliyunRegionKey = "Region"
 )
 
 // Tencent specific constants.
@@ -113,6 +116,9 @@ const (
 const (
 	// volcTagKey is the key for Volc tag.
 	volcTagKey = "Tag"
+
+	// volcSmsAccountKey is the key for Volc SMS account.
+	volcSmsAccountKey = "SmsAccount"
 )
 
 // Yunpian specific constants.
