@@ -38,14 +38,14 @@ import "github.com/shellvon/go-sender/providers/sms"
 
 // Aliyun SMS Example
 msg := sms.Aliyun().
-    To([]string{"***REMOVED***"}).
-    Content("Your verification code is: 1234").
-    TemplateCode("SMS_123456").
+    To("***REMOVED***").
+    Content("Hello from go-sender!").
+    TemplateID("SMS_xxx").
     Build()
 
 // Tencent SMS Example
 msg := sms.Tencent().
-    To([]string{"***REMOVED***"}).
+    To("***REMOVED***").
     Content("Your code is: 5678").
     TemplateID("123456").
     Sign("YourSign").
@@ -53,7 +53,7 @@ msg := sms.Tencent().
 
 // CL253 Example (with platform-specific params)
 msg := sms.CL253().
-    To([]string{"***REMOVED***"}).
+    To("***REMOVED***").
     Content("Test message").
     TDFlag(1). // int, see CL253 API doc
     Build()

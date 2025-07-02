@@ -45,6 +45,9 @@ type HTTPRequestOptions struct {
 
 	// Client allows custom HTTP client for this request. Only affects HTTP-based providers; SMTP/email is not affected.
 	Client *http.Client // Optional: custom HTTP client (proxy, timeout, etc.)
+
+	// ThrowHTTPErrors: if true, non-2xx/3xx status codes will return error; otherwise, always return body+status.
+	ThrowHTTPErrors bool
 }
 
 // DoRequest performs an HTTP request and returns the response body.
@@ -97,8 +100,12 @@ func DoRequest(ctx context.Context, requestURL string, options HTTPRequestOption
 		return nil, resp.StatusCode, fmt.Errorf("failed to read response body: %w", err)
 	}
 
-	if err = checkStatusCode(resp.StatusCode, bodyBytes); err != nil {
-		return bodyBytes, resp.StatusCode, err
+	if options.ThrowHTTPErrors && !IsAcceptableStatus(resp.StatusCode) {
+		return bodyBytes, resp.StatusCode, fmt.Errorf(
+			"HTTP request failed with status code %d. Response body: %s",
+			resp.StatusCode,
+			string(bodyBytes),
+		)
 	}
 
 	return bodyBytes, resp.StatusCode, nil
@@ -204,17 +211,9 @@ func readResponseBody(resp *http.Response) ([]byte, error) {
 	return io.ReadAll(resp.Body)
 }
 
-// checkStatusCode checks if the HTTP status code is in the 2xx range.
-// Returns an error if the status code is not successful (i.e., not between http.StatusOK and http.StatusMultipleChoices-1).
-func checkStatusCode(statusCode int, body []byte) error {
-	if statusCode < http.StatusOK || statusCode >= http.StatusMultipleChoices {
-		return fmt.Errorf(
-			"HTTP request failed with status code %d. Response body: %s",
-			statusCode,
-			string(body),
-		)
-	}
-	return nil
+// IsAcceptableStatus returns true if the status code is 2xx or 3xx.
+func IsAcceptableStatus(statusCode int) bool {
+	return statusCode >= http.StatusOK && statusCode < http.StatusBadRequest
 }
 
 // buildRequestBody builds the request body and determines content type.

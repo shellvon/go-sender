@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -183,7 +182,7 @@ func (t *huaweiTransformer) buildHuaweiWsseHeader(appKey, appSecret string) stri
 
 // handleHuaweiResponse 处理华为云短信 API 响应.
 func (t *huaweiTransformer) handleHuaweiResponse(statusCode int, body []byte) error {
-	if statusCode < http.StatusOK || statusCode >= http.StatusMultipleChoices {
+	if !utils.IsAcceptableStatus(statusCode) {
 		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
 	}
 	var result struct {

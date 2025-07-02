@@ -17,7 +17,7 @@ if err != nil {
 ```go
 for _, mobile := range mobiles {
     msg := sms.Aliyun().
-        To([]string{mobile}).
+        To(mobile).
         Content("Hello").
         Build()
     _ = sender.Send(ctx, msg)
@@ -28,7 +28,7 @@ for _, mobile := range mobiles {
 
 ```go
 sender.SetQueue(myQueue)
-sender.Send(ctx, msg) // Will be enqueued and sent asynchronously
+sender.Send(ctx, msg, core.WithSendAsync()) // Will be enqueued and sent asynchronously
 ```
 
 ## Custom HTTP Client

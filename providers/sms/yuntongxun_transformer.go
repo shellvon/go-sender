@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"strings"
 	"time"
 
@@ -249,7 +248,7 @@ func (t *yuntongxunTransformer) transformVoiceSMS(
 
 // handleYuntongxunResponse 处理云讯通API响应.
 func (t *yuntongxunTransformer) handleYuntongxunResponse(statusCode int, body []byte) error {
-	if statusCode < http.StatusOK || statusCode >= http.StatusMultipleChoices {
+	if !utils.IsAcceptableStatus(statusCode) {
 		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
 	}
 

@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 
 	"github.com/shellvon/go-sender/core"
+	"github.com/shellvon/go-sender/utils"
 )
 
 // wecombotTransformer implements core.HTTPTransformer[*core.Account] for WeCom Bot.
@@ -59,7 +59,7 @@ func (t *wecombotTransformer) Transform(
 
 // handleWecombotResponse handles WeCom Bot API response.
 func (t *wecombotTransformer) handleWecombotResponse(statusCode int, body []byte) error {
-	if statusCode != http.StatusOK {
+	if !utils.IsAcceptableStatus(statusCode) {
 		return fmt.Errorf("wecom API returned non-OK status: %d", statusCode)
 	}
 

@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/shellvon/go-sender/core"
+	"github.com/shellvon/go-sender/utils"
 )
 
 // @ProviderName: Resend
@@ -154,17 +155,17 @@ func (t *resendTransformer) getEndpoint(account *core.Account) string {
 	// Priority: account.Endpoint → account.IntlEndpoint → default
 	switch {
 	case account.Endpoint != "":
-		return account.Endpoint
+		return "https://" + account.Endpoint
 	case account.IntlEndpoint != "":
-		return account.IntlEndpoint
+		return "https://" + account.IntlEndpoint
 	default:
-		return resendDefaultEndpoint
+		return "https://" + resendDefaultEndpoint
 	}
 }
 
 // handleResendResponse handles Resend API response.
 func (t *resendTransformer) handleResendResponse(statusCode int, body []byte) error {
-	if statusCode < 200 || statusCode >= 300 {
+	if !utils.IsAcceptableStatus(statusCode) {
 		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
 	}
 

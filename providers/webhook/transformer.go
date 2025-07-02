@@ -7,6 +7,7 @@ import (
 	"regexp"
 
 	"github.com/shellvon/go-sender/core"
+	"github.com/shellvon/go-sender/utils"
 )
 
 // RequestTransformer defines the interface for transforming webhook messages to HTTP requests.
@@ -149,7 +150,7 @@ func (t *webhookTransformer) handleTextResponse(cfg *ResponseConfig, _ int, body
 }
 
 func (t *webhookTransformer) handleDefaultResponse(statusCode int, _ []byte) error {
-	if statusCode < 200 || statusCode >= 300 {
+	if !utils.IsAcceptableStatus(statusCode) {
 		return fmt.Errorf("webhook API returned non-2xx status: %d", statusCode)
 	}
 	return nil

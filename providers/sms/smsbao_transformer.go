@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 	"strings"
 
 	"github.com/shellvon/go-sender/core"
@@ -183,7 +182,7 @@ func (t *smsbaoTransformer) transformVoiceSMS(
 
 // handleSMSBaoResponse 处理短信宝 API 响应.
 func handleSMSBaoResponse(statusCode int, body []byte) error {
-	if statusCode != http.StatusOK {
+	if !utils.IsAcceptableStatus(statusCode) {
 		return fmt.Errorf("smsbao API returned non-OK status: %d", statusCode)
 	}
 

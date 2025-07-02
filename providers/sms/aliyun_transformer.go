@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
-	"net/http"
 	"net/url"
 	"sort"
 	"strconv"
@@ -444,7 +443,7 @@ func (t *aliyunTransformer) getEndpoint(isIntl bool, account *core.Account) stri
 
 // handleAliyunResponse handles Aliyun API response.
 func (t *aliyunTransformer) handleAliyunResponse(statusCode int, body []byte) error {
-	if statusCode < http.StatusOK || statusCode >= http.StatusMultipleChoices {
+	if !utils.IsAcceptableStatus(statusCode) {
 		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
 	}
 

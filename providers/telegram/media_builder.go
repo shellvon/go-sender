@@ -74,18 +74,42 @@ func (b *MediaMessageBuilder) BuildMediaMessage() MessageWithBase {
 			Animation:    b.media,
 		}
 		msg = animMsg
-	case TypeText:
-		// ... existing code ...
-	case TypeLocation:
-		// ...
-	case TypeContact:
-		// ...
-	case TypePoll:
-		// ...
 	case TypeVideoNote:
-		// ...
+		videoNoteMsg := &VideoNoteMessage{
+			BaseMessage: baseMsg,
+			VideoNote:   b.media,
+		}
+		msg = videoNoteMsg
+	case TypeText:
+		// Text messages don't use media parameter - use NewTextMessage instead
+		// This case is included for completeness but should not be used
+		msg = &MediaMessage{
+			BaseMessage: baseMsg,
+		}
+	case TypeLocation:
+		// Location messages require latitude/longitude coordinates, not media files
+		// Use NewLocationMessage instead
+		msg = &MediaMessage{
+			BaseMessage: baseMsg,
+		}
+	case TypeContact:
+		// Contact messages require phone number and name, not media files
+		// Use NewContactMessage instead
+		msg = &MediaMessage{
+			BaseMessage: baseMsg,
+		}
+	case TypePoll:
+		// Poll messages require question and options, not media files
+		// Use NewPollMessage instead
+		msg = &MediaMessage{
+			BaseMessage: baseMsg,
+		}
 	case TypeDice:
-		// ...
+		// Dice messages only require emoji, not media files
+		// Use NewDiceMessage instead
+		msg = &MediaMessage{
+			BaseMessage: baseMsg,
+		}
 	default:
 		// Fallback to a generic media message
 		msg = &MediaMessage{
@@ -157,4 +181,14 @@ func NewAnimationMessageWithBuilder(chatID, animation string, opts ...interface{
 	}
 	// Fallback - this should never happen with correct msgType
 	return &AnimationMessage{}
+}
+
+func NewVideoNoteMessageWithBuilder(chatID, videoNote string, opts ...interface{}) *VideoNoteMessage {
+	builder := NewMediaMessageBuilder(TypeVideoNote, chatID, videoNote).WithOptions(opts...)
+	msg := builder.BuildMediaMessage()
+	if videoNoteMsg, ok := msg.(*VideoNoteMessage); ok {
+		return videoNoteMsg
+	}
+	// Fallback - this should never happen with correct msgType
+	return &VideoNoteMessage{}
 }

@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/shellvon/go-sender/core"
+	"github.com/shellvon/go-sender/utils"
 )
 
 // dingTalkTransformer implements core.HTTPTransformer[*core.Account] for DingTalk
@@ -71,7 +72,7 @@ func (t *dingTalkTransformer) Transform(
 
 // handleDingTalkResponse handles DingTalk API response.
 func (t *dingTalkTransformer) handleDingTalkResponse(statusCode int, body []byte) error {
-	if statusCode < 200 || statusCode >= 300 {
+	if !utils.IsAcceptableStatus(statusCode) {
 		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
 	}
 

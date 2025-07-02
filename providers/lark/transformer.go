@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"strconv"
 	"time"
 
@@ -81,7 +80,7 @@ func (t *larkTransformer) Transform(
 
 // handleLarkResponse 处理 Lark API 响应.
 func (t *larkTransformer) handleLarkResponse(statusCode int, body []byte) error {
-	if statusCode != http.StatusOK {
+	if !utils.IsAcceptableStatus(statusCode) {
 		return fmt.Errorf("lark API returned non-OK status: %d", statusCode)
 	}
 	var result struct {
