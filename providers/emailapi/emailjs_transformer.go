@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/shellvon/go-sender/core"
+	"github.com/shellvon/go-sender/utils"
 )
 
 // @ProviderName: EmailJS
@@ -205,7 +206,7 @@ func (t *emailJSTransformer) getEndpoint(account *core.Account) string {
 
 // handleEmailJSResponse handles EmailJS API response.
 func (t *emailJSTransformer) handleEmailJSResponse(statusCode int, body []byte) error {
-	if statusCode < 200 || statusCode >= 300 {
+	if !utils.IsAcceptableStatus(statusCode) {
 		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
 	}
 

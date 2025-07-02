@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"net/url"
 	"sort"
 	"strconv"
@@ -286,7 +285,7 @@ func (t *yunpianTransformer) buildTemplateValue(params map[string]string) string
 
 // handleYunpianResponse 处理云片API响应.
 func (t *yunpianTransformer) handleYunpianResponse(statusCode int, body []byte) error {
-	if statusCode < http.StatusOK || statusCode >= http.StatusMultipleChoices {
+	if !utils.IsAcceptableStatus(statusCode) {
 		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
 	}
 

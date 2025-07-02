@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"net/url"
 	"sort"
 	"strconv"
@@ -13,6 +12,7 @@ import (
 	"time"
 
 	"github.com/shellvon/go-sender/core"
+	"github.com/shellvon/go-sender/utils"
 )
 
 // @ProviderName: Juhe / 聚合数据
@@ -163,7 +163,7 @@ func (t *juheTransformer) transformMMSSMS(
 }
 
 func (t *juheTransformer) handleJuheResponse(statusCode int, body []byte) error {
-	if statusCode < http.StatusOK || statusCode >= http.StatusMultipleChoices {
+	if !utils.IsAcceptableStatus(statusCode) {
 		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
 	}
 	var result struct {

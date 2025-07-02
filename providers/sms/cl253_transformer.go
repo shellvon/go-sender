@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"strings"
 	"time"
 
@@ -183,7 +182,7 @@ func (t *cl253Transformer) buildHeaders(userHeaders map[string]string) map[strin
 
 // handleCl253Response 处理 CL253 API 响应.
 func (t *cl253Transformer) handleCl253Response(statusCode int, body []byte) error {
-	if statusCode < http.StatusOK || statusCode >= http.StatusMultipleChoices {
+	if !utils.IsAcceptableStatus(statusCode) {
 		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
 	}
 	var result struct {

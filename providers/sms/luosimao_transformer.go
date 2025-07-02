@@ -183,7 +183,7 @@ func (t *luosimaoTransformer) transformVoiceSMS(
 // handleLuosimaoResponse 处理螺丝帽 API 响应
 //   - 统一处理单发、批量、语音接口返回
 func (t *luosimaoTransformer) handleLuosimaoResponse(statusCode int, body []byte) error {
-	if statusCode < 200 || statusCode >= 300 {
+	if !utils.IsAcceptableStatus(statusCode) {
 		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
 	}
 	var result struct {

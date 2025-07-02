@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
+	"strings"
 
 	"github.com/shellvon/go-sender/core"
+	"github.com/shellvon/go-sender/utils"
 )
 
 // telegramTransformer 实现 providers.HTTPTransformer[*core.Account].
@@ -36,7 +37,7 @@ func (t *telegramTransformer) Transform(
 	if !ok {
 		return nil, nil, fmt.Errorf("unsupported message type for telegram transformer: %T", msg)
 	}
-	apiURL := buildAPIURL(account.Key)
+	apiURL := buildAPIURL(account.Key, account.Endpoint)
 	body, err := json.Marshal(tgMsg)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to marshal telegram payload: %w", err)
@@ -52,13 +53,16 @@ func (t *telegramTransformer) Transform(
 }
 
 // buildAPIURL 构造 Telegram API 地址.
-func buildAPIURL(token string) string {
+func buildAPIURL(token string, endpoint string) string {
+	if endpoint != "" {
+		return fmt.Sprintf("%s/bot%s/sendMessage", strings.TrimSuffix(endpoint, "/"), token)
+	}
 	return fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", token)
 }
 
 // handleTelegramResponse 处理 Telegram API 响应.
 func handleTelegramResponse(statusCode int, body []byte) error {
-	if statusCode != http.StatusOK {
+	if !utils.IsAcceptableStatus(statusCode) {
 		return fmt.Errorf("telegram API returned non-OK status: %d", statusCode)
 	}
 	var result struct {

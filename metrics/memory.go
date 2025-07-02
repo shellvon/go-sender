@@ -30,13 +30,12 @@ func NewMemoryMetricsCollector() *MemoryMetricsCollector {
 // RecordSendResult records the result of a send operation.
 func (m *MemoryMetricsCollector) RecordSendResult(data core.MetricsData) {
 	m.mu.Lock()
+	defer m.mu.Unlock()
 	provider, exists := m.metrics[data.Provider]
 	if !exists {
 		provider = &providerMetrics{}
 		m.metrics[data.Provider] = provider
 	}
-	m.mu.Unlock()
-
 	if data.Success {
 		provider.successRequests++
 	} else {

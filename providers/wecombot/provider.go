@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"mime/multipart"
-	"net/http"
 	"path/filepath"
 
 	"github.com/shellvon/go-sender/core"
@@ -106,7 +105,7 @@ func (p *Provider) UploadMedia(
 	}
 
 	// Check response
-	if statusCode != http.StatusOK {
+	if !utils.IsAcceptableStatus(statusCode) {
 		return "", nil, fmt.Errorf("upload API returned non-OK status: %d", statusCode)
 	}
 

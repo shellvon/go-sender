@@ -113,7 +113,8 @@ func (s *Sender) Send(ctx context.Context, message core.Message, opts ...core.Se
 		return fmt.Errorf("no provider registered for type %s", providerType)
 	}
 
-	return provider.Send(ctx, message, opts...)
+	allOpts := append([]core.SendOption{core.WithSendHTTPClient(s.defaultHTTPClient)}, opts...)
+	return provider.Send(ctx, message, allOpts...)
 }
 
 // GetProvider retrieves a provider by type.

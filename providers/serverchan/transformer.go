@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"regexp"
 	"strings"
 
 	"github.com/shellvon/go-sender/core"
+	"github.com/shellvon/go-sender/utils"
 )
 
 // serverchanTransformer 实现 core.HTTPTransformer[*core.Account]，用于 ServerChan 消息
@@ -81,7 +81,7 @@ func (t *serverchanTransformer) buildAPIURL(key string) string {
 
 // handleServerChanResponse 处理 ServerChan API 响应.
 func (t *serverchanTransformer) handleServerChanResponse(statusCode int, body []byte) error {
-	if statusCode != http.StatusOK {
+	if !utils.IsAcceptableStatus(statusCode) {
 		return fmt.Errorf("serverchan API returned non-OK status: %d", statusCode)
 	}
 	var result struct {

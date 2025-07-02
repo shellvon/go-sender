@@ -210,8 +210,8 @@ func (p *HTTPProvider[T]) executeHTTPRequest(
 
 // defaultResponseHandler is the default response handler.
 func (p *HTTPProvider[T]) defaultResponseHandler(statusCode int, body []byte) error {
-	if statusCode < 200 || statusCode >= 300 {
-		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
+	if !utils.IsAcceptableStatus(statusCode) {
+		return fmt.Errorf("HTTP request failed with status code %d. Response body: %s", statusCode, string(body))
 	}
 	return nil
 }
