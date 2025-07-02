@@ -55,8 +55,7 @@ const (
 	voiceTemplateSingle = "/voice/xsend" // https://www.mysubmail.com/documents/KbG03
 	// 语音-模版群发.
 	voiceTemplateBatch   = "/voice/multixsend" // https://www.mysubmail.com/documents/FkgkM2
-	submailDefaultDomain = "api-v4.mysubmail.com"
-	submailTimeout       = 30 * time.Second
+	submailDefaultDomain = "https://api-v4.mysubmail.com"
 )
 
 type submailTransformer struct{}
@@ -132,8 +131,7 @@ func (t *submailTransformer) validateMessage(msg *Message) error {
 	return nil
 }
 
-func (t *submailTransformer) buildEndpoint(msg *Message, account *core.Account) string {
-	baseDomain := t.getBaseDomain(account)
+func (t *submailTransformer) buildEndpoint(msg *Message, _ *core.Account) string {
 	var apiPath string
 
 	switch msg.Type {
@@ -146,16 +144,7 @@ func (t *submailTransformer) buildEndpoint(msg *Message, account *core.Account) 
 	default:
 		apiPath = "" // 或 panic/return error
 	}
-
-	return fmt.Sprintf("https://%s%s", baseDomain, apiPath)
-}
-
-func (t *submailTransformer) getBaseDomain(account *core.Account) string {
-	// 优先使用消息中的自定义端点
-	if customEndpoint := account.Endpoint; customEndpoint != "" {
-		return customEndpoint
-	}
-	return submailDefaultDomain
+	return fmt.Sprintf("%s%s", smsbaoDefaultBaseURI, apiPath)
 }
 
 func (t *submailTransformer) getSMSPath(msg *Message) string {
@@ -201,7 +190,7 @@ func (t *submailTransformer) getVoicePath(msg *Message) string {
 
 func (t *submailTransformer) buildParams(msg *Message, account *core.Account) map[string]string {
 	params := map[string]string{
-		"appid": account.Key,
+		"appid": account.APIKey,
 	}
 
 	// 添加接收者
@@ -301,11 +290,11 @@ func (t *submailTransformer) calculateSignature(account *core.Account, params ma
 	// 根据签名类型计算签名
 	switch signType {
 	case "sha1":
-		return utils.SHA1Hex(stringToSign + account.Secret)
+		return utils.SHA1Hex(stringToSign + account.APISecret)
 	case "normal":
-		return account.Secret
+		return account.APISecret
 	default: // md5
-		return utils.MD5Hex(stringToSign + account.Secret)
+		return utils.MD5Hex(stringToSign + account.APISecret)
 	}
 }
 

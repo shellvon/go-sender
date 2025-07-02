@@ -3,11 +3,11 @@ package sms
 
 import (
 	"context"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"math/rand"
+	"net/http"
 	"net/url"
 	"sort"
 	"strconv"
@@ -258,44 +258,28 @@ func (t *aliyunTransformer) signAliyunRequest(params aliyunSignParams) map[strin
 	if _, ok := headers["content-type"]; !ok {
 		headers["content-type"] = "application/json"
 	}
-	// 过滤 canonical headers
-	filtered := make(map[string]string)
-	for k, v := range headers {
-		lowerKey := strings.ToLower(k)
-		if lowerKey == "host" || lowerKey == "content-type" || strings.HasPrefix(lowerKey, "x-acs-") {
-			filtered[lowerKey] = strings.TrimSpace(v)
-		}
+	flatQuery := make(map[string]string)
+	for k, v := range params.Query {
+		t.flattenParams(k, v, flatQuery)
 	}
-	// 升序排列
-	canonKeys := make([]string, 0, len(filtered))
-	for k := range filtered {
-		canonKeys = append(canonKeys, k)
-	}
-	sort.Strings(canonKeys)
-	// 拼接 canonicalHeaders 和 signedHeaders
-	canonicalHeaders := ""
-	signedHeaders := ""
-	for _, k := range canonKeys {
-		canonicalHeaders += k + ":" + filtered[k] + "\n"
-		signedHeaders += k + ";"
-	}
-	signedHeaders = strings.TrimSuffix(signedHeaders, ";")
-	canonicalQueryString := ""
-	keys := make([]string, 0, len(params.Query))
-	for k := range params.Query {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	for _, k := range keys {
-		v := params.Query[k]
-		canonicalQueryString += t.percentCode(url.QueryEscape(k)) + "=" + t.percentCode(url.QueryEscape(v)) + "&"
-	}
-	canonicalQueryString = strings.TrimSuffix(canonicalQueryString, "&")
-	canonicalRequest := params.Method + "\n" + params.Path + "\n" + canonicalQueryString + "\n" + canonicalHeaders + "\n" + signedHeaders + "\n" + hashedRequestPayload
+
+	canonicalQueryString := t.buildCanonicalQueryString(flatQuery)
+	canonicalHeaders, signedHeaders := t.buildCanonicalHeaders(headers)
+	canonicalRequest := strings.Join([]string{
+		params.Method,
+		params.Path,
+		canonicalQueryString,
+		canonicalHeaders,
+		signedHeaders,
+		hashedRequestPayload,
+	}, "\n")
+
 	hashedCanonicalRequest := utils.SHA256Hex([]byte(canonicalRequest))
 	stringToSign := algorithm + "\n" + hashedCanonicalRequest
-	signature := hex.EncodeToString(utils.HMACSHA256([]byte(params.Account.Secret), []byte(stringToSign)))
-	authorization := algorithm + " Credential=" + params.Account.Key + ",SignedHeaders=" + signedHeaders + ",Signature=" + signature
+
+	signature := utils.HMACSHA256Hex(params.Account.APISecret, stringToSign)
+	authorization := algorithm + " Credential=" + params.Account.APIKey +
+		",SignedHeaders=" + signedHeaders + ",Signature=" + signature
 	headers["Authorization"] = authorization
 	return headers
 }
@@ -307,7 +291,6 @@ func (t *aliyunTransformer) transformSMS(
 	msg *Message,
 	account *core.Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
-	endpoint := t.getEndpoint(msg.IsIntl(), account)
 	phones := make([]string, len(msg.Mobiles))
 	for i, mobile := range msg.Mobiles {
 		phones[i] = t.formatPhoneNumber(mobile, msg.RegionCode)
@@ -335,24 +318,39 @@ func (t *aliyunTransformer) transformSMS(
 		params["OutId"] = v
 	}
 
+	endpoint := t.getEndpointByRegion(msg.Type, msg.GetExtraStringOrDefault(aliyunRegionKey, ""))
+
 	reqSpec := &core.HTTPRequestSpec{
-		Method: "POST",
+		Method: http.MethodPost,
 		URL:    "https://" + endpoint + "/",
 		Headers: t.signAliyunRequest(aliyunSignParams{
 			Host:    endpoint,
-			Method:  "POST",
+			Method:  http.MethodPost,
 			Path:    "/",
 			Query:   params,
-			Body:    nil,
 			Action:  "SendSms",
 			Version: "2017-05-25",
 			Account: account,
 		}),
 		QueryParams: params,
-		BodyType:    "raw",
+		Body:        nil,
+		BodyType:    core.BodyTypeNone,
 	}
 
 	return reqSpec, t.handleAliyunResponse, nil
+}
+
+// getEndpointByRegion returns the correct endpoint for the given message type and region.
+// For voice, always use the default voice endpoint.
+// For SMS, use region-specific endpoint if available, otherwise use the default.
+func (t *aliyunTransformer) getEndpointByRegion(msgType MessageType, region string) string {
+	if msgType == Voice {
+		return aliyunDefaultVoiceEndpoint
+	}
+	if ep, ok := t.regionSmsEndpoints()[region]; ok {
+		return ep
+	}
+	return aliyunDefaultSmsEndpoint
 }
 
 // transformCardSMS transforms card SMS message to HTTP request
@@ -409,12 +407,14 @@ func (t *aliyunTransformer) transformVoice(
 		action = "SingleCallByTts"
 	}
 
+	endpoint := t.getEndpointByRegion(msg.Type, msg.GetExtraStringOrDefault(aliyunRegionKey, ""))
+
 	reqSpec := &core.HTTPRequestSpec{
 		Method: "POST",
-		URL:    "https://" + aliyunDefaultVoiceEndpoint + "/",
+		URL:    "https://" + endpoint + "/",
 		Headers: t.signAliyunRequest(aliyunSignParams{
-			Host:    aliyunDefaultVoiceEndpoint,
-			Method:  "POST",
+			Host:    endpoint,
+			Method:  http.MethodPost,
 			Path:    "/",
 			Query:   params,
 			Body:    nil,
@@ -423,22 +423,10 @@ func (t *aliyunTransformer) transformVoice(
 			Account: account,
 		}),
 		QueryParams: params,
-		BodyType:    "raw",
+		BodyType:    core.BodyTypeRaw,
 	}
 
 	return reqSpec, t.handleAliyunResponse, nil
-}
-
-// getEndpoint returns the appropriate endpoint based on international flag and account.
-func (t *aliyunTransformer) getEndpoint(isIntl bool, account *core.Account) string {
-	// Use default endpoints
-	if isIntl && account.IntlEndpoint != "" {
-		return account.IntlEndpoint
-	}
-	if account.Endpoint != "" {
-		return account.Endpoint
-	}
-	return aliyunDefaultSmsEndpoint
 }
 
 // handleAliyunResponse handles Aliyun API response.
@@ -492,4 +480,66 @@ func (t *aliyunTransformer) percentCode(str string) string {
 	encoded = strings.ReplaceAll(encoded, "*", "%2A")
 	encoded = strings.ReplaceAll(encoded, "%7E", "~")
 	return encoded
+}
+
+// flattenParams 平铺参数（支持数组/嵌套对象，key.1/key.2）.
+func (t *aliyunTransformer) flattenParams(prefix string, value interface{}, out map[string]string) {
+	switch v := value.(type) {
+	case []interface{}:
+		for i, item := range v {
+			t.flattenParams(prefix+fmt.Sprintf(".%d", i+1), item, out)
+		}
+	case map[string]interface{}:
+		for k, item := range v {
+			t.flattenParams(prefix+"."+k, item, out)
+		}
+	default:
+		key := strings.TrimPrefix(prefix, ".")
+		out[key] = fmt.Sprintf("%v", v)
+	}
+}
+
+// buildCanonicalQueryString 构造规范化 query string.
+func (t *aliyunTransformer) buildCanonicalQueryString(params map[string]string) string {
+	keys := make([]string, 0, len(params))
+	for k := range params {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	var parts []string
+	for _, k := range keys {
+		ek := t.percentCode(k)
+		ev := t.percentCode(params[k])
+		parts = append(parts, ek+"="+ev)
+	}
+	return strings.Join(parts, "&")
+}
+
+// buildCanonicalHeaders 构造规范化 header 字符串.
+func (t *aliyunTransformer) buildCanonicalHeaders(headers map[string]string) (string, string) {
+	keys := make([]string, 0, len(headers))
+	for k := range headers {
+		lk := strings.ToLower(k)
+		if lk == "host" || strings.HasPrefix(lk, "x-acs-") || lk == "content-type" {
+			keys = append(keys, lk)
+		}
+	}
+	sort.Strings(keys)
+	var canonicalHeaders, signedHeaders []string
+	for _, k := range keys {
+		canonicalHeaders = append(canonicalHeaders, k+":"+strings.TrimSpace(headers[k]))
+		signedHeaders = append(signedHeaders, k)
+	}
+	return strings.Join(canonicalHeaders, "\n") + "\n", strings.Join(signedHeaders, ";")
+}
+
+func (t *aliyunTransformer) regionSmsEndpoints() map[string]string {
+	return map[string]string{
+		"ap-southeast-1": "dysmsapi.ap-southeast-1.aliyuncs.com",
+		"cn-hangzhou":    "dysmsapi.aliyuncs.com",
+		"cn-shanghai":    "dysmsapi.aliyuncs.com",
+		"cn-shenzhen":    "dysmsapi.aliyuncs.com",
+		"cn-beijing":     "dysmsapi.aliyuncs.com",
+		"cn-hongkong":    "dysmsapi.aliyuncs.com",
+	}
 }

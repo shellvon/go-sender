@@ -2,9 +2,13 @@ package sms
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
+	"net/url"
+	"sort"
 	"strings"
 	"time"
 
@@ -14,12 +18,19 @@ import (
 
 // @ProviderName: Volc / 火山引擎
 // @Website: https://www.volcengine.com
-// @APIDoc: https://www.volcengine.com/docs/6348/70146
+// @APIDoc: https://www.volcengine.com/docs/6361/67380
 //
 // 官方文档:
-//   - 短信API: https://www.volcengine.com/docs/6348/70146
+//   - 短信API: https://www.volcengine.com/docs/6361/67380
 //
 // transformer 仅支持 text（普通短信）类型。
+const (
+	volcDefaultSmsEndpoint = "sms.volcengineapi.com"
+	volcDefaultSmsAction   = "SendSms"
+	volcDefaultSmsVersion  = "2020-01-01"
+	volcDefaultSmsRegion   = "cn-beijing"
+	volcDefaultSmsService  = "volcSMS"
+)
 
 type volcTransformer struct{}
 
@@ -51,11 +62,11 @@ func (t *volcTransformer) validateMessage(msg *Message) error {
 	if len(msg.Mobiles) == 0 {
 		return errors.New("mobiles is required")
 	}
-	if msg.Content == "" {
-		return errors.New("content is required")
-	}
 	if msg.SignName == "" {
 		return errors.New("sign name is required")
+	}
+	if msg.GetExtraStringOrDefault(volcSmsAccountKey, "") == "" {
+		return errors.New("sms account is required")
 	}
 	if msg.IsIntl() {
 		return NewUnsupportedInternationalError(string(SubProviderVolc), "sendSMS")
@@ -69,7 +80,7 @@ func (t *volcTransformer) transformTextSMS(
 	account *core.Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	body := map[string]interface{}{
-		"SmsAccount":   account.Key,
+		"SmsAccount":   msg.GetExtraStringOrDefault(volcSmsAccountKey, ""),
 		"Sign":         msg.SignName,
 		"TemplateID":   msg.TemplateID,
 		"PhoneNumbers": strings.Join(msg.Mobiles, ","),
@@ -85,50 +96,119 @@ func (t *volcTransformer) transformTextSMS(
 		return nil, nil, fmt.Errorf("failed to marshal volc request body: %w", err)
 	}
 
-	endpoint := account.Endpoint
-	if endpoint == "" {
-		endpoint = "sms.volcengineapi.com"
-	}
-	url := "https://" + endpoint + "/?Action=SendSms&Version=2020-01-01"
+	// 只维护一份qs
+	qs := url.Values{}
+	qs.Set("Action", volcDefaultSmsAction)
+	qs.Set("Version", volcDefaultSmsVersion)
 
-	headers := t.buildVolcHeaders(account, bodyJSON)
+	url := fmt.Sprintf("https://%s/?%s", volcDefaultSmsEndpoint, qs.Encode())
+	headers := t.buildVolcHeaders(account, bodyJSON, qs)
 
 	return &core.HTTPRequestSpec{
-		Method:   "POST",
+		Method:   http.MethodPost,
 		URL:      url,
 		Headers:  headers,
 		Body:     bodyJSON,
-		BodyType: "json",
+		BodyType: core.BodyTypeRaw,
 	}, t.handleVolcResponse, nil
 }
 
-// buildVolcHeaders 构建火山引擎TOP网关签名头
-// 签名文档: https://www.volcengine.com/docs/6361/1205061
-func (t *volcTransformer) buildVolcHeaders(account *core.Account, body []byte) map[string]string {
-	ak := account.Key
-	sk := account.Secret
-	timestamp := time.Now().UTC().Format("2006-01-02T15:04:05Z")
-	xDate := timestamp[:10]
+// buildVolcHeaders constructs VolcEngine signature headers.
+func (t *volcTransformer) buildVolcHeaders(account *core.Account, body []byte, qs url.Values) map[string]string {
+	// 1. Basic parameters
+	xDate := time.Now().UTC().Format("20060102T150405Z")
+	authDate := xDate[:8]
+	service := volcDefaultSmsService
+	region := volcDefaultSmsRegion
+	path := "/"
+	host := volcDefaultSmsEndpoint
+	contentType := "application/json"
 
-	endpoint := account.Endpoint
-	if endpoint == "" {
-		endpoint = "sms.volcengineapi.com"
-	}
+	// 2. Payload: hex-encoded SHA256
+	payload := utils.SHA256Hex(body)
 
-	headers := map[string]string{
-		"Content-Type": "application/json;charset=utf-8",
-		"Host":         endpoint,
-		"X-Date":       timestamp,
+	// 3. Canonicalize query string
+	canonicalQueryString := t.normalizeQueryString(qs.Encode())
+
+	// 4. Signed headers in fixed order
+	signedHeaders := []string{"host", "x-date", "x-content-sha256", "content-type"}
+
+	// 5. Canonical headers in the same order as signedHeaders
+	headerMap := map[string]string{
+		"host":             host,
+		"x-date":           xDate,
+		"x-content-sha256": payload,
+		"content-type":     contentType,
 	}
-	canonicalHeaders := "content-type:application/json;charset=utf-8\nhost:" + endpoint + "\nx-date:" + timestamp + "\n"
-	canonicalRequest := "POST\n/\n\n" + canonicalHeaders + "\n" + string(body)
-	stringToSign := "HMAC-SHA256\n" + xDate + "\n" + utils.SHA256Hex([]byte(canonicalRequest))
-	signingKey := utils.HMACSHA256([]byte(sk), []byte(xDate))
-	signature := utils.HMACSHA256(signingKey, []byte(stringToSign))
-	signatureBase64 := utils.Base64EncodeBytes(signature)
-	authHeader := "HMAC-SHA256 Credential=" + ak + ", SignedHeaders=content-type;host;x-date, Signature=" + signatureBase64
-	headers["Authorization"] = authHeader
-	return headers
+	var canonicalHeaders []string
+	for _, k := range signedHeaders {
+		canonicalHeaders = append(canonicalHeaders, k+":"+headerMap[k])
+	}
+	headerString := strings.Join(canonicalHeaders, "\n") + "\n"
+
+	// 6. Build canonical request
+	canonicalRequest := strings.Join([]string{
+		http.MethodPost,
+		path,
+		canonicalQueryString,
+		headerString,
+		strings.Join(signedHeaders, ";"),
+		payload,
+	}, "\n")
+
+	// 7. Build string to sign
+	credentialScope := authDate + "/" + region + "/" + service + "/request"
+	stringToSign := strings.Join([]string{
+		"HMAC-SHA256",
+		xDate,
+		credentialScope,
+		utils.SHA256Hex([]byte(canonicalRequest)),
+	}, "\n")
+
+	// 8. Derive signing key
+	kDate := utils.HMACSHA256([]byte(account.APISecret), []byte(authDate))
+	kRegion := utils.HMACSHA256(kDate, []byte(region))
+	kService := utils.HMACSHA256(kRegion, []byte(service))
+	kSigning := utils.HMACSHA256(kService, []byte("request"))
+	signature := utils.HMACSHA256(kSigning, []byte(stringToSign))
+	signatureHex := hex.EncodeToString(signature)
+
+	// 9. Build Authorization header
+	authHeader := "HMAC-SHA256 Credential=" + account.APIKey + "/" + credentialScope +
+		", SignedHeaders=" + strings.Join(signedHeaders, ";") +
+		", Signature=" + signatureHex
+
+	// 10. Return headers with capitalized keys
+	return map[string]string{
+		"Content-Type":     contentType,
+		"Host":             host,
+		"X-Date":           xDate,
+		"X-Content-Sha256": payload,
+		"Authorization":    authHeader,
+	}
+}
+
+// normalizeQueryString canonicalizes the query string: sorts, URL-encodes, and replaces spaces with %20.
+func (t *volcTransformer) normalizeQueryString(queryString string) string {
+	if queryString == "" {
+		return ""
+	}
+	values, _ := url.ParseQuery(queryString)
+	var keys []string
+	for k := range values {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	var canonicalQS []string
+	for _, k := range keys {
+		for _, v := range values[k] {
+			// url.QueryEscape replaces spaces with '+', so we replace '+' with '%20'
+			keyEsc := strings.ReplaceAll(url.QueryEscape(k), "+", "%20")
+			valEsc := strings.ReplaceAll(url.QueryEscape(v), "+", "%20")
+			canonicalQS = append(canonicalQS, keyEsc+"="+valEsc)
+		}
+	}
+	return strings.Join(canonicalQS, "&")
 }
 
 // handleVolcResponse 处理火山引擎API响应.
@@ -151,7 +231,8 @@ func (t *volcTransformer) handleVolcResponse(statusCode int, body []byte) error 
 			} `json:"Error,omitempty"`
 		} `json:"ResponseMetadata"`
 		Result struct {
-			MessageID string `json:"MessageID"`
+			// Array of String
+			MessageID []string `json:"MessageID"`
 		} `json:"Result"`
 	}
 

@@ -28,8 +28,8 @@ func TestNewProvider(t *testing.T) {
 	config := telegram.Config{
 		Accounts: []core.Account{
 			{
-				Name: "test",
-				Key:  "bot123:token",
+				Name:   "test",
+				APIKey: "bot123:token",
 			},
 		},
 	}
@@ -68,8 +68,8 @@ func TestNewProvider_Disabled(t *testing.T) {
 		BaseConfig: core.BaseConfig{Disabled: true},
 		Accounts: []core.Account{
 			{
-				Name: "test",
-				Key:  "bot123:token",
+				Name:   "test",
+				APIKey: "bot123:token",
 			},
 		},
 	}
@@ -91,7 +91,7 @@ func TestNewProvider_NoEnabledAccounts(t *testing.T) {
 		Accounts: []core.Account{
 			{
 				Name:     "test",
-				Key:      "bot123:token",
+				APIKey:   "bot123:token",
 				Disabled: true,
 			},
 		},
@@ -118,9 +118,8 @@ func TestProvider_Send_Success(t *testing.T) {
 	config := telegram.Config{
 		Accounts: []core.Account{
 			{
-				Name:     "test",
-				Key:      "bot123:token",
-				Endpoint: ts.URL,
+				Name:   "test",
+				APIKey: "bot123:token",
 			},
 		},
 	}
@@ -155,9 +154,8 @@ func TestProvider_Send_WithOptions(t *testing.T) {
 	config := telegram.Config{
 		Accounts: []core.Account{
 			{
-				Name:     "test",
-				Key:      "bot123:token",
-				Endpoint: ts.URL,
+				Name:   "test",
+				APIKey: "bot123:token",
 			},
 		},
 	}
@@ -192,9 +190,8 @@ func TestProvider_Send_HTTPFailure(t *testing.T) {
 	config := telegram.Config{
 		Accounts: []core.Account{
 			{
-				Name:     "test",
-				Key:      "bot123:token",
-				Endpoint: ts.URL,
+				Name:   "test",
+				APIKey: "bot123:token",
 			},
 		},
 	}
@@ -216,8 +213,8 @@ func TestProvider_Send_InvalidMessageType(t *testing.T) {
 	config := telegram.Config{
 		Accounts: []core.Account{
 			{
-				Name: "test",
-				Key:  "bot123:token",
+				Name:   "test",
+				APIKey: "bot123:token",
 			},
 		},
 	}
@@ -239,8 +236,8 @@ func TestProvider_Send_InvalidMessage(t *testing.T) {
 	config := telegram.Config{
 		Accounts: []core.Account{
 			{
-				Name: "test",
-				Key:  "bot123:token",
+				Name:   "test",
+				APIKey: "bot123:token",
 			},
 		},
 	}

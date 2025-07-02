@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"strconv"
 	"time"
 
@@ -25,14 +26,12 @@ import (
 // transformer 支持 text（普通短信）和 voice（语音短信）类型。
 
 const (
-	tencentEndpoint          = "sms.tencentcloudapi.com"
-	tencentVoiceEndpoint     = "vms.tencentcloudapi.com"
+	tencentAPIDomain         = "tencentcloudapi.com"
 	tencentVersion           = "2021-01-11"
 	tencentVoiceVersion      = "2020-09-02"
-	tencentAction            = "SendSms"
+	tencentSmsAction         = "SendSms"
 	tencentVoiceAction       = "SendCodeVoice"
 	tencentVoiceNotifyAction = "SendVoice"
-	tencentTimeout           = 30 * time.Second
 )
 
 type tencentTransformer struct{}
@@ -94,14 +93,6 @@ func (t *tencentTransformer) transformTextSMS(
 	msg *Message,
 	account *core.Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
-	endpoint := account.Endpoint
-	if endpoint == "" {
-		endpoint = "sms.tencentcloudapi.com"
-	}
-	if msg.IsIntl() && account.IntlEndpoint != "" {
-		endpoint = account.IntlEndpoint
-	}
-
 	// 格式化手机号
 	phoneNumbers := make([]string, len(msg.Mobiles))
 	for i, mobile := range msg.Mobiles {
@@ -110,7 +101,7 @@ func (t *tencentTransformer) transformTextSMS(
 
 	params := map[string]interface{}{
 		"PhoneNumberSet":   phoneNumbers,
-		"SmsSdkAppId":      msg.GetExtraStringOrDefault(tencentSmsSdkAppIDKey, account.Key),
+		"SmsSdkAppId":      msg.GetExtraStringOrDefault(tencentSmsSdkAppIDKey, account.APIKey),
 		"TemplateId":       msg.TemplateID,
 		"SignName":         msg.SignName,
 		"TemplateParamSet": msg.ParamsOrder,
@@ -124,7 +115,7 @@ func (t *tencentTransformer) transformTextSMS(
 	}
 
 	requestBody := map[string]interface{}{
-		"Action":  "SendSms",
+		"Action":  tencentSmsAction,
 		"Version": "2021-01-11",
 		"Region":  msg.GetExtraStringOrDefault(tencentRegionKey, tencentDefaultRegion),
 		"Request": params,
@@ -138,23 +129,24 @@ func (t *tencentTransformer) transformTextSMS(
 	timestamp := time.Now().Unix()
 	date := time.Unix(timestamp, 0).UTC().Format("2006-01-02")
 
+	endpoint := fmt.Sprintf("%s.%s", "sms", tencentAPIDomain)
 	headers := t.buildTencentHeaders(tencentHeaderParams{
 		Endpoint:  endpoint,
-		Action:    "SendSms",
+		Action:    tencentSmsAction,
 		Version:   "2021-01-11",
 		Region:    msg.GetExtraStringOrDefault(tencentRegionKey, tencentDefaultRegion),
-		AppSecret: account.Secret,
+		AppSecret: account.APISecret,
 		BodyData:  bodyData,
 		Timestamp: timestamp,
 		Date:      date,
 	})
 
 	return &core.HTTPRequestSpec{
-		Method:   "POST",
-		URL:      "https://" + endpoint,
+		Method:   http.MethodPost,
+		URL:      fmt.Sprintf("https://%s", endpoint),
 		Headers:  headers,
 		Body:     bodyData,
-		BodyType: "json",
+		BodyType: core.BodyTypeJSON,
 	}, t.handleTencentResponse, nil
 }
 
@@ -168,14 +160,6 @@ func (t *tencentTransformer) transformVoiceSMS(
 	msg *Message,
 	account *core.Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
-	endpoint := account.Endpoint
-	if endpoint == "" {
-		endpoint = tencentVoiceEndpoint
-	}
-	if msg.IsIntl() && account.IntlEndpoint != "" {
-		endpoint = account.IntlEndpoint
-	}
-
 	// 腾讯云语音只支持单发
 	calledNumber := t.formatTencentPhone(msg.Mobiles[0], msg.RegionCode)
 
@@ -213,23 +197,24 @@ func (t *tencentTransformer) transformVoiceSMS(
 	timestamp := time.Now().Unix()
 	date := time.Unix(timestamp, 0).UTC().Format("2006-01-02")
 
+	endpoint := fmt.Sprintf("%s.%s", "vms", tencentAPIDomain)
 	headers := t.buildTencentHeaders(tencentHeaderParams{
 		Endpoint:  endpoint,
 		Action:    action,
 		Version:   tencentVoiceVersion,
-		Region:    msg.GetExtraStringOrDefault("Region", tencentDefaultRegion),
-		AppSecret: account.Secret,
+		Region:    msg.GetExtraStringOrDefault(tencentRegionKey, tencentDefaultRegion),
+		AppSecret: account.APISecret,
 		BodyData:  bodyData,
 		Timestamp: timestamp,
 		Date:      date,
 	})
 
 	return &core.HTTPRequestSpec{
-		Method:   "POST",
-		URL:      "https://" + endpoint,
+		Method:   http.MethodPost,
+		URL:      fmt.Sprintf("https://%s", endpoint),
 		Headers:  headers,
 		Body:     bodyData,
-		BodyType: "json",
+		BodyType: core.BodyTypeJSON,
 	}, t.handleTencentResponse, nil
 }
 
@@ -311,35 +296,20 @@ func (t *tencentTransformer) handleTencentResponse(_ int, body []byte) error {
 				Message        string `json:"Message"`
 				IsoCode        string `json:"IsoCode"`
 			} `json:"SendStatusSet"`
-			RequestID string `json:"RequestID"`
 		} `json:"Response"`
-		Error *struct {
-			Code    string `json:"Code"`
-			Message string `json:"Message"`
-		} `json:"Error,omitempty"`
 	}
 
 	if err := json.Unmarshal(body, &result); err != nil {
-		return fmt.Errorf("failed to parse tencent response: %w", err)
+		return fmt.Errorf("failed to unmarshal tencent response: %w", err)
 	}
 
-	// 检查是否有错误
-	if result.Error != nil {
-		return &Error{
-			Code:     result.Error.Code,
-			Message:  result.Error.Message,
-			Provider: string(SubProviderTencent),
-		}
+	if len(result.Response.SendStatusSet) == 0 {
+		return errors.New("no send status found in response")
 	}
 
-	// 检查发送状态
 	for _, status := range result.Response.SendStatusSet {
-		if status.Code != "Ok" {
-			return &Error{
-				Code:     status.Code,
-				Message:  status.Message,
-				Provider: string(SubProviderTencent),
-			}
+		if status.Code != "OK" {
+			return fmt.Errorf("tencent sms send failed: %s - %s", status.Code, status.Message)
 		}
 	}
 

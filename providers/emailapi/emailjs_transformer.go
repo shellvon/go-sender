@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/shellvon/go-sender/core"
@@ -23,8 +24,7 @@ func init() {
 }
 
 const (
-	emailjsDefaultEndpoint = "api.emailjs.com"
-	emailjsDefaultPath     = "/api/v1.0/email/send"
+	defaultEmailjsAPIPath = "https://api.emailjs.com/api/v1.0/email/send"
 )
 
 // emailJSTransformer implements HTTPRequestTransformer for EmailJS.
@@ -84,8 +84,8 @@ func (t *emailJSTransformer) transformEmail(
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	// Get required parameters
 	serviceID := msg.From
-	userID := msg.GetExtraStringOrDefault(emailjsUserID, account.Key)
-	accessToken := msg.GetExtraStringOrDefault(emailjsAccessToken, account.Secret)
+	userID := msg.GetExtraStringOrDefault(emailjsUserID, account.APIKey)
+	accessToken := msg.GetExtraStringOrDefault(emailjsAccessToken, account.APISecret)
 
 	if serviceID == "" {
 		return nil, nil, errors.New("EmailJS: service_id (From) is required")
@@ -122,15 +122,12 @@ func (t *emailJSTransformer) transformEmail(
 		"Content-Type": "application/json",
 	}
 
-	// Build endpoint URL
-	endpoint := t.getEndpoint(account)
-
 	return &core.HTTPRequestSpec{
-		Method:   "POST",
-		URL:      endpoint,
+		Method:   http.MethodPost,
+		URL:      defaultEmailjsAPIPath,
 		Headers:  headers,
 		Body:     bodyData,
-		BodyType: "json",
+		BodyType: core.BodyTypeJSON,
 	}, t.handleEmailJSResponse, nil
 }
 
@@ -189,18 +186,6 @@ func isEmptyValue(v interface{}) bool {
 		return len(val) == 0
 	default:
 		return false
-	}
-}
-
-// getEndpoint returns the appropriate endpoint URL.
-func (t *emailJSTransformer) getEndpoint(account *core.Account) string {
-	switch {
-	case account.Endpoint != "":
-		return "https://" + account.Endpoint + emailjsDefaultPath
-	case account.IntlEndpoint != "":
-		return "https://" + account.IntlEndpoint + emailjsDefaultPath
-	default:
-		return "https://" + emailjsDefaultEndpoint + emailjsDefaultPath
 	}
 }
 

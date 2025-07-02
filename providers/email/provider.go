@@ -76,6 +76,26 @@ func (p *Provider) Send(ctx context.Context, message core.Message, _ *core.Provi
 	return p.doSendEmail(ctx, account, emailMsg)
 }
 
+func buildMailOptions(account *Account) []mail.Option {
+	opts := []mail.Option{
+		mail.WithPort(account.Port),
+		mail.WithSMTPAuth(mail.SMTPAuthPlain),
+		mail.WithUsername(account.Username),
+		mail.WithPassword(account.Password),
+		// mail.WithDebugLog(),
+	}
+
+	switch account.Port {
+	case mail.DefaultPortSSL:
+		opts = append(opts, mail.WithSSL())
+	case mail.DefaultPortTLS, mail.DefaultPort:
+		opts = append(opts, mail.WithTLSPolicy(mail.TLSOpportunistic))
+	default:
+		opts = append(opts, mail.WithTLSPolicy(mail.TLSOpportunistic))
+	}
+	return opts
+}
+
 // doSendEmail performs the actual email sending.
 func (p *Provider) doSendEmail(ctx context.Context, account *Account, emailMsg *Message) error {
 	// Set default From if not provided
@@ -135,22 +155,20 @@ func (p *Provider) doSendEmail(ctx context.Context, account *Account, emailMsg *
 	}
 
 	// Create client and send
-	client, err := mail.NewClient(account.Host,
-		mail.WithPort(account.Port),
-		mail.WithUsername(account.Username),
-		mail.WithPassword(account.Password),
-	)
+	client, err := mail.NewClient(account.Host, buildMailOptions(account)...)
 	if err != nil {
 		return fmt.Errorf("failed to create mail client: %w", err)
 	}
+
 	defer client.Close()
 
-	client.SetSSL(true)
-	if errSend := client.DialAndSendWithContext(ctx, m); errSend != nil {
-		return errSend
+	err = client.DialAndSendWithContext(ctx, m)
+	var sendErr *mail.SendError
+	// https://github.com/wneessen/go-mail/issues/463
+	if err != nil && errors.As(err, &sendErr) && sendErr.Reason == mail.ErrSMTPReset {
+		err = nil
 	}
-
-	return nil
+	return err
 }
 
 func (p *Provider) Name() string {

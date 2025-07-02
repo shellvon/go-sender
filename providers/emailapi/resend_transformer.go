@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 
 	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/utils"
@@ -25,8 +26,7 @@ func init() {
 }
 
 const (
-	resendDefaultEndpoint = "api.resend.com"
-	resendDefaultPath     = "/emails"
+	resendDefaultAPIPath  = "https://api.resend.com/emails"
 	maxRecipientsPerBatch = 50
 )
 
@@ -133,34 +133,18 @@ func (t *resendTransformer) transformEmail(
 
 	// Build headers
 	headers := map[string]string{
-		"Authorization":   "Bearer " + account.Secret,
+		"Authorization":   "Bearer " + account.APISecret,
 		"Content-Type":    "application/json",
 		"Idempotency-Key": msg.MsgID(),
 	}
 
-	// Build endpoint URL
-	endpoint := t.getEndpoint(account)
-
 	return &core.HTTPRequestSpec{
-		Method:   "POST",
-		URL:      endpoint,
+		Method:   http.MethodPost,
+		URL:      resendDefaultAPIPath,
 		Headers:  headers,
 		Body:     bodyData,
-		BodyType: "json",
+		BodyType: core.BodyTypeJSON,
 	}, t.handleResendResponse, nil
-}
-
-// getEndpoint returns the appropriate endpoint URL.
-func (t *resendTransformer) getEndpoint(account *core.Account) string {
-	// Priority: account.Endpoint → account.IntlEndpoint → default
-	switch {
-	case account.Endpoint != "":
-		return "https://" + account.Endpoint
-	case account.IntlEndpoint != "":
-		return "https://" + account.IntlEndpoint
-	default:
-		return "https://" + resendDefaultEndpoint
-	}
 }
 
 // handleResendResponse handles Resend API response.

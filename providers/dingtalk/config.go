@@ -8,7 +8,7 @@ import (
 type Config struct {
 	core.BaseConfig
 
-	Accounts []core.Account `json:"accounts"` // Multiple accounts configuration
+	Accounts []*core.Account `json:"accounts"` // Multiple accounts configuration
 }
 
 // IsConfigured checks if the DingTalk configuration is valid.

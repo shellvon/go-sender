@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 
@@ -27,6 +28,13 @@ import (
 //   - 彩信/语音：暂不支持。
 //
 // 注意：支持国内外手机号码，需模板ID。
+
+const (
+	ucpDefaultBaseURI = "http://open2.ucpaas.com/sms-server"
+	ucpSingleAPI      = "variablesms"
+	ucpBatchAPI       = "templatesms"
+)
+
 type ucpTransformer struct{}
 
 func init() {
@@ -73,14 +81,14 @@ func (t *ucpTransformer) transformTextSMS(
 	// 根据手机号数量选择API
 	var apiPath string
 	if len(msg.Mobiles) > 1 {
-		apiPath = "templatesms"
+		apiPath = ucpBatchAPI
 	} else {
-		apiPath = "variablesms"
+		apiPath = ucpSingleAPI
 	}
 
 	params := map[string]interface{}{
-		"clientid":   account.Key,
-		"password":   account.Secret,
+		"clientid":   account.APIKey,
+		"password":   account.APISecret,
 		"templateid": msg.TemplateID,
 		"mobile":     strings.Join(msg.Mobiles, ","),
 		"uid":        msg.UID,
@@ -92,26 +100,17 @@ func (t *ucpTransformer) transformTextSMS(
 		params["param"] = strings.Join(msg.ParamsOrder, ";")
 	}
 
-	endpoint := account.Endpoint
-	if endpoint == "" {
-		endpoint = "open.ucpaas.com"
-	}
-	if msg.IsIntl() && account.IntlEndpoint != "" {
-		endpoint = account.IntlEndpoint
-	}
-	url := "https://" + endpoint + "/sms-server/" + apiPath
-
 	bodyData, err := json.Marshal(params)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to marshal ucp request body: %w", err)
 	}
 
 	return &core.HTTPRequestSpec{
-		Method:   "POST",
-		URL:      url,
+		Method:   http.MethodPost,
+		URL:      fmt.Sprintf("%s/%s", ucpDefaultBaseURI, apiPath),
 		Headers:  map[string]string{"Content-Type": "application/json"},
 		Body:     bodyData,
-		BodyType: "json",
+		BodyType: core.BodyTypeJSON,
 	}, t.handleUcpResponse, nil
 }
 

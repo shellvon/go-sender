@@ -17,7 +17,7 @@ func TestConfig_IsConfigured(t *testing.T) {
 			name: "valid config",
 			config: telegram.Config{
 				Accounts: []core.Account{
-					{Name: "test", Key: "bot123:token"},
+					{Name: "test", APIKey: "bot123:token"},
 				},
 			},
 			expected: true,
@@ -32,7 +32,7 @@ func TestConfig_IsConfigured(t *testing.T) {
 			config: telegram.Config{
 				BaseConfig: core.BaseConfig{Disabled: true},
 				Accounts: []core.Account{
-					{Name: "test", Key: "bot123:token"},
+					{Name: "test", APIKey: "bot123:token"},
 				},
 			},
 			expected: false,

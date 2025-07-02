@@ -24,9 +24,8 @@ func TestAliyun_Integration_SendTextSMS(t *testing.T) {
 	defer ts.Close()
 
 	acc := &core.Account{
-		Key:      "ak",
-		Secret:   "sk",
-		Endpoint: ts.URL[7:], // 去掉 http://
+		APIKey:    "ak",
+		APISecret: "sk",
 	}
 	msg := sms.Aliyun()
 	msg.To("13800138000")
@@ -93,10 +92,9 @@ func TestSender_DispatchToAliyun_EndToEnd(t *testing.T) {
 	defer ts.Close()
 
 	acc := &core.Account{
-		Name:     "test",
-		Key:      "ak",
-		Secret:   "sk",
-		Endpoint: ts.URL[8:], // 去掉 https://
+		Name:      "test",
+		APIKey:    "ak",
+		APISecret: "sk",
 	}
 	tr, ok := sms.GetTransformer("aliyun")
 	if !ok {

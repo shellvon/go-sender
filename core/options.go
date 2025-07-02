@@ -23,6 +23,17 @@ const (
 	idleConnTimeout      = 90 * time.Second
 )
 
+type BodyType string
+
+const (
+	BodyTypeJSON BodyType = "json"
+	BodyTypeForm BodyType = "form"
+	BodyTypeText BodyType = "text"
+	BodyTypeXML  BodyType = "xml"
+	BodyTypeRaw  BodyType = "raw"
+	BodyTypeNone BodyType = "none"
+)
+
 // DefaultHTTPClient returns a default HTTP client with proper settings.
 func DefaultHTTPClient() *http.Client {
 	return &http.Client{

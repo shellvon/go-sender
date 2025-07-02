@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 
 	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/utils"
@@ -38,7 +39,7 @@ func (t *wecombotTransformer) Transform(
 	}
 
 	// Build webhook URL
-	webhookURL := fmt.Sprintf("https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=%s", account.Key)
+	webhookURL := fmt.Sprintf("https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=%s", account.APIKey)
 
 	// Marshal message to JSON
 	body, err := json.Marshal(wecomMsg)
@@ -47,11 +48,11 @@ func (t *wecombotTransformer) Transform(
 	}
 
 	reqSpec := &core.HTTPRequestSpec{
-		Method:   "POST",
+		Method:   http.MethodPost,
 		URL:      webhookURL,
 		Headers:  map[string]string{"Content-Type": "application/json"},
 		Body:     body,
-		BodyType: "json",
+		BodyType: core.BodyTypeJSON,
 	}
 
 	return reqSpec, t.handleWecombotResponse, nil

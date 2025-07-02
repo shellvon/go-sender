@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 
 	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/utils"
@@ -44,7 +45,7 @@ func (t *dingTalkTransformer) Transform(
 	}
 
 	// Build webhook URL
-	webhookURL := fmt.Sprintf("https://oapi.dingtalk.com/robot/send?access_token=%s", account.Key)
+	webhookURL := fmt.Sprintf("https://oapi.dingtalk.com/robot/send?access_token=%s", account.APIKey)
 
 	// Prepare the request payload
 	payload := map[string]interface{}{
@@ -60,11 +61,11 @@ func (t *dingTalkTransformer) Transform(
 
 	// Build request
 	reqSpec := &core.HTTPRequestSpec{
-		Method:   "POST",
+		Method:   http.MethodPost,
 		URL:      webhookURL,
 		Headers:  map[string]string{"Content-Type": "application/json"},
 		Body:     body,
-		BodyType: "json",
+		BodyType: core.BodyTypeJSON,
 	}
 
 	return reqSpec, t.handleDingTalkResponse, nil

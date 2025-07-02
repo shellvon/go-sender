@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"strconv"
 	"time"
 
@@ -40,17 +41,13 @@ func (t *larkTransformer) Transform(
 		return nil, nil, fmt.Errorf("unsupported message type for lark transformer: %T", msg)
 	}
 
-	// 构造 webhook URL
-	var webhookURL string
+	var webhookURL = fmt.Sprintf("https://open.feishu.cn/open-apis/bot/v2/hook/%s", account.APIKey)
 	var timestamp, sign string
-	if account.Webhook != "" {
-		webhookURL = account.Webhook
-		if account.Key != "" {
-			timestamp = strconv.FormatInt(time.Now().Unix(), 10)
-			sign = utils.HMACSHA256Base64(account.Key, timestamp+"\n"+account.Key)
-		}
-	} else {
-		webhookURL = fmt.Sprintf("https://open.feishu.cn/open-apis/bot/v2/hook/%s", account.Key)
+
+	// https://open.feishu.cn/document/client-docs/bot-v3/add-custom-bot#3c6592d6
+	if account.APISecret != "" {
+		timestamp = strconv.FormatInt(time.Now().Unix(), 10)
+		sign = utils.HMACSHA256Base64(account.APISecret, timestamp+"\n"+account.APISecret)
 	}
 
 	// 构造 payload
@@ -69,11 +66,11 @@ func (t *larkTransformer) Transform(
 	}
 
 	reqSpec := &core.HTTPRequestSpec{
-		Method:   "POST",
+		Method:   http.MethodPost,
 		URL:      webhookURL,
 		Headers:  map[string]string{"Content-Type": "application/json"},
 		Body:     body,
-		BodyType: "json",
+		BodyType: core.BodyTypeJSON,
 	}
 	return reqSpec, t.handleLarkResponse, nil
 }

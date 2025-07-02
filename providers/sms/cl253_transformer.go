@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
-	"time"
 
 	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/utils"
@@ -35,7 +35,6 @@ func init() {
 const (
 	cl253DomesticEndpoint = "smssh1.253.com"
 	cl253IntlEndpoint     = "intapi.253.com"
-	cl253Timeout          = 30 * time.Second
 )
 
 // cl253Transformer implements HTTPRequestTransformer for CL253 SMS.
@@ -99,12 +98,12 @@ func (t *cl253Transformer) transformDomesticSMS(
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	url := "https://" + cl253DomesticEndpoint + "/msg/v1/send/json"
 	params := map[string]interface{}{
-		"account":     account.Key,
-		"password":    account.Secret,
+		"account":     account.APIKey,
+		"password":    account.APISecret,
 		"msg":         utils.AddSignature(msg.Content, msg.SignName),
 		"phone":       strings.Join(msg.Mobiles, ","),
 		"report":      msg.GetExtraStringOrDefault(cl253ReportKey, ""),
-		"callbackUrl": utils.DefaultStringIfEmpty(msg.CallbackURL, account.Webhook),
+		"callbackUrl": msg.CallbackURL,
 		"uid":         msg.UID,
 		"extend":      msg.Extend,
 	}
@@ -138,33 +137,26 @@ func (t *cl253Transformer) transformIntlSMS(
 
 	// 手机号码，格式(区号+手机号码)，例如：8615800000000，其中 86 为中国的区号， 区号前不使用 00 开头,15800000000 为接收短信的真实手机号码。5-20 位
 	params := map[string]interface{}{
-		"account":  account.Key,
-		"password": account.Secret,
-		"mobile":   fmt.Sprintf("%d%s", msg.RegionCode, msg.Mobiles[0]),
-		"msg":      utils.AddSignature(msg.Content, msg.SignName),
-	}
-
-	// 处理统一的接口字段 - 适配到CL253国际短信特定的key
-	if senderID := msg.GetExtraStringOrDefault(cl253SenderIDKey, ""); senderID != "" {
-		params["senderId"] = senderID
-	}
-	if templateID := msg.GetExtraStringOrDefault(msg.TemplateID, ""); templateID != "" {
-		params["templateId"] = templateID
-	}
-	if msg.UID != "" {
-		params["uid"] = msg.UID // CL253使用 uid
-	}
-	if tdFlag := msg.GetExtraStringOrDefault(cl253TDFlagKey, ""); tdFlag != "" {
-		params["tdFlag"] = tdFlag
+		"account":     account.APIKey,
+		"password":    account.APISecret,
+		"mobile":      fmt.Sprintf("%d%s", msg.RegionCode, msg.Mobiles[0]),
+		"msg":         utils.AddSignature(msg.Content, msg.SignName),
+		"tdFlag":      msg.GetExtraIntOrDefault(cl253TDFlagKey, 0),
+		"report":      msg.GetExtraStringOrDefault(cl253ReportKey, ""),
+		"callbackUrl": msg.CallbackURL,
+		"uid":         msg.UID,
+		"extend":      msg.Extend,
+		"templateId":  msg.TemplateID,
+		"senderId":    msg.GetExtraStringOrDefault(cl253SenderIDKey, ""),
 	}
 
 	body, _ := json.Marshal(params)
 	reqSpec := &core.HTTPRequestSpec{
-		Method:   "POST",
+		Method:   http.MethodPost,
 		URL:      url,
 		Headers:  t.buildHeaders(nil),
 		Body:     body,
-		BodyType: "json",
+		BodyType: core.BodyTypeJSON,
 	}
 	return reqSpec, t.handleCl253Response, nil
 }

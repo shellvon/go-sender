@@ -3,7 +3,9 @@ package webhook
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
 	"regexp"
 
 	"github.com/shellvon/go-sender/core"
@@ -77,7 +79,7 @@ func (t *webhookTransformer) Transform(
 		method = whMsg.Method
 	}
 	if method == "" {
-		method = "POST"
+		method = http.MethodPost
 	}
 	// Body已经是[]byte，直接使用
 	reqSpec := &core.HTTPRequestSpec{
@@ -85,7 +87,7 @@ func (t *webhookTransformer) Transform(
 		URL:      url,
 		Headers:  headers,
 		Body:     whMsg.Body,
-		BodyType: "json",
+		BodyType: core.BodyTypeJSON,
 	}
 	return reqSpec, t.buildResponseHandler(endpoint), nil
 }
@@ -98,12 +100,20 @@ func (t *webhookTransformer) buildResponseHandler(endpoint *Endpoint) core.Respo
 			return t.handleDefaultResponse(statusCode, body)
 		}
 		switch cfg.ResponseType {
-		case "json":
+		case core.BodyTypeJSON:
 			return t.handleJSONResponse(cfg, statusCode, body)
-		case "text":
+		case core.BodyTypeText:
 			return t.handleTextResponse(cfg, statusCode, body)
-		case "none":
+		case core.BodyTypeNone:
 			return nil
+		case core.BodyTypeXML:
+			fallthrough
+		case core.BodyTypeRaw:
+			fallthrough
+		case core.BodyTypeForm:
+			// TODO: Implement form response handling if needed, or add a comment if not supported.
+			// For now, just fall through or return an error if not supported.
+			return errors.New("BodyTypeForm is not supported yet")
 		default:
 			return t.handleDefaultResponse(statusCode, body)
 		}
