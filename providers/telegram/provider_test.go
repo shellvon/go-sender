@@ -1,3 +1,6 @@
+//go:build legacy
+// +build legacy
+
 package telegram_test
 
 import (

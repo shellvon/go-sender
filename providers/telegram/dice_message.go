@@ -13,30 +13,16 @@ type DiceMessage struct {
 }
 
 // NewDiceMessage creates a new DiceMessage instance.
-func NewDiceMessage(chatID string, opts ...interface{}) *DiceMessage {
-	msg := &DiceMessage{
+// Based on SendDiceParams from Telegram Bot API
+// https://core.telegram.org/bots/api#senddice
+//   - Only chat_id is required.
+func NewDiceMessage(chatID string) *DiceMessage {
+	return &DiceMessage{
 		BaseMessage: BaseMessage{
 			MsgType: TypeDice,
 			ChatID:  chatID,
 		},
 	}
-	for _, opt := range opts {
-		switch o := opt.(type) {
-		case DiceMessageOption:
-			o(msg)
-		case MessageOption:
-			o(msg)
-		}
-	}
-	return msg
-}
-
-func (m *DiceMessage) GetBase() *BaseMessage {
-	return &m.BaseMessage
-}
-
-func (m *DiceMessage) ProviderType() core.ProviderType {
-	return core.ProviderTypeTelegram
 }
 
 func (m *DiceMessage) Validate() error {
@@ -44,12 +30,4 @@ func (m *DiceMessage) Validate() error {
 		return core.NewParamError("chat_id cannot be empty")
 	}
 	return nil
-}
-
-type DiceMessageOption func(*DiceMessage)
-
-// WithDiceEmoji sets the emoji for the dice animation
-// Must be one of "🎲", "🎯", "🏀", "⚽", "🎳", or "🎰". Defaults to "🎲".
-func WithDiceEmoji(emoji string) DiceMessageOption {
-	return func(m *DiceMessage) { m.Emoji = emoji }
 }

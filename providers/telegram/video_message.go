@@ -43,16 +43,12 @@ type VideoMessage struct {
 }
 
 // NewVideoMessage creates a new VideoMessage instance.
-func NewVideoMessage(chatID string, video string, opts ...interface{}) *VideoMessage {
-	return NewVideoMessageWithBuilder(chatID, video, opts...)
-}
-
-func (m *VideoMessage) GetBase() *BaseMessage {
-	return &m.BaseMessage
-}
-
-func (m *VideoMessage) ProviderType() core.ProviderType {
-	return core.ProviderTypeTelegram
+// Based on SendVideoParams from Telegram Bot API
+// https://core.telegram.org/bots/api#sendvideo
+//   - Only chat_id and video are required.
+//   - Currently, only file_id or http URL is supported.
+func NewVideoMessage(chatID string, video string) *VideoMessage {
+	return Video().Chat(chatID).File(video).Build()
 }
 
 func (m *VideoMessage) Validate() error {
@@ -63,56 +59,4 @@ func (m *VideoMessage) Validate() error {
 		return core.NewParamError("video cannot be empty")
 	}
 	return nil
-}
-
-type VideoMessageOption func(*VideoMessage)
-
-// WithVideoDuration sets the duration of the video in seconds
-// This is optional and can be used to provide metadata about the video.
-func WithVideoDuration(duration int) VideoMessageOption {
-	return func(m *VideoMessage) { m.Duration = duration }
-}
-
-// WithVideoWidth sets the width of the video
-// This is optional and can be used to provide metadata about the video.
-func WithVideoWidth(width int) VideoMessageOption {
-	return func(m *VideoMessage) { m.Width = width }
-}
-
-// WithVideoHeight sets the height of the video
-// This is optional and can be used to provide metadata about the video.
-func WithVideoHeight(height int) VideoMessageOption {
-	return func(m *VideoMessage) { m.Height = height }
-}
-
-// WithVideoThumbnail sets the thumbnail for the video
-// Should be in JPEG format and less than 200 kB in size
-// Width and height should not exceed 320.
-func WithVideoThumbnail(thumbnail string) VideoMessageOption {
-	return func(m *VideoMessage) { m.Thumbnail = thumbnail }
-}
-
-// WithVideoCover sets the video cover/thumbnail
-// Can only be uploaded as a separate file
-// Only jpeg and png formats are supported.
-func WithVideoCover(cover string) VideoMessageOption {
-	return func(m *VideoMessage) { m.Cover = cover }
-}
-
-// WithVideoStartTimestamp sets the timestamp of the video start
-// This can be used to specify where the video should start playing.
-func WithVideoStartTimestamp(startTimestamp int) VideoMessageOption {
-	return func(m *VideoMessage) { m.StartTimestamp = startTimestamp }
-}
-
-// WithVideoHasSpoiler sets whether the video should be covered with a spoiler animation
-// Users will need to tap to reveal the video content.
-func WithVideoHasSpoiler(has bool) VideoMessageOption {
-	return func(m *VideoMessage) { m.HasSpoiler = has }
-}
-
-// WithVideoSupportsStreaming sets whether the uploaded video is suitable for streaming
-// This helps Telegram optimize the video for streaming playback.
-func WithVideoSupportsStreaming(supports bool) VideoMessageOption {
-	return func(m *VideoMessage) { m.SupportsStreaming = supports }
 }

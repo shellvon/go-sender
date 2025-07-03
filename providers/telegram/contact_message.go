@@ -22,8 +22,11 @@ type ContactMessage struct {
 }
 
 // NewContactMessage creates a new ContactMessage instance.
-func NewContactMessage(chatID string, phoneNumber, firstName string, opts ...interface{}) *ContactMessage {
-	msg := &ContactMessage{
+// Based on SendContactParams from Telegram Bot API
+// https://core.telegram.org/bots/api#sendcontact
+//   - Only chat_id and phoneNumber/firstName are required.
+func NewContactMessage(chatID string, phoneNumber, firstName string) *ContactMessage {
+	return &ContactMessage{
 		BaseMessage: BaseMessage{
 			MsgType: TypeContact,
 			ChatID:  chatID,
@@ -31,23 +34,6 @@ func NewContactMessage(chatID string, phoneNumber, firstName string, opts ...int
 		PhoneNumber: phoneNumber,
 		FirstName:   firstName,
 	}
-	for _, opt := range opts {
-		switch o := opt.(type) {
-		case ContactMessageOption:
-			o(msg)
-		case MessageOption:
-			o(msg)
-		}
-	}
-	return msg
-}
-
-func (m *ContactMessage) GetBase() *BaseMessage {
-	return &m.BaseMessage
-}
-
-func (m *ContactMessage) ProviderType() core.ProviderType {
-	return core.ProviderTypeTelegram
 }
 
 func (m *ContactMessage) Validate() error {
@@ -61,18 +47,4 @@ func (m *ContactMessage) Validate() error {
 		return core.NewParamError("first_name cannot be empty")
 	}
 	return nil
-}
-
-type ContactMessageOption func(*ContactMessage)
-
-// WithContactLastName sets the last name of the contact
-// This is optional and can be omitted.
-func WithContactLastName(lastName string) ContactMessageOption {
-	return func(m *ContactMessage) { m.LastName = lastName }
-}
-
-// WithContactVCard sets additional data about the contact in vCard format
-// Should be 0-2048 bytes in size.
-func WithContactVCard(vCard string) ContactMessageOption {
-	return func(m *ContactMessage) { m.VCard = vCard }
 }

@@ -17,6 +17,7 @@ type PollMessage struct {
 	Question string `json:"question"`
 
 	// Mode for parsing entities in the question. See formatting options for more details. Currently, only custom emoji entities are allowed
+	// See  https://core.telegram.org/bots/api#formatting-options
 	QuestionParseMode string `json:"question_parse_mode,omitempty"`
 
 	// A JSON-serialized list of special entities that appear in the poll question. It can be specified instead of question_parse_mode
@@ -41,6 +42,7 @@ type PollMessage struct {
 	Explanation string `json:"explanation,omitempty"`
 
 	// Mode for parsing entities in the explanation. See formatting options for more details.
+	// See  https://core.telegram.org/bots/api#formatting-options
 	ExplanationParseMode string `json:"explanation_parse_mode,omitempty"`
 
 	// A JSON-serialized list of special entities that appear in the poll explanation. It can be specified instead of explanation_parse_mode
@@ -57,8 +59,11 @@ type PollMessage struct {
 }
 
 // NewPollMessage creates a new PollMessage instance.
-func NewPollMessage(chatID string, question string, options []InputPollOption, opts ...interface{}) *PollMessage {
-	msg := &PollMessage{
+// Based on SendPollParams from Telegram Bot API
+// https://core.telegram.org/bots/api#sendpoll
+//   - Only chat_id and question/options are required.
+func NewPollMessage(chatID string, question string, options []InputPollOption) *PollMessage {
+	return &PollMessage{
 		BaseMessage: BaseMessage{
 			MsgType: TypePoll,
 			ChatID:  chatID,
@@ -66,23 +71,6 @@ func NewPollMessage(chatID string, question string, options []InputPollOption, o
 		Question: question,
 		Options:  options,
 	}
-	for _, opt := range opts {
-		switch o := opt.(type) {
-		case PollMessageOption:
-			o(msg)
-		case MessageOption:
-			o(msg)
-		}
-	}
-	return msg
-}
-
-func (m *PollMessage) GetBase() *BaseMessage {
-	return &m.BaseMessage
-}
-
-func (m *PollMessage) ProviderType() core.ProviderType {
-	return core.ProviderTypeTelegram
 }
 
 func (m *PollMessage) Validate() error {
@@ -98,78 +86,4 @@ func (m *PollMessage) Validate() error {
 	return nil
 }
 
-type PollMessageOption func(*PollMessage)
-
-// WithPollQuestionParseMode sets the parse mode for the poll question
-// Currently, only custom emoji entities are allowed.
-func WithPollQuestionParseMode(mode string) PollMessageOption {
-	return func(m *PollMessage) { m.QuestionParseMode = mode }
-}
-
-// WithPollQuestionEntities sets the entities for the poll question
-// A JSON-serialized list of special entities that appear in the poll question.
-func WithPollQuestionEntities(entities []MessageEntity) PollMessageOption {
-	return func(m *PollMessage) { m.QuestionEntities = entities }
-}
-
-// WithPollIsAnonymous sets whether the poll should be anonymous
-// Defaults to True if not specified.
-func WithPollIsAnonymous(anonymous bool) PollMessageOption {
-	return func(m *PollMessage) { m.IsAnonymous = anonymous }
-}
-
-// WithPollType sets the type of the poll
-// Options: "quiz" or "regular", defaults to "regular".
-func WithPollType(pollType string) PollMessageOption {
-	return func(m *PollMessage) { m.Type = pollType }
-}
-
-// WithPollAllowsMultipleAnswers sets whether the poll allows multiple answers
-// Ignored for polls in quiz mode, defaults to False.
-func WithPollAllowsMultipleAnswers(allow bool) PollMessageOption {
-	return func(m *PollMessage) { m.AllowsMultipleAnswers = allow }
-}
-
-// WithPollCorrectOptionID sets the 0-based identifier of the correct answer option
-// Required for polls in quiz mode.
-func WithPollCorrectOptionID(correctOptionID int) PollMessageOption {
-	return func(m *PollMessage) { m.CorrectOptionID = correctOptionID }
-}
-
-// WithPollExplanation sets the explanation text for quiz polls
-// Text shown when a user chooses an incorrect answer or taps on the lamp icon
-// 0-200 characters with at most 2 line feeds after entities parsing.
-func WithPollExplanation(explanation string) PollMessageOption {
-	return func(m *PollMessage) { m.Explanation = explanation }
-}
-
-// WithPollExplanationParseMode sets the parse mode for the explanation text
-// Supported modes: "HTML", "Markdown", "MarkdownV2".
-func WithPollExplanationParseMode(mode string) PollMessageOption {
-	return func(m *PollMessage) { m.ExplanationParseMode = mode }
-}
-
-// WithPollExplanationEntities sets the entities for the poll explanation
-// A JSON-serialized list of special entities that appear in the poll explanation.
-func WithPollExplanationEntities(entities []MessageEntity) PollMessageOption {
-	return func(m *PollMessage) { m.ExplanationEntities = entities }
-}
-
-// WithPollOpenPeriod sets the amount of time in seconds the poll will be active
-// Range: 5-600 seconds. Can't be used together with close_date.
-func WithPollOpenPeriod(period int) PollMessageOption {
-	return func(m *PollMessage) { m.OpenPeriod = period }
-}
-
-// WithPollCloseDate sets the point in time when the poll will be automatically closed
-// Unix timestamp, must be at least 5 and no more than 600 seconds in the future
-// Can't be used together with open_period.
-func WithPollCloseDate(closeDate int64) PollMessageOption {
-	return func(m *PollMessage) { m.CloseDate = closeDate }
-}
-
-// WithPollIsClosed sets whether the poll should be immediately closed
-// Useful for poll preview.
-func WithPollIsClosed(isClosed bool) PollMessageOption {
-	return func(m *PollMessage) { m.IsClosed = isClosed }
-}
+// Option helpers removed – use PollBuilder instead.

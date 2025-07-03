@@ -20,20 +20,17 @@ type DocumentMessage struct {
 	Thumbnail string `json:"thumbnail,omitempty"`
 
 	// Disables automatic server-side content type detection for files uploaded using multipart/form-data
+	//  - Currently, This option is unsupported and will be ignored.
 	DisableContentTypeDetection bool `json:"disable_content_type_detection,omitempty"`
 }
 
 // NewDocumentMessage creates a new DocumentMessage instance.
-func NewDocumentMessage(chatID string, document string, opts ...interface{}) *DocumentMessage {
-	return NewDocumentMessageWithBuilder(chatID, document, opts...)
-}
-
-func (m *DocumentMessage) GetBase() *BaseMessage {
-	return &m.BaseMessage
-}
-
-func (m *DocumentMessage) ProviderType() core.ProviderType {
-	return core.ProviderTypeTelegram
+// Based on SendDocumentParams from Telegram Bot API
+// https://core.telegram.org/bots/api#senddocument
+//   - Only chat_id and document are required.
+//   - Currently, only file_id or http URL is supported.
+func NewDocumentMessage(chatID string, document string) *DocumentMessage {
+	return Document().Chat(chatID).File(document).Build()
 }
 
 func (m *DocumentMessage) Validate() error {
@@ -44,19 +41,4 @@ func (m *DocumentMessage) Validate() error {
 		return core.NewParamError("document cannot be empty")
 	}
 	return nil
-}
-
-type DocumentMessageOption func(*DocumentMessage)
-
-// WithDocumentThumbnail sets the thumbnail for the document
-// Should be in JPEG format and less than 200 kB in size
-// Width and height should not exceed 320.
-func WithDocumentThumbnail(thumbnail string) DocumentMessageOption {
-	return func(m *DocumentMessage) { m.Thumbnail = thumbnail }
-}
-
-// WithDocumentDisableContentTypeDetection disables automatic server-side content type detection
-// This is useful when you want to control the MIME type of the uploaded file.
-func WithDocumentDisableContentTypeDetection(disable bool) DocumentMessageOption {
-	return func(m *DocumentMessage) { m.DisableContentTypeDetection = disable }
 }
