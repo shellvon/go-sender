@@ -1,4 +1,3 @@
-//nolint:dupl // intentional duplication for explicit message type separation
 package telegram
 
 import "github.com/shellvon/go-sender/core"
@@ -19,16 +18,12 @@ type VoiceMessage struct {
 }
 
 // NewVoiceMessage creates a new VoiceMessage instance.
-func NewVoiceMessage(chatID string, voice string, opts ...interface{}) *VoiceMessage {
-	return NewVoiceMessageWithBuilder(chatID, voice, opts...)
-}
-
-func (m *VoiceMessage) GetBase() *BaseMessage {
-	return &m.BaseMessage
-}
-
-func (m *VoiceMessage) ProviderType() core.ProviderType {
-	return core.ProviderTypeTelegram
+// Based on SendVoiceParams from Telegram Bot API
+// https://core.telegram.org/bots/api#sendvoice
+//   - Only chat_id and voice are required.
+//   - Currently, only file_id or http URL is supported.
+func NewVoiceMessage(chatID string, voice string) *VoiceMessage {
+	return Voice().Chat(chatID).File(voice).Build()
 }
 
 func (m *VoiceMessage) Validate() error {
@@ -39,12 +34,4 @@ func (m *VoiceMessage) Validate() error {
 		return core.NewParamError("voice cannot be empty")
 	}
 	return nil
-}
-
-type VoiceMessageOption func(*VoiceMessage)
-
-// WithVoiceDuration sets the duration of the voice message in seconds
-// This is optional and can be used to provide metadata about the voice message.
-func WithVoiceDuration(duration int) VoiceMessageOption {
-	return func(m *VoiceMessage) { m.Duration = duration }
 }

@@ -29,8 +29,11 @@ type LocationMessage struct {
 }
 
 // NewLocationMessage creates a new LocationMessage instance.
-func NewLocationMessage(chatID string, latitude, longitude float64, opts ...interface{}) *LocationMessage {
-	msg := &LocationMessage{
+// Based on SendLocationParams from Telegram Bot API
+// https://core.telegram.org/bots/api#sendlocation
+//   - Only chat_id and latitude/longitude are required.
+func NewLocationMessage(chatID string, latitude, longitude float64) *LocationMessage {
+	return &LocationMessage{
 		BaseMessage: BaseMessage{
 			MsgType: TypeLocation,
 			ChatID:  chatID,
@@ -38,23 +41,6 @@ func NewLocationMessage(chatID string, latitude, longitude float64, opts ...inte
 		Latitude:  latitude,
 		Longitude: longitude,
 	}
-	for _, opt := range opts {
-		switch o := opt.(type) {
-		case LocationMessageOption:
-			o(msg)
-		case MessageOption:
-			o(msg)
-		}
-	}
-	return msg
-}
-
-func (m *LocationMessage) GetBase() *BaseMessage {
-	return &m.BaseMessage
-}
-
-func (m *LocationMessage) ProviderType() core.ProviderType {
-	return core.ProviderTypeTelegram
 }
 
 func (m *LocationMessage) Validate() error {
@@ -62,30 +48,4 @@ func (m *LocationMessage) Validate() error {
 		return core.NewParamError("chat_id cannot be empty")
 	}
 	return nil
-}
-
-type LocationMessageOption func(*LocationMessage)
-
-// WithLocationHorizontalAccuracy sets the radius of uncertainty for the location
-// Measured in meters, should be between 0-1500.
-func WithLocationHorizontalAccuracy(accuracy float64) LocationMessageOption {
-	return func(m *LocationMessage) { m.HorizontalAccuracy = accuracy }
-}
-
-// WithLocationLivePeriod sets the period for which the location can be updated
-// Should be between 60 and 86400 seconds.
-func WithLocationLivePeriod(period int) LocationMessageOption {
-	return func(m *LocationMessage) { m.LivePeriod = period }
-}
-
-// WithLocationHeading sets the direction in which the user is moving
-// Must be between 1 and 360 degrees if specified.
-func WithLocationHeading(heading int) LocationMessageOption {
-	return func(m *LocationMessage) { m.Heading = heading }
-}
-
-// WithLocationProximityAlertRadius sets the maximum distance for proximity alerts
-// Must be between 1 and 100000 meters if specified.
-func WithLocationProximityAlertRadius(radius int) LocationMessageOption {
-	return func(m *LocationMessage) { m.ProximityAlertRadius = radius }
 }

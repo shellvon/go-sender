@@ -10,6 +10,22 @@ import (
 	"github.com/shellvon/go-sender/utils"
 )
 
+const (
+	endpointSendMessage   = "sendMessage"
+	endpointSendPhoto     = "sendPhoto"
+	endpointSendAudio     = "sendAudio"
+	endpointSendVoice     = "sendVoice"
+	endpointSendDocument  = "sendDocument"
+	endpointSendVideo     = "sendVideo"
+	endpointSendAnimation = "sendAnimation"
+	endpointSendVideoNote = "sendVideoNote"
+	endpointSendLocation  = "sendLocation"
+	endpointSendContact   = "sendContact"
+	endpointSendPoll      = "sendPoll"
+	endpointSendDice      = "sendDice"
+	endpointSendVenue     = "sendVenue"
+)
+
 // telegramTransformer 实现 providers.HTTPTransformer[*core.Account].
 type telegramTransformer struct{}
 
@@ -33,12 +49,40 @@ func (t *telegramTransformer) Transform(
 	msg core.Message,
 	account *core.Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
-	tgMsg, ok := msg.(Message)
-	if !ok {
+	var endpoint string
+	switch msg.(type) {
+	case *TextMessage:
+		endpoint = endpointSendMessage
+	case *PhotoMessage:
+		endpoint = endpointSendPhoto
+	case *AudioMessage:
+		endpoint = endpointSendAudio
+	case *VoiceMessage:
+		endpoint = endpointSendVoice
+	case *DocumentMessage:
+		endpoint = endpointSendDocument
+	case *VideoMessage:
+		endpoint = endpointSendVideo
+	case *AnimationMessage:
+		endpoint = endpointSendAnimation
+	case *VideoNoteMessage:
+		endpoint = endpointSendVideoNote
+	case *LocationMessage:
+		endpoint = endpointSendLocation
+	case *ContactMessage:
+		endpoint = endpointSendContact
+	case *PollMessage:
+		endpoint = endpointSendPoll
+	case *DiceMessage:
+		endpoint = endpointSendDice
+	case *VenueMessage:
+		endpoint = endpointSendVenue
+	default:
 		return nil, nil, fmt.Errorf("unsupported message type for telegram transformer: %T", msg)
 	}
-	apiURL := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", account.APIKey)
-	body, err := json.Marshal(tgMsg)
+
+	apiURL := fmt.Sprintf("https://api.telegram.org/bot%s/%s", account.APIKey, endpoint)
+	body, err := json.Marshal(msg)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to marshal telegram payload: %w", err)
 	}

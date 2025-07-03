@@ -27,24 +27,8 @@ type VideoNoteMessage struct {
 }
 
 // NewVideoNoteMessage creates a new VideoNoteMessage instance.
-func NewVideoNoteMessage(chatID string, videoNote string, opts ...interface{}) *VideoNoteMessage {
-	msg := &VideoNoteMessage{
-		BaseMessage: BaseMessage{
-			MsgType: TypeVideoNote,
-			ChatID:  chatID,
-		},
-		VideoNote: videoNote,
-	}
-	applyMediaMessageOptions(msg, opts)
-	return msg
-}
-
-func (m *VideoNoteMessage) GetBase() *BaseMessage {
-	return &m.BaseMessage
-}
-
-func (m *VideoNoteMessage) ProviderType() core.ProviderType {
-	return core.ProviderTypeTelegram
+func NewVideoNoteMessage(chatID string, videoNote string) *VideoNoteMessage {
+	return VideoNote().Chat(chatID).File(videoNote).Build()
 }
 
 func (m *VideoNoteMessage) Validate() error {
@@ -55,25 +39,4 @@ func (m *VideoNoteMessage) Validate() error {
 		return core.NewParamError("video_note cannot be empty")
 	}
 	return nil
-}
-
-type VideoNoteMessageOption func(*VideoNoteMessage)
-
-// WithVideoNoteDuration sets the duration of the video note in seconds
-// This is optional and can be used to provide metadata about the video note.
-func WithVideoNoteDuration(duration int) VideoNoteMessageOption {
-	return func(m *VideoNoteMessage) { m.Duration = duration }
-}
-
-// WithVideoNoteLength sets the length (diameter) of the video note
-// Video notes are always square, so this represents both width and height.
-func WithVideoNoteLength(length int) VideoNoteMessageOption {
-	return func(m *VideoNoteMessage) { m.Length = length }
-}
-
-// WithVideoNoteThumbnail sets the thumbnail for the video note
-// Should be in JPEG format and less than 200 kB in size
-// Width and height should not exceed 320.
-func WithVideoNoteThumbnail(thumbnail string) VideoNoteMessageOption {
-	return func(m *VideoNoteMessage) { m.Thumbnail = thumbnail }
 }

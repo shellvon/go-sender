@@ -30,16 +30,11 @@ type AudioMessage struct {
 }
 
 // NewAudioMessage creates a new AudioMessage instance.
-func NewAudioMessage(chatID string, audio string, opts ...interface{}) *AudioMessage {
-	return NewAudioMessageWithBuilder(chatID, audio, opts...)
-}
-
-func (m *AudioMessage) GetBase() *BaseMessage {
-	return &m.BaseMessage
-}
-
-func (m *AudioMessage) ProviderType() core.ProviderType {
-	return core.ProviderTypeTelegram
+// Based on SendAudioParams from Telegram Bot API
+// https://core.telegram.org/bots/api#sendaudio
+//   - Only chat_id and audio are required.
+func NewAudioMessage(chatID string, audio string) *AudioMessage {
+	return Audio().Chat(chatID).File(audio).Build()
 }
 
 func (m *AudioMessage) Validate() error {
@@ -50,31 +45,4 @@ func (m *AudioMessage) Validate() error {
 		return core.NewParamError("audio cannot be empty")
 	}
 	return nil
-}
-
-type AudioMessageOption func(*AudioMessage)
-
-// WithAudioDuration sets the duration of the audio in seconds
-// This is optional and can be used to provide metadata about the audio.
-func WithAudioDuration(duration int) AudioMessageOption {
-	return func(m *AudioMessage) { m.Duration = duration }
-}
-
-// WithAudioPerformer sets the performer of the audio
-// This is optional and can be used to provide metadata about the audio.
-func WithAudioPerformer(performer string) AudioMessageOption {
-	return func(m *AudioMessage) { m.Performer = performer }
-}
-
-// WithAudioTitle sets the title of the audio
-// This is optional and can be used to provide metadata about the audio.
-func WithAudioTitle(title string) AudioMessageOption {
-	return func(m *AudioMessage) { m.Title = title }
-}
-
-// WithAudioThumbnail sets the thumbnail for the audio
-// Should be in JPEG format and less than 200 kB in size
-// Width and height should not exceed 320.
-func WithAudioThumbnail(thumbnail string) AudioMessageOption {
-	return func(m *AudioMessage) { m.Thumbnail = thumbnail }
 }

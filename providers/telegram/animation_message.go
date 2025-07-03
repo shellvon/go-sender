@@ -28,34 +28,17 @@ type AnimationMessage struct {
 	// so you can pass "attach://<file_attach_name>" if the thumbnail was uploaded using multipart/form-data under <file_attach_name>.
 	Thumbnail string `json:"thumbnail,omitempty"`
 
-	// Animation caption (may also be used when resending animation by file_id), 0-1024 characters after entities parsing
-	Caption string `json:"caption,omitempty"`
-
-	// Mode for parsing entities in the animation caption. See formatting options for more details on supported modes.
-	// Options: "HTML", "Markdown", "MarkdownV2"
-	ParseMode string `json:"parse_mode,omitempty"`
-
-	// A JSON-serialized list of special entities that appear in the caption, which can be specified instead of parse_mode
-	CaptionEntities []MessageEntity `json:"caption_entities,omitempty"`
-
-	// Pass True if the caption must be shown above the message media
-	ShowCaptionAboveMedia bool `json:"show_caption_above_media,omitempty"`
-
 	// Pass True if the animation needs to be covered with a spoiler animation
 	HasSpoiler bool `json:"has_spoiler,omitempty"`
 }
 
 // NewAnimationMessage creates a new AnimationMessage instance.
-func NewAnimationMessage(chatID string, animation string, opts ...interface{}) *AnimationMessage {
-	return NewAnimationMessageWithBuilder(chatID, animation, opts...)
-}
-
-func (m *AnimationMessage) GetBase() *BaseMessage {
-	return &m.BaseMessage
-}
-
-func (m *AnimationMessage) ProviderType() core.ProviderType {
-	return core.ProviderTypeTelegram
+// Based on SendAnimationParams from Telegram Bot API
+// https://core.telegram.org/bots/api#sendanimation
+//   - Only chat_id and animation are required.
+//   - Currently, only file_id or http URL is supported.
+func NewAnimationMessage(chatID string, animation string) *AnimationMessage {
+	return Animation().Chat(chatID).File(animation).Build()
 }
 
 func (m *AnimationMessage) Validate() error {
@@ -66,37 +49,4 @@ func (m *AnimationMessage) Validate() error {
 		return core.NewParamError("animation cannot be empty")
 	}
 	return nil
-}
-
-type AnimationMessageOption func(*AnimationMessage)
-
-// WithAnimationDuration sets the duration of the animation in seconds
-// This is optional and can be used to provide metadata about the animation.
-func WithAnimationDuration(duration int) AnimationMessageOption {
-	return func(m *AnimationMessage) { m.Duration = duration }
-}
-
-// WithAnimationWidth sets the width of the animation
-// This is optional and can be used to provide metadata about the animation.
-func WithAnimationWidth(width int) AnimationMessageOption {
-	return func(m *AnimationMessage) { m.Width = width }
-}
-
-// WithAnimationHeight sets the height of the animation
-// This is optional and can be used to provide metadata about the animation.
-func WithAnimationHeight(height int) AnimationMessageOption {
-	return func(m *AnimationMessage) { m.Height = height }
-}
-
-// WithAnimationThumbnail sets the thumbnail for the animation
-// Should be in JPEG format and less than 200 kB in size
-// Width and height should not exceed 320.
-func WithAnimationThumbnail(thumbnail string) AnimationMessageOption {
-	return func(m *AnimationMessage) { m.Thumbnail = thumbnail }
-}
-
-// WithAnimationHasSpoiler sets whether the animation should be covered with a spoiler animation
-// Users will need to tap to reveal the animation content.
-func WithAnimationHasSpoiler(has bool) AnimationMessageOption {
-	return func(m *AnimationMessage) { m.HasSpoiler = has }
 }

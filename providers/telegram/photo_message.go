@@ -1,4 +1,3 @@
-//nolint:dupl // intentional duplication for explicit message type separation
 package telegram
 
 import "github.com/shellvon/go-sender/core"
@@ -20,18 +19,14 @@ type PhotoMessage struct {
 }
 
 // NewPhotoMessage creates a new PhotoMessage instance.
-func NewPhotoMessage(chatID string, photo string, opts ...interface{}) *PhotoMessage {
-	return NewPhotoMessageWithBuilder(chatID, photo, opts...)
+// Based on SendPhotoParams from Telegram Bot API
+// https://core.telegram.org/bots/api#sendphoto
+//   - Only chat_id and photo are required.
+func NewPhotoMessage(chatID string, photo string) *PhotoMessage {
+	return Photo().Chat(chatID).File(photo).Build()
 }
 
-func (m *PhotoMessage) GetBase() *BaseMessage {
-	return &m.BaseMessage
-}
-
-func (m *PhotoMessage) ProviderType() core.ProviderType {
-	return core.ProviderTypeTelegram
-}
-
+// Validate checks if the message is valid.
 func (m *PhotoMessage) Validate() error {
 	if m.ChatID == "" {
 		return core.NewParamError("chat_id cannot be empty")
@@ -40,12 +35,4 @@ func (m *PhotoMessage) Validate() error {
 		return core.NewParamError("photo cannot be empty")
 	}
 	return nil
-}
-
-type PhotoMessageOption func(*PhotoMessage)
-
-// WithPhotoHasSpoiler sets whether the photo should be covered with a spoiler animation
-// Users will need to tap to reveal the photo content.
-func WithPhotoHasSpoiler(hasSpoiler bool) PhotoMessageOption {
-	return func(m *PhotoMessage) { m.HasSpoiler = hasSpoiler }
 }
