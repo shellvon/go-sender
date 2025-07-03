@@ -1,17 +1,23 @@
 [⬅️ Back to Main README](../../README.md)
 
-# WeCom Bot Provider
+# WeCom Bot Provider | 企业微信机器人推送组件
 
 This provider supports sending messages to WeCom (企业微信) group robots via webhooks.
 
-## Features
+本组件支持通过 webhook 向企业微信（WeCom）群机器人发送消息。
 
-- **Multiple Account Support**: Configure multiple accounts with different strategies (round-robin, random, weighted)
-- **Message Types**: Support for text, markdown, image, news, and template card messages
-- **Media Upload**: Support for uploading media files (images, documents)
-- **Mention Support**: Support for mentioning users or @all
+---
 
-## Configuration
+## Features | 功能特性
+
+- **Multiple Account Support 多账号支持**: Configure multiple accounts with different strategies (round-robin, random, weighted) | 支持多账号、灵活负载均衡（轮询、随机、加权）
+- **Message Types 消息类型**: Text, Markdown, Image, News, Template Card, File, Voice | 文本、Markdown、图片、新闻、模板卡片、文件、语音
+- **Media Upload 媒体上传**: Support for uploading media files (images, files, voice) | 支持自动上传图片、文件、语音等媒体
+- **Mention Support @成员支持**: Support for mentioning users or @all | 支持@指定成员或@所有人
+
+---
+
+## Configuration | 配置示例
 
 ```go
 import (
@@ -19,141 +25,119 @@ import (
     "github.com/shellvon/go-sender/providers/wecombot"
 )
 
-// Create WeCom Bot configuration
+// English: Create WeCom Bot configuration
+// 中文：创建企业微信机器人配置
 config := wecombot.Config{
     BaseConfig: core.BaseConfig{
-        Strategy: core.StrategyRoundRobin,
+        Strategy: core.StrategyRoundRobin, // 轮询、随机、加权等
     },
     Accounts: []core.Account{
         {
             Name:     "main",
-            Key:      "YOUR_WEBHOOK_KEY",
+            Key:      "YOUR_WEBHOOK_KEY", // webhook URL 末尾 /key= 后的部分
             Weight:   100,
             Disabled: false,
         },
-        {
-            Name:     "backup",
-            Key:      "YOUR_BACKUP_KEY",
-            Weight:   80,
-            Disabled: false,
-        },
+        // ... more accounts
     },
 }
 
-// Create provider
 provider, err := wecombot.New(config)
 if err != nil {
-    log.Fatalf("Failed to create WeCom Bot provider: %v", err)
+    log.Fatalf("Failed to create WeCom Bot provider: %v", err) // 创建失败
 }
 ```
 
-## Message Types
+---
 
-### 1. Text Message
+## Message Types (Builder Style) | 消息类型（链式构建）
+
+### 1. Text Message | 文本消息
 
 ```go
-// Simple text message
-textMsg := wecombot.NewTextMessage("Hello from go-sender!")
+// English: Simple text message
+// 中文：简单文本消息
+msg := wecombot.Text().
+    Content("Hello from go-sender! 你好，世界！").
+    Build()
 
-// Text message with mentions
-textMsg := wecombot.NewTextMessage("Hello everyone!",
-    wecombot.WithMentionedList([]string{"@all"}),
-    wecombot.WithMentionedMobileList([]string{"13800138000"}),
-)
+// English: Text message with mentions
+// 中文：带@的文本消息
+msg := wecombot.Text().
+    Content("Hello @all, this is a test message").
+    MentionUsers([]string{"@all"}).
+    MentionMobiles([]string{"13800138000"}).
+    Build()
 ```
 
-### 2. Markdown Message
+### 2. Markdown Message | Markdown 消息
 
 ```go
-markdownContent := `# 系统通知
+markdownContent := `# 系统通知 System Notice\n\n- **CPU**: 45%\n- **Memory**: 60%\n- **Disk**: 75%\n\n> 系统运行正常 System OK\n\n[查看详情 View Details](https://example.com)`
 
-## 状态报告
-- **CPU 使用率**: 45%
-- **内存使用率**: 60%
-- **磁盘空间**: 75%
-
-> 系统运行正常
-
-[查看详情](https://example.com)`
-
-markdownMsg := wecombot.NewMarkdownMessage(markdownContent)
+msg := wecombot.Markdown().
+    Content(markdownContent).
+    Build()
 ```
 
-### 3. Image Message
+### 3. Image Message | 图片消息
 
 ```go
-// Upload image first
+// English: Upload image and send
+// 中文：上传图片并发送
 file, err := os.Open("image.jpg")
 if err != nil {
     log.Fatalf("Failed to open image: %v", err)
 }
 defer file.Close()
-
 mediaId, account, err := provider.UploadMedia(ctx, "image.jpg", file)
 if err != nil {
     log.Fatalf("Failed to upload image: %v", err)
 }
-
-// Send image message
-imageMsg := wecombot.NewImageMessage(mediaId)
+msg := wecombot.Image().Base64(imgBase64).MD5(imgMD5).Build()
 ```
 
-### 4. News Message
+### 4. News Message | 新闻消息
 
 ```go
-newsMsg := wecombot.NewNewsMessage([]wecombot.NewsArticle{
-    {
-        Title:       "重要通知",
-        Description: "这是一条重要通知的描述",
-        URL:         "https://example.com",
-        PicURL:      "https://example.com/image.jpg",
-    },
-    {
-        Title:       "系统更新",
-        Description: "系统已更新到最新版本",
-        URL:         "https://example.com/update",
-        PicURL:      "https://example.com/update.jpg",
-    },
-})
+msg := wecombot.NewsMsg().
+    AddArticle("重要通知 Important", "描述 Description", "https://example.com", "https://example.com/image.jpg").
+    Build()
 ```
 
-### 5. Template Card Message
+### 5. Template Card Message | 模板卡片消息
 
 ```go
-cardMsg := wecombot.NewTemplateCardMessage().
-    SetCardType(wecombot.CardTypeTextNotice).
-    SetSource(&wecombot.CardSource{
-        IconURL: "https://example.com/icon.png",
-        Desc:    "消息来源",
-    }).
-    SetMainTitle(&wecombot.CardMainTitle{
-        Title: "模板卡片标题",
-        Desc:  "模板卡片描述",
-    }).
-    SetHorizontalContentList([]wecombot.CardHorizontalContent{
-        {
-            KeyName: "项目名称",
-            Value:   "go-sender",
-        },
-        {
-            KeyName: "版本",
-            Value:   "1.0.0",
-        },
-    }).
-    SetJumpList([]wecombot.CardJump{
-        {
-            Type:  wecombot.JumpTypeUrl,
-            Title: "查看详情",
-            URL:   "https://example.com",
-        },
-    }).
-    SetCardAction(&wecombot.CardAction{
-        Type: wecombot.ActionTypeUrl,
-        URL:  "https://example.com",
-    })
+msg := wecombot.Card(wecombot.CardTypeTextNotice).
+    MainTitle("模板卡片标题 Main Title", "描述 Description").
+    SubTitle("点击查看详情 Click for details").
+    JumpURL("https://example.com").
+    Build()
 ```
 
-## Usage with Sender
+### 6. File Message (Auto Upload) | 文件消息（自动上传）
+
+```go
+// English: Send a file by local path (auto upload)
+// 中文：通过本地路径发送文件（自动上传）
+msg := wecombot.File().
+    LocalPath("/path/to/report.pdf"). // 自动上传，无需手动获取 media_id
+    Build()
+```
+
+### 7. Voice Message (Auto Upload) | 语音消息（自动上传）
+
+```go
+// English: Send a voice message by local path (auto upload, AMR format, ≤2MB, ≤60s)
+// 中文：通过本地路径发送语音（自动上传，仅支持AMR格式，≤2MB，≤60秒）
+msg := wecombot.Voice().
+    LocalPath("/path/to/voice.amr"). // 自动上传，无需手动获取 media_id
+    Build()
+```
+
+---
+
+## Usage with Sender | 与 Sender 结合使用
 
 ```go
 import (
@@ -162,87 +146,71 @@ import (
     "github.com/shellvon/go-sender/providers/wecombot"
 )
 
-// Create sender
 s := gosender.NewSender(nil)
-
-// Register WeCom Bot provider
 wecomProvider, err := wecombot.New(config)
 if err != nil {
     log.Fatalf("Failed to create WeCom Bot provider: %v", err)
 }
 s.RegisterProvider(core.ProviderTypeWecombot, wecomProvider, nil)
 
-// Send message
 ctx := context.Background()
-textMsg := wecombot.NewTextMessage("Hello from go-sender!")
-err = s.Send(ctx, textMsg)
+msg := wecombot.File().LocalPath("/path/to/report.pdf").Build() // 文件自动上传
+err = s.Send(ctx, msg)
 if err != nil {
     log.Printf("Failed to send message: %v", err)
 }
 ```
 
-## Media Upload
+---
 
-WeCom Bot supports uploading media files for use in image and file messages:
+## Media Upload | 媒体上传说明
 
-```go
-// Upload an image
-file, err := os.Open("image.jpg")
-if err != nil {
-    log.Fatalf("Failed to open file: %v", err)
-}
-defer file.Close()
+- **Auto Upload 自动上传**: For file/voice messages, you can use `.LocalPath("/path/to/file")` in the builder. The SDK will automatically upload the file/voice and fill in the media_id. No need to call UploadMedia manually.
+- **Manual Upload 手动上传**: For image messages, you can use `provider.UploadMedia(ctx, "image.jpg", file)` to get media_id, then use it in the builder.
+- **Constraints 限制**:
+  - File: ≤20MB
+  - Voice: ≤2MB, ≤60s, AMR format only
+  - All media: >5 bytes
+  - 媒体文件有效期 3 天，仅上传账号可用
 
-mediaId, account, err := provider.UploadMedia(ctx, "image.jpg", file)
-if err != nil {
-    log.Fatalf("Failed to upload media: %v", err)
-}
+---
 
-// Use the mediaId in image message
-imageMsg := wecombot.NewImageMessage(mediaId)
-```
+## API Reference | API 参考
 
-## API Reference
+### Config | 配置
 
-### Config
+- `BaseConfig`: Common configuration fields | 通用配置字段
+- `Accounts`: Array of account configurations | 账号配置数组
 
-- `BaseConfig`: Common configuration fields
-  - `Disabled`: Whether the provider is disabled
-  - `Strategy`: Selection strategy (round_robin, random, weighted)
-- `Accounts`: Array of account configurations
+### Message Types | 消息类型
 
-### Account
+- `TextMessage`: Text | 文本
+- `MarkdownMessage`: Markdown
+- `ImageMessage`: Image | 图片
+- `NewsMessage`: News | 新闻
+- `TemplateCardMessage`: Template Card | 模板卡片
+- `FileMessage`: File | 文件
+- `VoiceMessage`: Voice | 语音
 
-- `Name`: Account name for identification
-- `Key`: WeCom webhook key (get from WeCom group robot settings)
-- `Weight`: Weight for weighted strategy (default: 1)
-- `Disabled`: Whether this account is disabled
+### Builder Options | 构建器选项
 
-### Message Types
+- `.MentionUsers(users []string)`: Mention users | @成员
+- `.MentionMobiles(mobiles []string)`: Mention by mobile | @手机号
+- `.LocalPath(path string)`: Auto upload file/voice | 自动上传文件/语音
+- `.MediaID(id string)`: Use existing media_id | 使用已上传的 media_id
 
-- `TextMessage`: Simple text messages with mention support
-- `MarkdownMessage`: Rich text messages with Markdown formatting
-- `ImageMessage`: Image messages (requires media upload)
-- `NewsMessage`: News article messages
-- `TemplateCardMessage`: Interactive template card messages
+---
 
-### Message Options
+## Notes | 说明
 
-- `WithMentionedList(users []string)`: Mention specific users
-- `WithMentionedMobileList(mobiles []string)`: Mention users by mobile number
-- `WithMentionedEmailList(emails []string)`: Mention users by email
+- **Webhook Key**: Get from WeCom group robot settings | webhook key 请在企业微信机器人设置中获取
+- **Media Upload**: Media files valid for 3 days, only usable by uploading account | 媒体文件 3 天有效，仅上传账号可用
+- **Mention**: Use `@all` to mention all | 使用 `@all` 可@所有人
+- **Voice**: Only AMR format, ≤2MB, ≤60s | 语音仅支持 AMR 格式，≤2MB，≤60 秒
+- **File**: ≤20MB | 文件最大 20MB
 
-## Notes
+---
 
-- **Webhook Key**: Get your webhook key from WeCom group robot settings
-- **Media Upload**: Media files are valid for 3 days and can only be used by the account that uploaded them
-- **Mention Support**: Use `@all` to mention all group members
-- **Markdown**: Supports standard Markdown syntax
-- **Template Cards**: Support various card types for rich interactions
+## API Documentation | 官方文档
 
-## API Documentation
-
-For detailed API documentation, visit:
-
-- [WeCom Bot API Documentation](https://developer.work.weixin.qq.com/document/path/91770)
-- [WeCom Group Robot](https://developer.work.weixin.qq.com/document/path/91770)
+- [WeCom Bot API Documentation | 企业微信机器人官方文档](https://developer.work.weixin.qq.com/document/path/91770)

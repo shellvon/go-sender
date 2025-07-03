@@ -1,21 +1,27 @@
 [⬅️ Back to Main README](../../README.md)
 
-# Webhook Provider
+# Webhook Provider | 通用 Webhook 推送组件
 
 This provider supports sending messages via HTTP webhooks to any endpoint that accepts HTTP requests.
 
-## Features
+本组件支持通过 HTTP Webhook 向任意支持 HTTP 请求的接口推送消息。
 
-- **Universal HTTP Support**: Send messages to any HTTP endpoint
-- **Multiple Methods**: Support for GET, POST, PUT, PATCH, DELETE methods (configured in endpoint)
-- **Custom Headers**: Add custom headers for authentication and content type
-- **Flexible Body Format**: Support for any raw body content
-- **Response Validation**: Configurable response validation for different webhook formats
-- **Multiple Response Types**: Support for JSON, text, and XML response validation
-- **Custom Status Codes**: Configure custom success status codes
-- **Multiple Endpoints**: Support multiple webhook endpoints with load balancing
+---
 
-## Configuration
+## Features | 功能特性
+
+- **Universal HTTP Support 通用 HTTP 支持**: Send messages to any HTTP endpoint | 支持任意 HTTP 接口
+- **Multiple Methods 多种请求方法**: Support for GET, POST, PUT, PATCH, DELETE methods | 支持 GET、POST、PUT、PATCH、DELETE 等方法
+- **Custom Headers 自定义请求头**: Add custom headers for authentication and content type | 支持自定义请求头
+- **Flexible Body Format 灵活请求体**: Support for any raw body content | 支持任意原始请求体
+- **Response Validation 响应校验**: Configurable response validation for different webhook formats | 支持多种响应校验方式
+- **Multiple Response Types 多种响应类型**: Support for JSON, text, and XML response validation | 支持 JSON、文本、XML 响应校验
+- **Custom Status Codes 自定义状态码**: Configure custom success status codes | 支持自定义成功状态码
+- **Multiple Endpoints 多端点支持**: Support multiple webhook endpoints with load balancing | 支持多端点负载均衡
+
+---
+
+## Configuration | 配置示例
 
 ```go
 import (
@@ -23,10 +29,11 @@ import (
     "github.com/shellvon/go-sender/providers/webhook"
 )
 
-// Create webhook configuration
+// English: Create webhook configuration
+// 中文：创建 Webhook 配置
 config := webhook.Config{
     BaseConfig: core.BaseConfig{
-        Strategy: core.StrategyRoundRobin,
+        Strategy: core.StrategyRoundRobin, // 轮询、随机、加权等
     },
     Endpoints: []webhook.Endpoint{
         {
@@ -36,156 +43,25 @@ config := webhook.Config{
             Weight:   100,
             Disabled: false,
         },
-        {
-            Name:     "backup-webhook",
-            URL:      "https://backup.example.com/webhook",
-            Method:   "POST",
-            Weight:   50,
-            Disabled: false,
-        },
+        // ... more endpoints
     },
 }
 
-// Create provider
 provider, err := webhook.New(config)
 if err != nil {
-    log.Fatalf("Failed to create webhook provider: %v", err)
+    log.Fatalf("Failed to create webhook provider: %v", err) // 创建失败
 }
 ```
 
-## Response Validation
+---
 
-The webhook provider supports configurable response validation to handle different webhook response formats.
+## Message Types | 消息类型
 
-### 1. Simple Status Code Validation (Default)
+### 1. JSON Message | JSON 消息
 
 ```go
-// Default behavior - only checks HTTP status codes (2xx = success)
-config := webhook.Config{
-    Endpoints: []webhook.Endpoint{
-        {
-            Name:   "simple-webhook",
-            URL:    "https://api.example.com/webhook",
-            Method: "POST",
-        },
-    },
-}
-```
-
-### 2. JSON Response Validation
-
-```go
-// Validate JSON responses with success/error fields
-config := webhook.Config{
-    Endpoints: []webhook.Endpoint{
-        {
-            Name:   "json-webhook",
-            URL:    "https://api.example.com/webhook",
-            Method: "POST",
-            ResponseConfig: &webhook.ResponseConfig{
-                ValidateResponse: true,
-                ResponseType:     "json",
-                SuccessField:     "success",    // Field name indicating success
-                SuccessValue:     "true",       // Expected value for success
-                ErrorField:       "error",      // Field name containing error message
-                MessageField:     "message",    // Field name containing response message
-            },
-        },
-    },
-}
-```
-
-**Example JSON responses:**
-
-```json
-// Success response
-{
-    "success": "true",
-    "message": "Message sent successfully",
-    "id": "12345"
-}
-
-// Error response
-{
-    "success": "false",
-    "error": "Invalid API key",
-    "code": 401
-}
-```
-
-### 3. Custom Status Codes
-
-```go
-// Accept only specific status codes as success
-config := webhook.Config{
-    Endpoints: []webhook.Endpoint{
-        {
-            Name:   "custom-status-webhook",
-            URL:    "https://api.example.com/webhook",
-            Method: "POST",
-            ResponseConfig: &webhook.ResponseConfig{
-                SuccessStatusCodes: []int{200, 201, 202}, // Only these codes = success
-            },
-        },
-    },
-}
-```
-
-### 4. Text Response Validation
-
-```go
-// Validate text responses using regex patterns
-config := webhook.Config{
-    Endpoints: []webhook.Endpoint{
-        {
-            Name:   "text-webhook",
-            URL:    "https://api.example.com/webhook",
-            Method: "POST",
-            ResponseConfig: &webhook.ResponseConfig{
-                ValidateResponse: true,
-                ResponseType:     "text",
-                SuccessPattern:   "^OK$",           // Regex for success response
-                ErrorPattern:     "^ERROR:",        // Regex for error response
-            },
-        },
-    },
-}
-```
-
-**Example text responses:**
-
-```
-// Success response
-OK
-
-// Error response
-ERROR: Invalid request
-```
-
-### 5. No Response Validation
-
-```go
-// Skip response body validation (only check status code)
-config := webhook.Config{
-    Endpoints: []webhook.Endpoint{
-        {
-            Name:   "no-validation-webhook",
-            URL:    "https://api.example.com/webhook",
-            Method: "POST",
-            ResponseConfig: &webhook.ResponseConfig{
-                ValidateResponse: false, // or omit ResponseConfig entirely
-            },
-        },
-    },
-}
-```
-
-## Message Types
-
-### 1. JSON Message
-
-```go
-// Send JSON data
+// English: Send JSON data
+// 中文：发送 JSON 数据
 jsonData := map[string]interface{}{
     "event": "user.created",
     "data": map[string]interface{}{
@@ -198,14 +74,14 @@ body, _ := json.Marshal(jsonData)
 
 msg := webhook.NewMessage(body, webhook.WithHeaders(map[string]string{
     "Content-Type": "application/json",
-    "Authorization": "Bearer your-token",
 }))
 ```
 
-### 2. Form Data Message
+### 2. Form Data Message | 表单消息
 
 ```go
-// Send form data
+// English: Send form data
+// 中文：发送表单数据
 formData := "action=notify&message=Hello from webhook&priority=high"
 body := []byte(formData)
 
@@ -214,10 +90,11 @@ msg := webhook.NewMessage(body, webhook.WithHeaders(map[string]string{
 }))
 ```
 
-### 3. Raw Text Message
+### 3. Raw Text Message | 纯文本消息
 
 ```go
-// Send raw text
+// English: Send raw text
+// 中文：发送纯文本
 body := []byte("Simple text message")
 
 msg := webhook.NewMessage(body, webhook.WithHeaders(map[string]string{
@@ -225,10 +102,11 @@ msg := webhook.NewMessage(body, webhook.WithHeaders(map[string]string{
 }))
 ```
 
-### 4. GET Request with Query Parameters
+### 4. GET Request with Query Parameters | GET 请求带查询参数
 
 ```go
-// For GET requests, use endpoint QueryParams configuration
+// English: GET request with query params
+// 中文：GET 请求带查询参数
 config := webhook.Config{
     Endpoints: []webhook.Endpoint{
         {
@@ -243,11 +121,13 @@ config := webhook.Config{
     },
 }
 
-// Empty body for GET requests
+// Empty body for GET requests | GET 请求 body 为空
 msg := webhook.NewMessage([]byte{})
 ```
 
-## Usage with Sender
+---
+
+## Usage with Sender | 与 Sender 结合使用
 
 ```go
 import (
@@ -256,17 +136,13 @@ import (
     "github.com/shellvon/go-sender/providers/webhook"
 )
 
-// Create sender
 s := gosender.NewSender(nil)
-
-// Register webhook provider
 webhookProvider, err := webhook.New(config)
 if err != nil {
     log.Fatalf("Failed to create webhook provider: %v", err)
 }
 s.RegisterProvider(core.ProviderTypeWebhook, webhookProvider, nil)
 
-// Send webhook message
 ctx := context.Background()
 jsonData := map[string]interface{}{
     "message": "Hello from Go-Sender",
@@ -284,65 +160,74 @@ if err != nil {
 }
 ```
 
-## Message Options
+---
 
-### Header Options
+## Message Options | 消息选项
 
-- `WithHeaders(headers map[string]string)`: Set custom headers
+### Header Options | 请求头选项
 
-## Configuration Reference
+- `WithHeaders(headers map[string]string)`: Set custom headers | 设置自定义请求头
 
-### Config
+---
 
-- `BaseConfig`: Common configuration fields
-  - `Disabled`: Whether the provider is disabled
-  - `Strategy`: Selection strategy (round_robin, random, weighted)
-- `Endpoints`: Array of webhook endpoint configurations
+## Configuration Reference | 配置参考
 
-### Endpoint
+### Config | 配置
 
-- `Name`: Endpoint name for identification
-- `URL`: Webhook URL (endpoint)
-- `Method`: HTTP method (default: POST)
-- `Headers`: Fixed request headers
-- `QueryParams`: Fixed query parameters
-- `Weight`: Weight for weighted strategy (default: 1)
-- `Disabled`: Whether this endpoint is disabled
-- `ResponseConfig`: Response validation configuration
+- `BaseConfig`: Common configuration fields | 通用配置字段
+- `Endpoints`: Array of webhook endpoint configurations | 端点配置数组
 
-### ResponseConfig
+### Endpoint | 端点
 
-- `SuccessStatusCodes`: Custom success status codes (default: 2xx range)
-- `ValidateResponse`: Whether to validate response body (default: false)
-- `ResponseType`: Response type for validation ("json", "text", "xml", "none")
-- `SuccessField`: JSON field name indicating success
-- `SuccessValue`: Expected value for success field
-- `ErrorField`: JSON field name containing error message
-- `MessageField`: JSON field name containing response message
-- `SuccessPattern`: Regex pattern for success text response
-- `ErrorPattern`: Regex pattern for error text response
+- `Name`: Endpoint name for identification | 端点名称
+- `URL`: Webhook URL (endpoint) | Webhook 地址
+- `Method`: HTTP method (default: POST) | HTTP 方法（默认 POST）
+- `Headers`: Fixed request headers | 固定请求头
+- `QueryParams`: Fixed query parameters | 固定查询参数
+- `Weight`: Weight for weighted strategy (default: 1) | 权重（加权策略）
+- `Disabled`: Whether this endpoint is disabled | 是否禁用
+- `ResponseConfig`: Response validation configuration | 响应校验配置
 
-### Message
+### ResponseConfig | 响应校验配置
 
-- `Body`: Request body (raw bytes)
-- `Headers`: HTTP headers
+- `SuccessStatusCodes`: Custom success status codes (default: 2xx range) | 自定义成功状态码
+- `ValidateResponse`: Whether to validate response body (default: false) | 是否校验响应体
+- `ResponseType`: Response type for validation ("json", "text", "xml", "none") | 响应类型
+- `SuccessField`: JSON field name indicating success | JSON 成功字段
+- `SuccessValue`: Expected value for success field | 成功字段值
+- `ErrorField`: JSON field name containing error message | 错误字段
+- `MessageField`: JSON field name containing response message | 消息字段
+- `SuccessPattern`: Regex pattern for success text response | 文本成功正则
+- `ErrorPattern`: Regex pattern for error text response | 文本错误正则
 
-## Error Handling
+### Message | 消息
+
+- `Body`: Request body (raw bytes) | 原始请求体
+- `Headers`: HTTP headers | HTTP 请求头
+
+---
+
+## Error Handling | 错误处理
 
 The provider handles:
 
-- Network timeouts and connection errors
-- HTTP error status codes (4xx, 5xx)
-- Custom response validation failures
-- Provider selection based on strategy
-- Fallback to alternative endpoints on failure
+本组件处理如下错误：
 
-## Best Practices
+- Network timeouts and connection errors | 网络超时与连接错误
+- HTTP error status codes (4xx, 5xx) | HTTP 错误状态码（4xx, 5xx）
+- Custom response validation failures | 自定义响应校验失败
+- Provider selection based on strategy | 策略选择账号失败
+- Fallback to alternative endpoints on failure | 失败自动切换备用端点
 
-### 1. Configure Response Validation
+---
+
+## Best Practices | 最佳实践
+
+### 1. Configure Response Validation | 配置响应校验
 
 ```go
-// For APIs that return structured responses
+// English: For APIs that return structured responses
+// 中文：对于返回结构化响应的 API
 config := webhook.Config{
     Endpoints: []webhook.Endpoint{
         {
@@ -361,69 +246,66 @@ config := webhook.Config{
 }
 ```
 
-### 2. Use Appropriate HTTP Methods
+### 2. Use Appropriate HTTP Methods | 合理选择 HTTP 方法
 
 ```go
-// Configure method in endpoint
+// English: Configure method in endpoint
+// 中文：在端点配置中指定方法
 config := webhook.Config{
     Endpoints: []webhook.Endpoint{
         {
             Name:   "notifications",
             URL:    "https://api.example.com/webhook",
-            Method: "POST", // For notifications
+            Method: "POST", // For notifications | 通知用 POST
         },
         {
             Name:   "status-check",
             URL:    "https://api.example.com/status",
-            Method: "GET", // For status checks
+            Method: "GET", // For status checks | 状态查询用 GET
         },
     },
 }
 ```
 
-### 3. Handle Authentication Properly
+### 3. Handle Authentication Properly | 正确处理认证
 
 ```go
-// Use headers for API keys
+// English: Use headers for API keys
+// 中文：通过请求头传递 API Key
 msg := webhook.NewMessage(body, webhook.WithHeaders(map[string]string{
     "X-API-Key": "your-api-key",
     "Content-Type": "application/json",
 }))
 
-// Or use bearer tokens
+// Or use bearer tokens | 或使用 Bearer Token
 msg := webhook.NewMessage(body, webhook.WithHeaders(map[string]string{
     "Authorization": "Bearer your-bearer-token",
     "Content-Type": "application/json",
 }))
 ```
 
-### 4. Use Multiple Endpoints for Reliability
+### 4. Use Multiple Endpoints for Reliability | 多端点提升可靠性
 
-```go
-config := webhook.Config{
-    BaseConfig: core.BaseConfig{
-        Strategy: core.StrategyRoundRobin,
-    },
-    Endpoints: []webhook.Endpoint{
-        {
-            Name: "primary",
-            URL:  "https://primary.example.com/webhook",
-            Weight: 100,
-        },
-        {
-            Name: "backup",
-            URL:  "https://backup.example.com/webhook",
-            Weight: 50,
-        },
-    },
-}
-```
+- Configure multiple endpoints for failover and load balancing | 配置多个端点以实现故障切换和负载均衡
 
-## Common Use Cases
+---
+
+## API Documentation | 官方文档
+
+- [Webhook Provider Guide | Webhook 组件文档](https://github.com/shellvon/go-sender)
+
+## Integration Examples (English Only)
+
+Below are practical integration examples for popular third-party push services. Each example includes configuration, message construction, and sending with go-sender. You can adapt these patterns for any HTTP-based push service.
 
 ### 1. Slack Webhook Integration
 
 ```go
+import (
+    "github.com/shellvon/go-sender/providers/webhook"
+    "encoding/json"
+)
+
 config := webhook.Config{
     Endpoints: []webhook.Endpoint{
         {
@@ -440,7 +322,7 @@ config := webhook.Config{
 }
 
 slackData := map[string]interface{}{
-    "text": "Hello from Go-Sender!",
+    "text":    "Hello from Go-Sender!",
     "channel": "#general",
     "username": "Go-Sender Bot",
 }
@@ -454,6 +336,11 @@ msg := webhook.NewMessage(body, webhook.WithHeaders(map[string]string{
 ### 2. Discord Webhook Integration
 
 ```go
+import (
+    "github.com/shellvon/go-sender/providers/webhook"
+    "encoding/json"
+)
+
 config := webhook.Config{
     Endpoints: []webhook.Endpoint{
         {
@@ -473,9 +360,9 @@ discordData := map[string]interface{}{
     "content": "Hello from Go-Sender!",
     "embeds": []map[string]interface{}{
         {
-            "title": "Notification",
+            "title":       "Notification",
             "description": "This is a test message",
-            "color": 0x00ff00,
+            "color":       0x00ff00,
         },
     },
 }
@@ -486,7 +373,79 @@ msg := webhook.NewMessage(body, webhook.WithHeaders(map[string]string{
 }))
 ```
 
-### 3. Custom API Integration
+### 3. Bark (iOS Push) Integration
+
+```go
+config := webhook.Config{
+    Endpoints: []webhook.Endpoint{
+        {
+            Name:   "bark",
+            URL:    "https://api.day.app/YOUR_DEVICE_KEY/Hello%20from%20go-sender",
+            Method: "GET",
+        },
+    },
+}
+
+msg := webhook.NewMessage([]byte{})
+```
+
+### 4. PushDeer Integration
+
+```go
+config := webhook.Config{
+    Endpoints: []webhook.Endpoint{
+        {
+            Name:   "pushdeer",
+            URL:    "https://api2.pushdeer.com/message/push?pushkey=YOUR_KEY&text=Hello+from+go-sender",
+            Method: "GET",
+        },
+    },
+}
+
+msg := webhook.NewMessage([]byte{})
+```
+
+### 5. Pushover Integration
+
+```go
+config := webhook.Config{
+    Endpoints: []webhook.Endpoint{
+        {
+            Name:   "pushover",
+            URL:    "https://api.pushover.net/1/messages.json",
+            Method: "POST",
+            Headers: map[string]string{
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+        },
+    },
+}
+
+form := "token=YOUR_APP_TOKEN&user=USER_KEY&message=Hello+from+go-sender"
+msg := webhook.NewMessage([]byte(form))
+```
+
+### 6. SimplePush Integration
+
+```go
+config := webhook.Config{
+    Endpoints: []webhook.Endpoint{
+        {
+            Name:   "simplepush",
+            URL:    "https://simplepu.sh",
+            Method: "POST",
+            Headers: map[string]string{
+                "Content-Type": "application/json",
+            },
+        },
+    },
+}
+
+body := []byte(`{"key":"YOUR_KEY","msg":"Hello from go-sender!"}`)
+msg := webhook.NewMessage(body)
+```
+
+### 7. Custom API Integration (with JSON Response Validation)
 
 ```go
 config := webhook.Config{
@@ -508,8 +467,8 @@ config := webhook.Config{
 }
 
 apiData := map[string]interface{}{
-    "user_id": "12345",
-    "email": "user@example.com",
+    "user_id":   "12345",
+    "email":     "user@example.com",
     "created_at": time.Now().Format(time.RFC3339),
 }
 body, _ := json.Marshal(apiData)
@@ -517,91 +476,25 @@ body, _ := json.Marshal(apiData)
 msg := webhook.NewMessage(body, webhook.WithHeaders(map[string]string{
     "Content-Type": "application/json",
     "Authorization": "Bearer your-token",
-    "X-Event-Type": "user.created",
+    "X-Event-Type":  "user.created",
 }))
 ```
 
-## API Reference
+### 8. go-sender Unified Send Example
 
-### Constructor Functions
+```go
+import (
+    "github.com/shellvon/go-sender"
+    "github.com/shellvon/go-sender/providers/webhook"
+    "context"
+)
 
-- `New(config Config) (*Provider, error)`: Create new webhook provider
-- `NewMessage(body []byte, opts ...MessageOption) *Message`: Create new webhook message
+sender := gosender.New()
+webhookProvider, _ := webhook.New(config)
+sender.AddProvider(webhookProvider)
 
-### Message Options
-
-- `WithHeaders(headers map[string]string)`: Set custom headers
-
-## Supported Push Services
-
-The webhook provider can be used to send notifications to many popular push services, including but not limited to:
-
-- **Pushover** ([API](https://pushover.net/api))
-- **SimplePush** ([API](https://simplepush.io/api))
-- **Bark** ([API](https://github.com/Finb/Bark))
-- **PushDeer** ([API](https://github.com/easychen/pushdeer))
-- ...and any service that accepts HTTP POST/GET requests
-
-### Example Configurations
-
-#### Pushover
-
-```json
-{
-  "endpoints": [
-    {
-      "name": "pushover",
-      "url": "https://api.pushover.net/1/messages.json",
-      "method": "POST",
-      "headers": { "Content-Type": "application/x-www-form-urlencoded" },
-      "body": "token=YOUR_APP_TOKEN&user=USER_KEY&message=Hello+from+go-sender"
-    }
-  ]
+err := sender.Send(context.Background(), msg)
+if err != nil {
+    log.Printf("Failed to send webhook: %v", err)
 }
 ```
-
-#### SimplePush
-
-```json
-{
-  "endpoints": [
-    {
-      "name": "simplepush",
-      "url": "https://simplepu.sh",
-      "method": "POST",
-      "headers": { "Content-Type": "application/json" },
-      "body": "{\"key\":\"YOUR_KEY\",\"msg\":\"Hello from go-sender!\"}"
-    }
-  ]
-}
-```
-
-#### Bark
-
-```json
-{
-  "endpoints": [
-    {
-      "name": "bark",
-      "url": "https://api.day.app/YOUR_DEVICE_KEY/Hello%20from%20go-sender",
-      "method": "GET"
-    }
-  ]
-}
-```
-
-#### PushDeer
-
-```json
-{
-  "endpoints": [
-    {
-      "name": "pushdeer",
-      "url": "https://api2.pushdeer.com/message/push?pushkey=YOUR_KEY&text=Hello+from+go-sender",
-      "method": "GET"
-    }
-  ]
-}
-```
-
-> You can use the webhook provider to integrate with any service that supports HTTP requests. Just configure the URL, method, headers, and body as needed.

@@ -1,18 +1,24 @@
 [⬅️ Back to Main README](../../README.md)
 
-# Telegram Provider
+# Telegram Provider | Telegram 机器人推送组件
 
 This provider supports sending messages to Telegram chats, groups, and channels via the [Telegram Bot API](https://core.telegram.org/bots/api).
 
-## Features
+本组件支持通过 [Telegram Bot API](https://core.telegram.org/bots/api) 向 Telegram 群组、频道、私聊发送消息。
 
-- **Multiple Account Support**: Configure multiple bot accounts with different strategies (round-robin, random, weighted)
-- **Message Types**: Support for all Telegram Bot API message types including text, media, location, contact, poll, and dice
-- **Rich Formatting**: Support for HTML and Markdown formatting in text messages
-- **File Support**: Support for sending files via file_id or public HTTP URLs
-- **Interactive Elements**: Support for polls, dice animations, and custom keyboards
+---
 
-## Configuration
+## Features | 功能特性
+
+- **Multiple Account Support 多账号支持**: Configure multiple bot accounts with different strategies (round-robin, random, weighted) | 支持多账号、灵活负载均衡（轮询、随机、加权）
+- **Message Types 消息类型**: Support for all Telegram Bot API message types including text, media, location, contact, poll, dice, etc. | 支持所有官方消息类型：文本、媒体、位置、联系人、投票、骰子等
+- **Rich Formatting 富文本格式**: Support for HTML and Markdown formatting in text messages | 文本消息支持 HTML/Markdown 富文本格式
+- **File Support 文件支持**: Support for sending files via file_id or public HTTP URLs | 支持通过 file_id 或公网 URL 发送文件
+- **Interactive Elements 交互元素**: Support for polls, dice, custom keyboards, etc. | 支持投票、骰子、键盘等交互元素
+
+---
+
+## Configuration | 配置示例
 
 ```go
 import (
@@ -20,230 +26,145 @@ import (
     "github.com/shellvon/go-sender/providers/telegram"
 )
 
-// Create Telegram configuration
+// English: Create Telegram configuration
+// 中文：创建 Telegram 配置
 config := telegram.Config{
     BaseConfig: core.BaseConfig{
-        Strategy: core.StrategyRoundRobin,
+        Strategy: core.StrategyRoundRobin, // 轮询、随机、加权等
     },
     Accounts: []core.Account{
         {
             Name:     "main-bot",
-            Key:      "YOUR_BOT_TOKEN",
+            Key:      "YOUR_BOT_TOKEN", // 机器人 token
             Weight:   100,
             Disabled: false,
         },
-        {
-            Name:     "backup-bot",
-            Key:      "YOUR_BACKUP_BOT_TOKEN",
-            Weight:   80,
-            Disabled: false,
-        },
+        // ... more accounts
     },
 }
 
-// Create provider
 provider, err := telegram.New(config)
 if err != nil {
-    log.Fatalf("Failed to create Telegram provider: %v", err)
+    log.Fatalf("Failed to create Telegram provider: %v", err) // 创建失败
 }
 ```
 
-## Message Types
+---
 
-### 1. Text Message
+## Message Types (Builder Style) | 消息类型（链式构建）
+
+### 1. Text Message | 文本消息
 
 ```go
-// Simple text message
-textMsg := telegram.NewTextMessage("@channel", "Hello from go-sender!")
+// English: Simple text message
+// 中文：简单文本消息
+msg := telegram.Text().
+    Chat("@channel").
+    Text("Hello from go-sender! 你好，世界！").
+    Build()
 
-// Text message with Markdown formatting
-textMsg := telegram.NewTextMessage("@channel", "**Bold text** and *italic text*",
-    telegram.WithParseMode("Markdown"),
-    telegram.WithDisableWebPreview(true),
-)
+// English: Text message with Markdown formatting
+// 中文：带 Markdown 格式的文本消息
+msg := telegram.Text().
+    Chat("@channel").
+    Text("**Bold text** and *italic text*").
+    ParseMode("Markdown").
+    Build()
 
-// Text message with entities
-textMsg := telegram.NewTextMessage("@channel", "Hello @username",
-    telegram.WithEntities([]telegram.MessageEntity{
+// English: Text message with entities
+// 中文：带实体的文本消息
+msg := telegram.Text().
+    Chat("@channel").
+    Text("Hello @username").
+    Entities([]telegram.MessageEntity{
         {Type: "mention", Offset: 6, Length: 9},
-    }),
-)
+    }).
+    Build()
 ```
 
-### 2. Photo Message
+### 2. Photo Message | 图片消息
 
 ```go
-// Photo from URL
-photoMsg := telegram.NewPhotoMessage("@channel", "https://example.com/image.jpg",
-    telegram.WithCaption("Beautiful image"),
-    telegram.WithParseMode("HTML"),
-)
+// English: Photo from URL
+// 中文：通过 URL 发送图片
+msg := telegram.Photo().
+    Chat("@channel").
+    File("https://example.com/image.jpg").
+    Caption("Beautiful image").
+    ParseMode("HTML").
+    Build()
 
-// Photo from file_id
-photoMsg := telegram.NewPhotoMessage("@channel", "AgACAgIAAxkBAAIB...",
-    telegram.WithCaption("Reused image"),
-    telegram.WithPhotoHasSpoiler(true),
-)
+// English: Photo from file_id
+// 中文：通过 file_id 发送图片
+msg := telegram.Photo().
+    Chat("@channel").
+    File("AgACAgIAAxkBAAIB...").
+    Caption("Reused image").
+    HasSpoiler(true).
+    Build()
 ```
 
-### 3. Audio Message
+### 3. Audio Message | 音频消息
 
 ```go
-// Audio from URL
-audioMsg := telegram.NewAudioMessage("@channel", "https://example.com/audio.mp3",
-    telegram.WithAudioTitle("Song Title"),
-    telegram.WithAudioPerformer("Artist Name"),
-    telegram.WithAudioDuration(180),
-)
+// English: Audio from URL
+// 中文：通过 URL 发送音频
+msg := telegram.Audio().
+    Chat("@channel").
+    File("https://example.com/audio.mp3").
+    Title("Song Title").
+    Performer("Artist Name").
+    Duration(180).
+    Build()
 
-// Audio from file_id
-audioMsg := telegram.NewAudioMessage("@channel", "CQACAgIAAxkBAAIB...",
-    telegram.WithCaption("Listen to this!"),
-)
+// English: Audio from file_id
+// 中文：通过 file_id 发送音频
+msg := telegram.Audio().
+    Chat("@channel").
+    File("CQACAgIAAxkBAAIB...").
+    Caption("Listen to this!").
+    Build()
 ```
 
-### 4. Document Message
+### 4. Poll Message | 投票消息
 
 ```go
-// Document from URL
-docMsg := telegram.NewDocumentMessage("@channel", "https://example.com/document.pdf",
-    telegram.WithCaption("Important document"),
-    telegram.WithDocumentDisableContentTypeDetection(true),
-)
+// English: Regular poll
+// 中文：普通投票
+msg := telegram.Poll().
+    Chat("@channel").
+    Question("What's your favorite color?").
+    Options(
+        telegram.Option("Option 1"),
+        telegram.Option("Option 2"),
+        telegram.Option("Option 3"),
+    ).
+    IsAnonymous(false).
+    AllowsMultipleAnswers(true).
+    Build()
 
-// Document from file_id
-docMsg := telegram.NewDocumentMessage("@channel", "BQACAgIAAxkBAAIB...",
-    telegram.WithCaption("Shared document"),
-)
+// English: Quiz poll
+// 中文：测验投票
+msg := telegram.Poll().
+    Chat("@channel").
+    Question("What is 2+2?").
+    Options(
+        telegram.Option("3"),
+        telegram.Option("4"),
+        telegram.Option("5"),
+    ).
+    Type("quiz").
+    CorrectOptionID(1).
+    Explanation("The correct answer is 4").
+    Build()
 ```
 
-### 5. Video Message
+// ... (other message types can be added similarly using their respective builders)
+// ... 其他类型消息可参考源码使用对应 builder
 
-```go
-// Video from URL
-videoMsg := telegram.NewVideoMessage("@channel", "https://example.com/video.mp4",
-    telegram.WithCaption("Amazing video"),
-    telegram.WithVideoDuration(30),
-    telegram.WithVideoWidth(1920),
-    telegram.WithVideoHeight(1080),
-    telegram.WithVideoSupportsStreaming(true),
-)
+---
 
-// Video from file_id
-videoMsg := telegram.NewVideoMessage("@channel", "BAACAgIAAxkBAAIB...",
-    telegram.WithVideoHasSpoiler(true),
-)
-```
-
-### 6. Animation Message
-
-```go
-// Animation (GIF) from URL
-animationMsg := telegram.NewAnimationMessage("@channel", "https://example.com/animation.gif",
-    telegram.WithCaption("Funny animation"),
-    telegram.WithAnimationDuration(5),
-    telegram.WithAnimationHasSpoiler(true),
-)
-
-// Animation from file_id
-animationMsg := telegram.NewAnimationMessage("@channel", "CgACAgIAAxkBAAIB...",
-    telegram.WithCaption("Reused animation"),
-)
-```
-
-### 7. Voice Message
-
-```go
-// Voice from URL
-voiceMsg := telegram.NewVoiceMessage("@channel", "https://example.com/voice.ogg",
-    telegram.WithVoiceDuration(10),
-    telegram.WithCaption("Voice message"),
-)
-
-// Voice from file_id
-voiceMsg := telegram.NewVoiceMessage("@channel", "AwACAgIAAxkBAAIB...",
-    telegram.WithCaption("Listen to this voice"),
-)
-```
-
-### 8. Video Note Message
-
-```go
-// Video note from URL
-videoNoteMsg := telegram.NewVideoNoteMessage("@channel", "https://example.com/videonote.mp4",
-    telegram.WithVideoNoteDuration(15),
-    telegram.WithVideoNoteLength(240),
-)
-
-// Video note from file_id
-videoNoteMsg := telegram.NewVideoNoteMessage("@channel", "DQACAgIAAxkBAAIB...",
-    telegram.WithVideoNoteDuration(10),
-)
-```
-
-### 9. Location Message
-
-```go
-// Location message
-locationMsg := telegram.NewLocationMessage("@channel", 40.7128, -74.0060,
-    telegram.WithLocationHorizontalAccuracy(10),
-    telegram.WithLocationLivePeriod(3600),
-    telegram.WithLocationHeading(90),
-    telegram.WithLocationProximityAlertRadius(1000),
-)
-```
-
-### 10. Contact Message
-
-```go
-// Contact message
-contactMsg := telegram.NewContactMessage("@channel", "+1234567890", "John Doe",
-    telegram.WithContactLastName("Smith"),
-    telegram.WithContactVCard("BEGIN:VCARD\nVERSION:3.0\nFN:John Doe\nTEL:+1234567890\nEND:VCARD"),
-)
-```
-
-### 11. Poll Message
-
-```go
-// Regular poll
-options := []telegram.InputPollOption{
-    {Text: "Option 1"},
-    {Text: "Option 2"},
-    {Text: "Option 3"},
-}
-pollMsg := telegram.NewPollMessage("@channel", "What's your favorite color?", options,
-    telegram.WithPollIsAnonymous(false),
-    telegram.WithPollAllowsMultipleAnswers(true),
-)
-
-// Quiz poll
-quizMsg := telegram.NewPollMessage("@channel", "What is 2+2?", []telegram.InputPollOption{
-    {Text: "3"},
-    {Text: "4"},
-    {Text: "5"},
-},
-    telegram.WithPollType("quiz"),
-    telegram.WithPollCorrectOptionID(1),
-    telegram.WithPollExplanation("The correct answer is 4"),
-)
-```
-
-### 12. Dice Message
-
-```go
-// Dice animation
-diceMsg := telegram.NewDiceMessage("@channel",
-    telegram.WithDiceEmoji("🎲"),
-)
-
-// Dart animation
-dartMsg := telegram.NewDiceMessage("@channel",
-    telegram.WithDiceEmoji("🎯"),
-)
-```
-
-## Usage with Sender
+## Usage with Sender | 与 Sender 结合使用
 
 ```go
 import (
@@ -252,126 +173,109 @@ import (
     "github.com/shellvon/go-sender/providers/telegram"
 )
 
-// Create sender
 s := gosender.NewSender(nil)
-
-// Register Telegram provider
 telegramProvider, err := telegram.New(config)
 if err != nil {
     log.Fatalf("Failed to create Telegram provider: %v", err)
 }
 s.RegisterProvider(core.ProviderTypeTelegram, telegramProvider, nil)
 
-// Send message
 ctx := context.Background()
-textMsg := telegram.NewTextMessage("@channel", "Hello from go-sender!")
-err = s.Send(ctx, textMsg)
+msg := telegram.Text().Chat("@channel").Text("Hello from go-sender! 你好，世界！").Build()
+err = s.Send(ctx, msg)
 if err != nil {
     log.Printf("Failed to send message: %v", err)
 }
 ```
 
-## Message Options
+---
 
-### Common Options (All Message Types)
+## API Reference | API 参考
 
-- `WithSilent(silent bool)`: Send message silently (no notification sound)
-- `WithProtectContent(protect bool)`: Protect message content from forwarding and saving
-- `WithAllowPaidBroadcast(allow bool)`: Allow paid broadcast (up to 1000 messages/second)
-- `WithMessageEffectID(effectID string)`: Add message effect (private chats only)
-- `WithReplyParameters(params ReplyParameters)`: Reply to a specific message
-- `WithReplyMarkup(markup interface{})`: Add inline keyboard or reply keyboard
-- `WithBusinessConnectionID(id string)`: Send on behalf of business account
-- `WithMessageThreadID(id int)`: Target specific message thread (forum topics)
+- Each message type (Text, Photo, Audio, Poll, etc.) has a corresponding builder: `telegram.Text()`, `telegram.Photo()`, `telegram.Audio()`, `telegram.Poll()`, etc. | 每种消息类型都有对应 builder，如 `telegram.Text()`、`telegram.Photo()`、`telegram.Audio()`、`telegram.Poll()` 等
+- All builders support chainable methods for setting fields, and end with `.Build()` to produce the message object. | 所有 builder 支持链式设置参数，最后 `.Build()` 生成消息对象
+- For more advanced options, see the GoDoc or source code for each builder. | 更多高级用法请参考 GoDoc 或源码
 
-### Media Message Options
+---
 
-- `WithCaption(caption string)`: Add caption to media
-- `WithParseMode(mode string)`: Set caption parse mode (HTML, Markdown, MarkdownV2)
-- `WithCaptionEntities(entities []MessageEntity)`: Set caption entities
-- `WithShowCaptionAboveMedia(show bool)`: Show caption above media instead of below
+## Notes | 说明
 
-### Text Message Options
+- **Bot Token**: Get your bot token from [BotFather](https://core.telegram.org/bots#botfather) | 机器人 token 请通过 [BotFather](https://core.telegram.org/bots#botfather) 获取
+- **File Upload**: For files, you can use file_id or HTTP URL | 文件支持 file_id 或公网 URL，暂不支持本地文件直传
+- **Markdown/HTML**: Use `ParseMode("Markdown")` or `ParseMode("HTML")` for rich formatting | 富文本格式请用 `ParseMode("Markdown")` 或 `ParseMode("HTML")`
+- **Polls**: Use `telegram.Poll()` builder for regular and quiz polls | 投票请用 `telegram.Poll()` builder
+- **Dice/Other Types**: See source code for additional builder types | 骰子等其他类型请参考源码
 
-- `WithParseMode(mode string)`: Set text parse mode
-- `WithEntities(entities []MessageEntity)`: Set text entities
-- `WithDisableWebPreview(disable bool)`: Disable web page preview
-- `WithLinkPreviewOptions(options LinkPreviewOptions)`: Configure link preview
+---
 
-### Poll Message Options
-
-- `WithPollQuestionParseMode(mode string)`: Set question parse mode
-- `WithPollQuestionEntities(entities []MessageEntity)`: Set question entities
-- `WithPollIsAnonymous(anonymous bool)`: Make poll anonymous
-- `WithPollType(pollType string)`: Set poll type (regular/quiz)
-- `WithPollAllowsMultipleAnswers(allow bool)`: Allow multiple answers
-- `WithPollCorrectOptionID(id int)`: Set correct answer for quiz
-- `WithPollExplanation(explanation string)`: Add explanation for quiz
-- `WithPollExplanationParseMode(mode string)`: Set explanation parse mode
-- `WithPollExplanationEntities(entities []MessageEntity)`: Set explanation entities
-- `WithPollOpenPeriod(period int)`: Set poll open period in seconds
-- `WithPollCloseDate(date int)`: Set poll close date (Unix timestamp)
-- `WithPollIsClosed(closed bool)`: Close poll immediately
-
-## File Sending Limitations
+## File Sending Limitations | 文件发送限制
 
 According to the [Telegram Bot API documentation](https://core.telegram.org/bots/api#sending-files), this provider has the following limitations:
 
-### File Sources
+根据 [Telegram Bot API 文档](https://core.telegram.org/bots/api#sending-files)，本组件有如下限制：
 
-- **file_id**: Existing file ID on Telegram servers
-- **HTTP URL**: Publicly accessible file URL that Telegram can download
-- **Local file upload**: Not supported (no multipart/form-data upload)
+### File Sources | 文件来源
 
-### File Size Limits
+- **file_id**: Existing file ID on Telegram servers | Telegram 服务器上的 file_id
+- **HTTP URL**: Publicly accessible file URL that Telegram can download | Telegram 可访问的公网 HTTPS URL
+- **Local file upload**: Not supported (no multipart/form-data upload) | 不支持本地文件直传（不支持 multipart/form-data）
 
-- Photos: 10 MB maximum
-- Audio: 50 MB maximum
-- Documents: 50 MB maximum
-- Videos: 50 MB maximum
-- Animations: 50 MB maximum
-- Voice messages: 50 MB maximum
-- Video notes: 50 MB maximum
+### File Size Limits | 文件大小限制
 
-### URL Requirements
+- Photos: 10 MB maximum | 图片最大 10MB
+- Audio: 50 MB maximum | 音频最大 50MB
+- Documents: 50 MB maximum | 文档最大 50MB
+- Videos: 50 MB maximum | 视频最大 50MB
+- Animations: 50 MB maximum | 动图最大 50MB
+- Voice messages: 50 MB maximum | 语音最大 50MB
+- Video notes: 50 MB maximum | 视频便签最大 50MB
 
-- Must be HTTPS URLs
-- Files must be publicly accessible
-- Telegram servers must be able to download the file
-- File format must be supported by Telegram
+### URL Requirements | URL 要求
 
-### Best Practices
+- Must be HTTPS URLs | 必须为 HTTPS URL
+- Files must be publicly accessible | 文件需公网可访问
+- Telegram servers must be able to download the file | Telegram 服务器需可下载
+- File format must be supported by Telegram | 文件格式需被 Telegram 支持
 
-1. **Prefer file_id**: Use existing file IDs when possible for better performance
-2. **Use reliable URLs**: Ensure URLs are stable and accessible
-3. **Check file formats**: Verify files are in supported formats
-4. **Monitor file sizes**: Stay within Telegram's size limits
+### Best Practices | 最佳实践
 
-## Error Handling
+1. **Prefer file_id**: Use existing file IDs when possible for better performance | 优先使用 file_id，性能最佳
+2. **Use reliable URLs**: Ensure URLs are stable and accessible | 确保 URL 稳定可访问
+3. **Check file formats**: Verify files are in supported formats | 检查文件格式是否受支持
+4. **Monitor file sizes**: Stay within Telegram's size limits | 文件大小需在限制内
+
+---
+
+## Error Handling | 错误处理
 
 The provider returns detailed error messages including:
 
-- HTTP request errors
-- Telegram API error codes and descriptions
-- Parameter validation errors
+本组件会返回详细的错误信息，包括：
+
+- HTTP request errors | HTTP 请求错误
+- Telegram API error codes and descriptions | Telegram API 错误码与描述
+- Parameter validation errors | 参数校验错误
 
 ```go
 err := provider.Send(ctx, message)
 if err != nil {
     // Error format: telegram API error 400: Bad Request: wrong type of the web page content
+    // 错误示例：telegram API error 400: Bad Request: wrong type of the web page content
     log.Printf("Failed to send message: %v", err)
 }
 ```
 
-## Testing
+---
 
-Run unit tests:
+## Testing | 测试
+
+Run unit tests | 运行单元测试：
 
 ```bash
 go test ./providers/telegram/...
 ```
 
-Run integration tests (requires environment variables):
+Run integration tests (requires environment variables) | 运行集成测试（需设置环境变量）：
 
 ```bash
 export TELEGRAM_BOT_TOKEN="your-bot-token"
@@ -379,21 +283,10 @@ export TELEGRAM_CHAT_ID="your-chat-id"
 go test ./providers/telegram/... -v -run TestTelegramProviderIntegration
 ```
 
-## API Reference
+---
 
-### Config
+## API Documentation | 官方文档
 
-- `BaseConfig`: Common configuration fields
-  - `Disabled`: Whether the provider is disabled
-  - `Strategy`: Selection strategy (round_robin, random, weighted)
-- `Accounts`: Array of bot account configurations
-
-### Message Types
-
-All message types implement the `Message` interface and can be used with the provider's `Send` method.
-
-## Related Links
-
-- [Telegram Bot API Documentation](https://core.telegram.org/bots/api)
-- [Sending Files Guide](https://core.telegram.org/bots/api#sending-files)
-- [Bot Creation Guide](https://core.telegram.org/bots#how-do-i-create-a-bot)
+- [Telegram Bot API Documentation | 官方文档](https://core.telegram.org/bots/api)
+- [Sending Files Guide | 文件发送指南](https://core.telegram.org/bots/api#sending-files)
+- [Bot Creation Guide | 机器人创建指南](https://core.telegram.org/bots#how-do-i-create-a-bot)
