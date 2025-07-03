@@ -13,8 +13,8 @@ const (
 	bytesPerMB        = 1024 * 1024
 )
 
-// Image represents the image content for a WeCom message.
-type Image struct {
+// ImageContent represents the image content for a WeCom message.
+type ImageContent struct {
 	// Base64 encoded content of the image.
 	Base64 string `json:"base64"`
 	// MD5 hash of the image content before Base64 encoding.
@@ -28,28 +28,15 @@ type Image struct {
 type ImageMessage struct {
 	BaseMessage
 
-	Image Image `json:"image"`
+	Image ImageContent `json:"image"`
 }
 
-// NewImageMessage creates a new ImageMessage with required fields and applies optional configurations.
-func NewImageMessage(base64, md5 string, opts ...ImageMessageOption) *ImageMessage {
-	// Initialize ImageMessage with required fields.
-	msg := &ImageMessage{
-		BaseMessage: BaseMessage{
-			MsgType: TypeImage,
-		},
-		Image: Image{
-			Base64: base64,
-			MD5:    md5,
-		},
-	}
-
-	// Apply optional configurations, which can override the initial base64 or md5 if provided.
-	for _, opt := range opts {
-		opt(msg)
-	}
-
-	return msg
+// NewImageMessage creates a new ImageMessage.
+// Based on SendImageParams from WeCom Bot API
+// https://developer.work.weixin.qq.com/document/path/91770#%E5%9B%BE%E7%89%87%E7%B1%BB%E5%9E%8B
+//   - Only base64 and md5 are required.
+func NewImageMessage(base64, md5 string) *ImageMessage {
+	return Image().Base64(base64).MD5(md5).Build()
 }
 
 // Validate validates the ImageMessage to ensure it meets WeCom API requirements.
@@ -73,21 +60,4 @@ func (m *ImageMessage) Validate() error {
 		)
 	}
 	return nil
-}
-
-// ImageMessageOption defines a function type for configuring ImageMessage.
-type ImageMessageOption func(*ImageMessage)
-
-// WithBase64 sets the Base64 field for ImageMessage.
-func WithBase64(base64 string) ImageMessageOption {
-	return func(m *ImageMessage) {
-		m.Image.Base64 = base64
-	}
-}
-
-// WithMD5 sets the MD5 field for ImageMessage.
-func WithMD5(md5 string) ImageMessageOption {
-	return func(m *ImageMessage) {
-		m.Image.MD5 = md5
-	}
 }

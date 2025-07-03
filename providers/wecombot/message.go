@@ -20,6 +20,10 @@ const (
 	TypeNews = "news"
 	// TypeTemplateCard represents template card message type.
 	TypeTemplateCard = "template_card"
+	// TypeVoice represents voice message type.
+	TypeVoice = "voice"
+	// TypeFile represents file message type.
+	TypeFile = "file"
 )
 
 // Message interface definition.
@@ -57,5 +61,14 @@ func (m *NewsMessage) ProviderType() core.ProviderType {
 }
 
 func (m *TemplateCardMessage) ProviderType() core.ProviderType {
+	return core.ProviderTypeWecombot
+}
+
+// ProviderType implementations for new message types.
+func (m *VoiceMessage) ProviderType() core.ProviderType {
+	return core.ProviderTypeWecombot
+}
+
+func (m *FileMessage) ProviderType() core.ProviderType {
 	return core.ProviderTypeWecombot
 }

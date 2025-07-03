@@ -30,20 +30,12 @@ type NewsMessage struct {
 	News News `json:"news"`
 }
 
-// NewNewsMessage creates a new NewsMessage with required articles and applies optional configurations.
-func NewNewsMessage(articles []*Article, opts ...NewsMessageOption) *NewsMessage {
-	msg := &NewsMessage{
-		BaseMessage: BaseMessage{
-			MsgType: TypeNews,
-		},
-		News: News{
-			Articles: articles,
-		},
-	}
-	for _, opt := range opts {
-		opt(msg)
-	}
-	return msg
+// NewNewsMessage creates a new NewsMessage.
+// Based on SendNewsParams from WeCom Bot API
+// https://developer.work.weixin.qq.com/document/path/91770#%E6%96%B0%E9%97%BB%E7%B1%BB%E5%9E%8B
+//   - Only articles are required.
+func NewNewsMessage(articles []*Article) *NewsMessage {
+	return NewsMsg().Articles(articles).Build()
 }
 
 // Validate validates the NewsMessage to ensure it meets WeCom API requirements.
@@ -60,14 +52,4 @@ func (m *NewsMessage) Validate() error {
 		}
 	}
 	return nil
-}
-
-// NewsMessageOption defines a function type for configuring NewsMessage.
-type NewsMessageOption func(*NewsMessage)
-
-// WithArticles sets the Articles for NewsMessage.
-func WithArticles(articles []*Article) NewsMessageOption {
-	return func(m *NewsMessage) {
-		m.News.Articles = articles
-	}
 }

@@ -8,12 +8,22 @@ import (
 	"fmt"
 	"io"
 	"mime/multipart"
+	"net/http"
+	"os"
 	"path/filepath"
 
 	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/providers"
 	"github.com/shellvon/go-sender/utils"
 )
+
+// uploadTarget abstracts Voice/File messages that need auto media upload.
+type uploadTarget interface {
+	getLocalPath() string
+	getMediaID() string
+	setMediaID(string)
+	mediaType() string // "voice" or "file"
+}
 
 // Provider implements the WeCom Bot provider.
 type Provider struct {
@@ -55,80 +65,95 @@ func New(config Config) (*Provider, error) {
 	}, nil
 }
 
-// UploadMedia uploads a media file and returns the media_id
-// This method can be used to upload images, files, etc. before sending them.
-func (p *Provider) UploadMedia(
+func (p *Provider) Name() string {
+	return string(core.ProviderTypeWecombot)
+}
+
+// Send overrides embedded HTTPProvider.Send to support automatic media upload for
+// VoiceMessage and FileMessage when only a local file path is provided.
+//
+// Upload constraints:
+//   - All media types must be larger than 5 bytes.
+//   - Regular files (`file`): size must not exceed 20 MB.
+//   - Voice files (`voice`): size must not exceed 2 MB, playback length ≤ 60 seconds, AMR format only.
+//
+// See https://developer.work.weixin.qq.com/document/path/91770 in the bottom of the page.
+//
+//nolint:nestif // acceptable nesting for media upload.
+func (p *Provider) Send(ctx context.Context, msg core.Message, opts *core.ProviderSendOptions) error {
+	if up, ok := msg.(uploadTarget); ok {
+		if up.getMediaID() == "" && up.getLocalPath() != "" {
+			file, err := os.Open(up.getLocalPath())
+			if err != nil {
+				return err
+			}
+			defer file.Close()
+			mediaID, acc, err := p.uploadMediaType(ctx, up.getLocalPath(), up.mediaType(), file, opts.HTTPClient)
+			if err != nil {
+				return err
+			}
+			up.setMediaID(mediaID)
+			ctx = core.WithCtxItemName(ctx, acc.GetName())
+		}
+	}
+	return p.HTTPProvider.Send(ctx, msg, opts)
+}
+
+// uploadMediaType is an internal helper allowing custom media type parameter.
+func (p *Provider) uploadMediaType(
 	ctx context.Context,
-	filePath string,
-	bodyReader io.Reader,
+	filePath, mediaType string,
+	reader io.Reader,
+	httpClient *http.Client,
 ) (string, *core.Account, error) {
 	selectedAccount := p.SelectConfig(ctx)
 	if selectedAccount == nil {
 		return "", nil, errors.New("no available account")
 	}
 
-	// Build upload URL
 	uploadURL := fmt.Sprintf(
-		"https://qyapi.weixin.qq.com/cgi-bin/webhook/upload_media?key=%s&type=file",
+		"https://qyapi.weixin.qq.com/cgi-bin/webhook/upload_media?key=%s&type=%s",
 		selectedAccount.APIKey,
+		mediaType,
 	)
 
-	// Create multipart form with custom reader
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
-
-	// Add file part
 	part, err := writer.CreateFormFile("media", filepath.Base(filePath))
 	if err != nil {
-		return "", nil, fmt.Errorf("failed to create form file: %w", err)
+		return "", nil, err
 	}
-
-	// Copy file content
-	if _, errCopy := io.Copy(part, bodyReader); errCopy != nil {
-		return "", nil, fmt.Errorf("failed to copy file content: %w", errCopy)
+	if _, errCopy := io.Copy(part, reader); errCopy != nil {
+		return "", nil, errCopy
 	}
-
-	// Close writer
 	if errClose := writer.Close(); errClose != nil {
-		return "", nil, fmt.Errorf("failed to close writer: %w", errClose)
+		return "", nil, errClose
 	}
 
-	respBody, statusCode, err := utils.DoRequest(ctx, uploadURL, utils.HTTPRequestOptions{
-		Method:    "POST",
+	resp, status, err := utils.DoRequest(ctx, uploadURL, utils.HTTPRequestOptions{
+		Method:    http.MethodPost,
 		RawReader: body,
-		Headers: map[string]string{
-			"Content-Type": writer.FormDataContentType(),
-		},
+		Headers:   map[string]string{"Content-Type": writer.FormDataContentType()},
+		Client:    httpClient,
 	})
 	if err != nil {
-		return "", nil, fmt.Errorf("failed to upload media: %w", err)
+		return "", nil, err
+	}
+	if !utils.IsAcceptableStatus(status) {
+		return "", nil, fmt.Errorf("upload status %d", status)
 	}
 
-	// Check response
-	if !utils.IsAcceptableStatus(statusCode) {
-		return "", nil, fmt.Errorf("upload API returned non-OK status: %d", statusCode)
-	}
-
-	// Parse response
 	var result struct {
-		ErrCode   int    `json:"errcode"`
-		ErrMsg    string `json:"errmsg"`
-		MediaID   string `json:"media_id"`
-		Type      string `json:"type"`
-		CreatedAt int64  `json:"created_at"`
+		ErrCode int    `json:"errcode"`
+		ErrMsg  string `json:"errmsg"`
+		MediaID string `json:"media_id"`
 	}
-
-	if errUnmarshal := json.Unmarshal(respBody, &result); errUnmarshal != nil {
-		return "", nil, fmt.Errorf("failed to parse upload response: %w", errUnmarshal)
+	var parseErr error
+	if parseErr = json.Unmarshal(resp, &result); parseErr != nil {
+		return "", nil, parseErr
 	}
-
 	if result.ErrCode != 0 {
-		return "", nil, fmt.Errorf("upload error: code=%d, msg=%s", result.ErrCode, result.ErrMsg)
+		return "", nil, fmt.Errorf("upload error %s", result.ErrMsg)
 	}
-
 	return result.MediaID, selectedAccount, nil
-}
-
-func (p *Provider) Name() string {
-	return string(core.ProviderTypeWecombot)
 }
