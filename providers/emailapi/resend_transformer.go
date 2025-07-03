@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/utils"
@@ -13,7 +14,7 @@ import (
 
 // @ProviderName: Resend
 // @Website: https://resend.com/
-// @APIDoc: https://resend.com/docs/api-reference/emails/send-batch-emails
+// @APIDoc: https://resend.com/docs/api-reference/emails
 //
 // To use Resend, you need to create an API key in the Resend dashboard.
 // The API key must be sent in the Authorization header as 'Bearer <API_KEY>'.
@@ -71,7 +72,7 @@ func (t *resendTransformer) validateMessage(msg *Message) error {
 		return errors.New("to recipients cannot be empty")
 	}
 	if len(msg.To) > maxRecipientsPerBatch {
-		return errors.New("to recipients are limited to 50 recipients")
+		return fmt.Errorf("to recipients are limited to %d recipients", maxRecipientsPerBatch)
 	}
 	if msg.From == "" {
 		return errors.New("from is required for Resend")
@@ -93,36 +94,21 @@ func (t *resendTransformer) transformEmail(
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	// Build request parameters
 	params := map[string]interface{}{
-		"from":    msg.From,
-		"to":      msg.To,
-		"subject": msg.Subject,
+		"from":        msg.From,
+		"to":          msg.To,
+		"subject":     msg.Subject,
+		"html":        msg.HTML,
+		"text":        msg.Text,
+		"reply_to":    msg.ReplyTo,
+		"cc":          msg.Cc,
+		"bcc":         msg.Bcc,
+		"headers":     msg.Headers,
+		"attachments": msg.Attachments,
+		"tags":        msg.Extras[resendTagsKey],
 	}
 
-	// Add content
-	if msg.HTML != "" {
-		params["html"] = msg.HTML
-	}
-	if msg.Text != "" {
-		params["text"] = msg.Text
-	}
-
-	// Add optional fields
-	if len(msg.ReplyTo) > 0 {
-		params["reply_to"] = msg.ReplyTo
-	}
-	if len(msg.Cc) > 0 {
-		params["cc"] = msg.Cc
-	}
-	if len(msg.Bcc) > 0 {
-		params["bcc"] = msg.Bcc
-	}
-	if msg.Headers != nil {
-		params["headers"] = msg.Headers
-	}
-
-	// Add platform-specific extras
-	if tags := msg.GetExtraStringOrDefault(resendTags, ""); tags != "" {
-		params["tags"] = tags
+	if msg.ScheduledAt != nil {
+		params["scheduled_at"] = msg.ScheduledAt.Format(time.RFC3339)
 	}
 
 	// Convert to JSON

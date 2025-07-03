@@ -24,7 +24,8 @@ func init() {
 }
 
 const (
-	defaultEmailjsAPIPath = "https://api.emailjs.com/api/v1.0/email/send"
+	defaultEmailjsAPIPath   = "https://api.emailjs.com/api/v1.0/email/send"
+	defaultEmailjsServiceID = "default_service"
 )
 
 // emailJSTransformer implements HTTPRequestTransformer for EmailJS.
@@ -67,12 +68,6 @@ func (t *emailJSTransformer) validateMessage(msg *Message) error {
 	if msg.TemplateID == "" {
 		return errors.New("template_id is required for EmailJS")
 	}
-	if len(msg.To) == 0 {
-		return errors.New("at least one recipient is required")
-	}
-	if msg.From == "" {
-		return errors.New("from is required for EmailJS")
-	}
 	return nil
 }
 
@@ -84,11 +79,11 @@ func (t *emailJSTransformer) transformEmail(
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	// Get required parameters
 	serviceID := msg.From
-	userID := msg.GetExtraStringOrDefault(emailjsUserID, account.APIKey)
-	accessToken := msg.GetExtraStringOrDefault(emailjsAccessToken, account.APISecret)
+	userID := account.APIKey
+	accessToken := account.APISecret
 
 	if serviceID == "" {
-		return nil, nil, errors.New("EmailJS: service_id (From) is required")
+		serviceID = defaultEmailjsServiceID
 	}
 	if userID == "" {
 		return nil, nil, errors.New("EmailJS: user_id (APIKey) is required")
@@ -97,19 +92,16 @@ func (t *emailJSTransformer) transformEmail(
 		return nil, nil, errors.New("EmailJS: accessToken (APISecret) is required")
 	}
 
-	// Build request parameters
-	params := map[string]interface{}{
-		emailjsServiceID:   serviceID,
-		emailjsTemplateID:  msg.TemplateID,
-		emailjsUserID:      userID,
-		emailjsAccessToken: accessToken,
-	}
-
 	// Prepare template data with smart field merging
 	templateData := t.prepareTemplateData(msg)
-
-	// Add template parameters
-	params[emailjsTemplateParams] = templateData
+	// Build request parameters
+	params := map[string]interface{}{
+		"service_id":      serviceID,
+		"template_id":     msg.TemplateID,
+		"user_id":         userID,
+		"accessToken":     accessToken,
+		"template_params": templateData,
+	}
 
 	// Convert to JSON
 	bodyData, err := json.Marshal(params)
