@@ -11,12 +11,12 @@ package sms
 
 // LuosimaoSMSBuilder provides Luosimao-specific SMS message creation.
 type LuosimaoSMSBuilder struct {
-	BaseSMSBuilder
+	*BaseBuilder[*LuosimaoSMSBuilder]
 }
 
 // newLuosimaoSMSBuilder creates a new Luosimao SMS builder.
 func newLuosimaoSMSBuilder() *LuosimaoSMSBuilder {
-	return &LuosimaoSMSBuilder{
-		BaseSMSBuilder: BaseSMSBuilder{subProvider: SubProviderLuosimao},
-	}
+	b := &LuosimaoSMSBuilder{}
+	b.BaseBuilder = &BaseBuilder[*LuosimaoSMSBuilder]{subProvider: SubProviderLuosimao, self: b}
+	return b
 }

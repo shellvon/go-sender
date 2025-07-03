@@ -8,13 +8,12 @@ import (
 )
 
 func TestAliyunSMSBuilder_AllFields_Text(t *testing.T) {
-	aliyunBuilder := sms.Aliyun()
-	aliyunBuilder.To("***REMOVED***", "13900139000")
-	aliyunBuilder.Content("test content")
-	aliyunBuilder.SignName("test-sign")
-	aliyunBuilder.TemplateID("TEMPLATE_ID")
-	aliyunBuilder.Params(map[string]string{"code": "1234"})
-	aliyunBuilder.
+	msg := sms.Aliyun().
+		To("***REMOVED***", "13900139000").
+		Content("test content").
+		SignName("test-sign").
+		TemplateID("TEMPLATE_ID").
+		Params(map[string]string{"code": "1234"}).
 		OutID("out-id").
 		FallbackType("SMS").
 		SmsTemplateCode("SMS_CODE").
@@ -22,9 +21,8 @@ func TestAliyunSMSBuilder_AllFields_Text(t *testing.T) {
 		SmsTemplateParam("sms-param").
 		DigitalTemplateParam("digital-param").
 		SmsUpExtendCode("up-ext").
-		CardObjects("card-obj")
-
-	msg := aliyunBuilder.Build()
+		CardObjects("card-obj").
+		Build()
 
 	if msg == nil {
 		t.Fatal("Build() returned nil")
@@ -60,19 +58,17 @@ func TestAliyunSMSBuilder_AllFields_Text(t *testing.T) {
 }
 
 func TestAliyunSMSBuilder_AllFields_Voice(t *testing.T) {
-	aliyunBuilder := sms.Aliyun()
-	aliyunBuilder.To("***REMOVED***")
-	aliyunBuilder.Content("test voice content")
-	aliyunBuilder.SignName("voice-sign")
-	aliyunBuilder.TemplateID("VOICE_TEMPLATE")
-	aliyunBuilder.Type(sms.Voice)
-	aliyunBuilder.
+	msg := sms.Aliyun().
+		To("***REMOVED***").
+		Content("test voice content").
+		SignName("voice-sign").
+		TemplateID("VOICE_TEMPLATE").
+		Type(sms.Voice).
 		CalledShowNumber("4000000000").
 		PlayTimes(2).
 		Volume(80).
-		Speed(100)
-
-	msg := aliyunBuilder.Build()
+		Speed(100).
+		Build()
 
 	if msg == nil {
 		t.Fatal("Build() returned nil")
@@ -103,13 +99,12 @@ func TestAliyunSMSBuilder_AllFields_Voice(t *testing.T) {
 }
 
 func TestAliyunSMSBuilder_AllFields_Extras(t *testing.T) {
-	aliyunBuilder := sms.Aliyun()
-	aliyunBuilder.To("***REMOVED***", "13900139000")
-	aliyunBuilder.Content("test content")
-	aliyunBuilder.SignName("test-sign")
-	aliyunBuilder.TemplateID("TEMPLATE_ID")
-	aliyunBuilder.Params(map[string]string{"code": "1234"})
-	aliyunBuilder.
+	msg := sms.Aliyun().
+		To("***REMOVED***", "13900139000").
+		Content("test content").
+		SignName("test-sign").
+		TemplateID("TEMPLATE_ID").
+		Params(map[string]string{"code": "1234"}).
 		CalledShowNumber("4000000000").
 		PlayTimes(2).
 		OutID("out-id").
@@ -121,9 +116,8 @@ func TestAliyunSMSBuilder_AllFields_Extras(t *testing.T) {
 		SmsTemplateParam("sms-param").
 		DigitalTemplateParam("digital-param").
 		SmsUpExtendCode("up-ext").
-		CardObjects("card-obj")
-
-	msg := aliyunBuilder.Build()
+		CardObjects("card-obj").
+		Build()
 
 	if msg == nil {
 		t.Fatal("Build() returned nil")
@@ -159,11 +153,11 @@ func TestAliyunSMSBuilder_AllFields_Extras(t *testing.T) {
 }
 
 func TestAliyunSMSBuilder_RequiredFields(t *testing.T) {
-	aliyunBuilder := sms.Aliyun()
-	aliyunBuilder.To("***REMOVED***")
-	aliyunBuilder.Content("hi")
-	aliyunBuilder.SignName("sign")
-	msg := aliyunBuilder.Build()
+	msg := sms.Aliyun().
+		To("***REMOVED***").
+		Content("hi").
+		SignName("sign").
+		Build()
 	if msg == nil {
 		t.Fatal("Build() returned nil")
 	}
@@ -173,10 +167,10 @@ func TestAliyunSMSBuilder_RequiredFields(t *testing.T) {
 }
 
 func TestAliyunSMSBuilder_EmptyMobiles(t *testing.T) {
-	aliyunBuilder := sms.Aliyun()
-	aliyunBuilder.Content("hi")
-	aliyunBuilder.SignName("sign")
-	msg := aliyunBuilder.Build()
+	msg := sms.Aliyun().
+		Content("hi").
+		SignName("sign").
+		Build()
 	if err := msg.Validate(); err == nil {
 		t.Error("Validate() should fail if mobiles is empty")
 	}

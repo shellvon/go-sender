@@ -13,16 +13,16 @@ package sms
 
 // YunpianSMSBuilder provides Yunpian-specific SMS message creation.
 type YunpianSMSBuilder struct {
-	*BaseBuilder
+	*BaseBuilder[*YunpianSMSBuilder]
 
 	register   bool
 	mobileStat bool
 }
 
 func newYunpianSMSBuilder() *YunpianSMSBuilder {
-	return &YunpianSMSBuilder{
-		BaseBuilder: &BaseBuilder{subProvider: SubProviderYunpian},
-	}
+	b := &YunpianSMSBuilder{}
+	b.BaseBuilder = &BaseBuilder[*YunpianSMSBuilder]{subProvider: SubProviderYunpian, self: b}
+	return b
 }
 
 // Register sets the register field for Yunpian SMS.

@@ -13,16 +13,16 @@ package sms
 
 // HuaweiSMSBuilder provides Huawei-specific SMS message creation.
 type HuaweiSMSBuilder struct {
-	*BaseBuilder
+	*BaseBuilder[*HuaweiSMSBuilder]
 
 	from string
 }
 
 // newHuaweiSMSBuilder creates a new Huawei SMS builder.
 func newHuaweiSMSBuilder() *HuaweiSMSBuilder {
-	return &HuaweiSMSBuilder{
-		BaseBuilder: &BaseBuilder{subProvider: SubProviderHuawei},
-	}
+	b := &HuaweiSMSBuilder{}
+	b.BaseBuilder = &BaseBuilder[*HuaweiSMSBuilder]{subProvider: SubProviderHuawei, self: b}
+	return b
 }
 
 // From sets the sender number for Huawei SMS.

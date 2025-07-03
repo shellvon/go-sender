@@ -83,7 +83,9 @@ type MessageBuilder interface {
 }
 
 // BaseBuilder provides chainable methods for common SMS parameters.
-type BaseBuilder struct {
+// It is generic so that each concrete builder can embed a `*BaseBuilder[*ConcreteBuilder]`
+// and all链式 methods将返回具体的 builder 类型，避免 "跳回" 基类的问题。
+type BaseBuilder[T any] struct {
 	subProvider    SubProviderType
 	mobiles        []string
 	content        string
@@ -98,62 +100,128 @@ type BaseBuilder struct {
 	scheduledAt    *time.Time
 	extend         string
 	uid            string
+
+	// self 持有实际的 builder 指针，用于链式调用时返回具体类型。
+	self T
 }
 
-func (b *BaseBuilder) To(mobiles ...string) *BaseBuilder {
+// To sets the mobile numbers to send the message to.
+func (b *BaseBuilder[T]) To(mobiles ...string) T {
 	b.mobiles = mobiles
-	return b
-}
-func (b *BaseBuilder) Content(content string) *BaseBuilder {
-	b.content = content
-	return b
-}
-func (b *BaseBuilder) SignName(sign string) *BaseBuilder {
-	b.signName = sign
-	return b
-}
-func (b *BaseBuilder) TemplateID(id string) *BaseBuilder {
-	b.templateID = id
-	return b
-}
-func (b *BaseBuilder) Params(params map[string]string) *BaseBuilder {
-	b.templateParams = params
-	return b
-}
-func (b *BaseBuilder) ParamsOrder(order []string) *BaseBuilder {
-	b.paramsOrder = order
-	return b
-}
-func (b *BaseBuilder) Category(category MessageCategory) *BaseBuilder {
-	b.category = category
-	return b
-}
-func (b *BaseBuilder) Type(t MessageType) *BaseBuilder {
-	b.msgType = t
-	return b
-}
-func (b *BaseBuilder) RegionCode(code int) *BaseBuilder {
-	b.regionCode = code
-	return b
-}
-func (b *BaseBuilder) CallbackURL(url string) *BaseBuilder {
-	b.callbackURL = url
-	return b
-}
-func (b *BaseBuilder) ScheduledAt(at time.Time) *BaseBuilder {
-	b.scheduledAt = &at
-	return b
-}
-func (b *BaseBuilder) Extend(ext string) *BaseBuilder {
-	b.extend = ext
-	return b
-}
-func (b *BaseBuilder) UID(uid string) *BaseBuilder {
-	b.uid = uid
-	return b
+	return b.self
 }
 
-func (b *BaseBuilder) Build() *Message {
+// Content sets the content of the message.
+func (b *BaseBuilder[T]) Content(content string) T {
+	b.content = content
+	return b.self
+}
+
+// SignName sets the SMS signature (sign name).
+//   - For most domestic (China mainland) SMS providers this field is mandatory and the value must be a previously approved signature.
+//   - A few international providers allow the signature to be embedded directly in the message body, making this field optional.
+//
+// When in doubt, always set a sign name to avoid provider-side validation errors.
+func (b *BaseBuilder[T]) SignName(sign string) T {
+	b.signName = sign
+	return b.self
+}
+
+// TemplateID sets the template ID of the message.
+func (b *BaseBuilder[T]) TemplateID(id string) T {
+	b.templateID = id
+	return b.self
+}
+
+// Params sets the template parameters of the message.
+//   - For most SMS providers, this is a map of parameter names to their values.
+//   - For some providers, the order of parameters is important and should be specified using ParamsOrder.
+//   - For providers that support both ordered and unordered parameters, this method can be used for both.
+//
+// When in doubt, always set the parameters to avoid provider-side validation errors.
+func (b *BaseBuilder[T]) Params(params map[string]string) T {
+	b.templateParams = params
+	return b.self
+}
+
+// ParamsOrder sets the order of template parameters.
+//   - For some SMS providers, the order of parameters is important and should be specified using this method.
+//   - For providers that support both ordered and unordered parameters, this method can be used for both.
+//
+// When in doubt, always set the parameters to avoid provider-side validation errors.
+func (b *BaseBuilder[T]) ParamsOrder(order []string) T {
+	b.paramsOrder = order
+	return b.self
+}
+
+// Category sets the category of the message.
+//   - For some SMS providers, the category of the message is important and should be specified using this method.
+//   - For providers that support both ordered and unordered parameters, this method can be used for both.
+//
+// When in doubt, always set the parameters to avoid provider-side validation errors.
+func (b *BaseBuilder[T]) Category(category MessageCategory) T {
+	b.category = category
+	return b.self
+}
+
+// Type sets the type of the message.
+//   - For some SMS providers, the type of the message is important and should be specified using this method.
+//   - For providers that support both ordered and unordered parameters, this method can be used for both.
+//
+// When in doubt, always set the parameters to avoid provider-side validation errors.
+func (b *BaseBuilder[T]) Type(t MessageType) T {
+	b.msgType = t
+	return b.self
+}
+
+// RegionCode sets the destination country/region code (E.164).
+//   - This only affects international SMS; for domestic (China mainland) SMS the value is ignored.
+//   - A value of 0 or 86 is treated as mainland China.
+//   - Any other value tells the provider to use its international-SMS API, if supported.
+func (b *BaseBuilder[T]) RegionCode(code int) T {
+	b.regionCode = code
+	return b.self
+}
+
+// CallbackURL sets the callback URL of the message.
+func (b *BaseBuilder[T]) CallbackURL(url string) T {
+	b.callbackURL = url
+	return b.self
+}
+
+// ScheduledAt sets the scheduled (delayed-send) time of the message.
+// The feature is only effective if the underlying SMS provider supports scheduled delivery; the
+// transformer will format the timestamp as required by that provider. Examples of supported
+// providers:
+//   - Luosimao: https://luosimao.com/docs/api#send_batch
+//   - CL253   : https://doc.chuanglan.com/
+//
+// If the provider has no concept of scheduled SMS, this parameter is silently ignored.
+func (b *BaseBuilder[T]) ScheduledAt(at time.Time) T {
+	b.scheduledAt = &at
+	return b.self
+}
+
+// Extend sets the vendor-specific extension field.
+// Most SMS providers expose an optional "extend/extra" parameter that is echoed back in delivery
+// receipts or callbacks. Validation rules vary by provider—refer to their respective docs for
+// the exact format.
+func (b *BaseBuilder[T]) Extend(ext string) T {
+	b.extend = ext
+	return b.self
+}
+
+// UID sets a user-defined unique identifier for the message.
+// Providers known to honor this field include:
+//   - Yunpian: https://www.yunpian.com/dev-doc
+//   - UCP    : http://docs.ucpaas.com/doku.php
+func (b *BaseBuilder[T]) UID(uid string) T {
+	b.uid = uid
+	return b.self
+}
+
+// Build assembles the final *Message with all已设置字段.
+func (b *BaseBuilder[T]) Build() *Message {
 	return &Message{
 		Type:           b.msgType,
 		Category:       b.category,
@@ -170,11 +238,6 @@ func (b *BaseBuilder) Build() *Message {
 		Extend:         b.extend,
 		UID:            b.uid,
 	}
-}
-
-// BaseSMSBuilder provides common functionality for all SMS builders.
-type BaseSMSBuilder struct {
-	subProvider SubProviderType
 }
 
 // Aliyun returns an Aliyun SMS builder.

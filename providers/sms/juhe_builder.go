@@ -14,12 +14,12 @@ package sms
 
 // JuheSMSBuilder provides Juhe-specific SMS message creation.
 type JuheSMSBuilder struct {
-	BaseSMSBuilder
+	*BaseBuilder[*JuheSMSBuilder]
 }
 
 // newJuheSMSBuilder creates a new Juhe SMS builder.
 func newJuheSMSBuilder() *JuheSMSBuilder {
-	return &JuheSMSBuilder{
-		BaseSMSBuilder: BaseSMSBuilder{subProvider: SubProviderJuhe},
-	}
+	b := &JuheSMSBuilder{}
+	b.BaseBuilder = &BaseBuilder[*JuheSMSBuilder]{subProvider: SubProviderJuhe, self: b}
+	return b
 }

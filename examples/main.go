@@ -275,14 +275,12 @@ func runSMSDemo() {
 		msg = sms.Cl253().To(phone).Content("【GoSender】Your code is 1234.").Build()
 
 	case "volc":
-		// 火山云, 必须存在子账号
-		b := sms.Volc().SmsAccount("xx")
-		b.To(phone).
+		msg = sms.Volc().To(phone).
 			//	Content("【GoSender】Your code is 1234.").
 			TemplateID(templateID).
 			Params(map[string]string{"code": "1234"}).
-			SignName(from)
-		msg = b.Build()
+			SignName(from).
+			Build()
 	default:
 		log.Println("Unsupported provider type for demo. Supported: aliyun, tencent, cl25, volc")
 		return

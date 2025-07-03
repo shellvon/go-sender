@@ -11,7 +11,7 @@ package sms
 // builder 仅支持 text（普通短信）类型。
 
 type YuntongxunSMSBuilder struct {
-	*BaseBuilder
+	*BaseBuilder[*YuntongxunSMSBuilder]
 
 	playTimes   string
 	mediaName   string
@@ -21,9 +21,9 @@ type YuntongxunSMSBuilder struct {
 }
 
 func newYuntongxunSMSBuilder() *YuntongxunSMSBuilder {
-	return &YuntongxunSMSBuilder{
-		BaseBuilder: &BaseBuilder{subProvider: SubProviderYuntongxun},
-	}
+	b := &YuntongxunSMSBuilder{}
+	b.BaseBuilder = &BaseBuilder[*YuntongxunSMSBuilder]{subProvider: SubProviderYuntongxun, self: b}
+	return b
 }
 
 // PlayTimes sets the playTimes field for YunTongXun voice SMS.
