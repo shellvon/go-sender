@@ -7,12 +7,12 @@ import (
 	"github.com/shellvon/go-sender/providers/webhook"
 )
 
-func TestNewMessage(t *testing.T) {
+func TestWebhookBuilder_Minimal(t *testing.T) {
 	body := []byte(`{"test": "data"}`)
-	msg := webhook.NewMessage(body)
+	msg := webhook.Webhook().Body(body).Build()
 
 	if msg == nil {
-		t.Fatal("NewMessage returned nil")
+		t.Fatal("Webhook().Build() returned nil")
 	}
 
 	if string(msg.Body) != string(body) {
@@ -23,35 +23,35 @@ func TestNewMessage(t *testing.T) {
 		t.Error("Expected Method to be empty by default")
 	}
 
-	if msg.Headers != nil {
-		t.Error("Expected Headers to be nil by default")
+	if msg.Headers == nil || len(msg.Headers) != 0 {
+		t.Error("Expected Headers to be empty by default")
 	}
 
-	if msg.PathParams != nil {
-		t.Error("Expected PathParams to be nil by default")
+	if msg.PathParams == nil || len(msg.PathParams) != 0 {
+		t.Error("Expected PathParams to be empty by default")
 	}
 
-	if msg.QueryParams != nil {
-		t.Error("Expected QueryParams to be nil by default")
+	if msg.QueryParams == nil || len(msg.QueryParams) != 0 {
+		t.Error("Expected QueryParams to be empty by default")
 	}
 }
 
-func TestMessageOptions(t *testing.T) {
+func TestWebhookBuilder_AllOptions(t *testing.T) {
 	body := []byte(`{"test": "data"}`)
 	headers := map[string]string{"Authorization": "Bearer token"}
 	pathParams := map[string]string{"id": "123"}
 	queryParams := map[string]string{"version": "v1"}
 
-	msg := webhook.NewMessage(
-		body,
-		webhook.WithMethod("PUT"),
-		webhook.WithHeaders(headers),
-		webhook.WithPathParams(pathParams),
-		webhook.WithQueryParams(queryParams),
-	)
+	msg := webhook.Webhook().
+		Body(body).
+		Method(http.MethodPut).
+		Headers(headers).
+		PathParams(pathParams).
+		Queries(queryParams).
+		Build()
 
 	if msg.Method != http.MethodPut {
-		t.Errorf("Expected Method to be 'PUT', got '%s'", msg.Method)
+		t.Errorf("Expected Method to be '%s', got '%s'", http.MethodPut, msg.Method)
 	}
 
 	if len(msg.Headers) != 1 || msg.Headers["Authorization"] != "Bearer token" {
@@ -67,18 +67,17 @@ func TestMessageOptions(t *testing.T) {
 	}
 }
 
-func TestMessageOptions_MultipleHeaders(t *testing.T) {
+func TestWebhookBuilder_MultipleHeaders(t *testing.T) {
 	body := []byte(`{"test": "data"}`)
 	headers1 := map[string]string{"Authorization": "Bearer token"}
 	headers2 := map[string]string{"Content-Type": "application/json", "X-Custom": "value"}
 
-	msg := webhook.NewMessage(
-		body,
-		webhook.WithHeaders(headers1),
-		webhook.WithHeaders(headers2),
-	)
+	msg := webhook.Webhook().
+		Body(body).
+		Headers(headers1).
+		Headers(headers2).
+		Build()
 
-	// Later headers should override earlier ones
 	expectedHeaders := map[string]string{
 		"Authorization": "Bearer token",
 		"Content-Type":  "application/json",
@@ -92,16 +91,16 @@ func TestMessageOptions_MultipleHeaders(t *testing.T) {
 	}
 }
 
-func TestMessageOptions_MultiplePathParams(t *testing.T) {
+func TestWebhookBuilder_MultiplePathParams(t *testing.T) {
 	body := []byte(`{"test": "data"}`)
 	params1 := map[string]string{"id": "123"}
 	params2 := map[string]string{"type": "user", "action": "update"}
 
-	msg := webhook.NewMessage(
-		body,
-		webhook.WithPathParams(params1),
-		webhook.WithPathParams(params2),
-	)
+	msg := webhook.Webhook().
+		Body(body).
+		PathParams(params1).
+		PathParams(params2).
+		Build()
 
 	expectedParams := map[string]string{
 		"id":     "123",
@@ -116,16 +115,16 @@ func TestMessageOptions_MultiplePathParams(t *testing.T) {
 	}
 }
 
-func TestMessageOptions_MultipleQueryParams(t *testing.T) {
+func TestWebhookBuilder_MultipleQueryParams(t *testing.T) {
 	body := []byte(`{"test": "data"}`)
 	params1 := map[string]string{"version": "v1"}
 	params2 := map[string]string{"format": "json", "pretty": "true"}
 
-	msg := webhook.NewMessage(
-		body,
-		webhook.WithQueryParams(params1),
-		webhook.WithQueryParams(params2),
-	)
+	msg := webhook.Webhook().
+		Body(body).
+		Queries(params1).
+		Queries(params2).
+		Build()
 
 	expectedParams := map[string]string{
 		"version": "v1",
@@ -140,8 +139,8 @@ func TestMessageOptions_MultipleQueryParams(t *testing.T) {
 	}
 }
 
-func TestMessage_Validate(t *testing.T) {
-	msg := webhook.NewMessage([]byte(`{"test": "data"}`))
+func TestWebhookBuilder_Validate(t *testing.T) {
+	msg := webhook.Webhook().Body([]byte(`{"test": "data"}`)).Build()
 
 	err := msg.Validate()
 	if err != nil {
@@ -149,8 +148,8 @@ func TestMessage_Validate(t *testing.T) {
 	}
 }
 
-func TestMessage_ProviderType(t *testing.T) {
-	msg := webhook.NewMessage([]byte(`{"test": "data"}`))
+func TestWebhookBuilder_ProviderType(t *testing.T) {
+	msg := webhook.Webhook().Body([]byte(`{"test": "data"}`)).Build()
 
 	providerType := msg.ProviderType()
 	if providerType != "webhook" {
@@ -158,15 +157,14 @@ func TestMessage_ProviderType(t *testing.T) {
 	}
 }
 
-func TestMessage_MsgID(t *testing.T) {
-	msg := webhook.NewMessage([]byte(`{"test": "data"}`))
+func TestWebhookBuilder_MsgID(t *testing.T) {
+	msg := webhook.Webhook().Body([]byte(`{"test": "data"}`)).Build()
 
 	msgID := msg.MsgID()
 	if msgID == "" {
 		t.Error("Expected MsgID to be non-empty")
 	}
 
-	// MsgID should be consistent for the same message
 	msgID2 := msg.MsgID()
 	if msgID != msgID2 {
 		t.Error("Expected MsgID to be consistent")
