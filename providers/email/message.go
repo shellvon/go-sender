@@ -31,10 +31,10 @@ var (
 
 // NewMessage creates a new email message with required fields only.
 func NewMessage(to []string, body string) *Message {
-	return &Message{
-		To:   to,
-		Body: body,
-	}
+	return Email().
+		To(to...).
+		Body(body).
+		Build()
 }
 
 // ProviderType returns the provider type for this message.
