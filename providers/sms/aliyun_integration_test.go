@@ -68,6 +68,18 @@ func TestAliyun_Integration_SendTextSMS(t *testing.T) {
 	}
 }
 
+// rewriteRoundTripper 重写请求的 Host + Scheme，让所有请求都转到指定 mock 服务器。
+type rewriteRoundTripper struct {
+	base       http.RoundTripper
+	targetHost string
+}
+
+func (rt rewriteRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	req.URL.Scheme = "https"
+	req.URL.Host = rt.targetHost
+	return rt.base.RoundTrip(req)
+}
+
 func TestSender_DispatchToAliyun_EndToEnd(t *testing.T) {
 	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -111,11 +123,10 @@ func TestSender_DispatchToAliyun_EndToEnd(t *testing.T) {
 	sender := gosender.NewSender()
 	sender.RegisterProvider(core.ProviderTypeSMS, aliyunProvider, nil)
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	// 使用自定义 RoundTripper 将请求重写到 httptest server。
+	targetHost := ts.Listener.Addr().String()
+	baseTransport := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
+	client := &http.Client{Transport: rewriteRoundTripper{base: baseTransport, targetHost: targetHost}}
 	sender.SetDefaultHTTPClient(client)
 
 	msg := sms.Aliyun().

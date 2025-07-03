@@ -2,7 +2,7 @@ package sms
 
 // AliyunSMSBuilder provides Aliyun-specific SMS message creation.
 type AliyunSMSBuilder struct {
-	*BaseBuilder
+	*BaseBuilder[*AliyunSMSBuilder]
 
 	region               string
 	calledShowNumber     string
@@ -20,10 +20,9 @@ type AliyunSMSBuilder struct {
 }
 
 func newAliyunSMSBuilder() *AliyunSMSBuilder {
-	return &AliyunSMSBuilder{
-		BaseBuilder: &BaseBuilder{subProvider: SubProviderAliyun},
-		volume:      aliyunDefaultVolume, // 默认音量
-	}
+	b := &AliyunSMSBuilder{}
+	b.BaseBuilder = &BaseBuilder[*AliyunSMSBuilder]{subProvider: SubProviderAliyun, self: b}
+	return b
 }
 
 // AliyunSMSBuilder inherits all methods from BaseSMSBuilder

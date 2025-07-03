@@ -12,7 +12,7 @@ package sms
 
 // TencentSMSBuilder provides Tencent-specific SMS message creation.
 type TencentSMSBuilder struct {
-	*BaseBuilder
+	*BaseBuilder[*TencentSMSBuilder]
 
 	senderID      string
 	region        string
@@ -23,10 +23,11 @@ type TencentSMSBuilder struct {
 
 // newTencentSMSBuilder creates a new Tencent SMS builder.
 func newTencentSMSBuilder() *TencentSMSBuilder {
-	return &TencentSMSBuilder{
-		BaseBuilder: &BaseBuilder{subProvider: SubProviderTencent},
-		region:      tencentDefaultRegion,
+	b := &TencentSMSBuilder{
+		region: tencentDefaultRegion,
 	}
+	b.BaseBuilder = &BaseBuilder[*TencentSMSBuilder]{subProvider: SubProviderTencent, self: b}
+	return b
 }
 
 // SenderID sets the SenderId for Tencent international/HK/Macau/Taiwan SMS.

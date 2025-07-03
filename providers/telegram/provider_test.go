@@ -24,6 +24,19 @@ func (m *invalidMessage) Validate() error {
 	return nil
 }
 
+// rewriteRoundTripper 用于在测试中把原始 telegram API URL 重写到 httptest server.
+type rewriteRoundTripper struct {
+	base         http.RoundTripper
+	targetHost   string
+	targetScheme string
+}
+
+func (rt rewriteRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	req.URL.Host = rt.targetHost
+	req.URL.Scheme = rt.targetScheme
+	return rt.base.RoundTrip(req)
+}
+
 func TestNewProvider(t *testing.T) {
 	config := telegram.Config{
 		Accounts: []core.Account{
@@ -131,7 +144,16 @@ func TestProvider_Send_Success(t *testing.T) {
 
 	msg := telegram.NewTextMessage("123456789", "Hello, World!")
 
-	err = provider.Send(context.Background(), msg, nil)
+	// 覆盖 HTTPClient，将请求导向 mock server。
+	tsURL := ts.URL // e.g., http://127.0.0.1:XXXXX
+	parts := strings.SplitN(tsURL, "://", 2)
+	scheme := parts[0]
+	host := parts[1]
+	client := &http.Client{
+		Transport: rewriteRoundTripper{base: http.DefaultTransport, targetHost: host, targetScheme: scheme},
+	}
+
+	err = provider.Send(context.Background(), msg, &core.ProviderSendOptions{HTTPClient: client})
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
@@ -173,7 +195,14 @@ func TestProvider_Send_WithOptions(t *testing.T) {
 		telegram.WithParseMode("HTML"),
 	)
 
-	err = provider.Send(context.Background(), msg, nil)
+	tsURL := ts.URL
+	parts := strings.SplitN(tsURL, "://", 2)
+	scheme, host := parts[0], parts[1]
+	client := &http.Client{
+		Transport: rewriteRoundTripper{base: http.DefaultTransport, targetHost: host, targetScheme: scheme},
+	}
+
+	err = provider.Send(context.Background(), msg, &core.ProviderSendOptions{HTTPClient: client})
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
@@ -203,7 +232,14 @@ func TestProvider_Send_HTTPFailure(t *testing.T) {
 
 	msg := telegram.NewTextMessage("123456789", "Hello, World!")
 
-	err = provider.Send(context.Background(), msg, nil)
+	tsURL := ts.URL
+	parts := strings.SplitN(tsURL, "://", 2)
+	scheme, host := parts[0], parts[1]
+	client := &http.Client{
+		Transport: rewriteRoundTripper{base: http.DefaultTransport, targetHost: host, targetScheme: scheme},
+	}
+
+	err = provider.Send(context.Background(), msg, &core.ProviderSendOptions{HTTPClient: client})
 	if err == nil {
 		t.Error("Expected error for HTTP failure, got nil")
 	}

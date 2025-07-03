@@ -12,15 +12,15 @@ package sms
 // builder 支持 text、voice、intl 短信。
 
 type SmsbaoSMSBuilder struct {
-	*BaseBuilder
+	*BaseBuilder[*SmsbaoSMSBuilder]
 
 	productID string
 }
 
 func newSmsbaoSMSBuilder() *SmsbaoSMSBuilder {
-	return &SmsbaoSMSBuilder{
-		BaseBuilder: &BaseBuilder{subProvider: SubProviderSmsbao},
-	}
+	b := &SmsbaoSMSBuilder{}
+	b.BaseBuilder = &BaseBuilder[*SmsbaoSMSBuilder]{subProvider: SubProviderSmsbao, self: b}
+	return b
 }
 
 // ProductID sets the productId for Smsbao SMS.

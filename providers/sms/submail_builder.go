@@ -15,7 +15,7 @@ package sms
 // builder 支持 text（国内/国际，模板/非模板，单发/群发）、voice（语音）、mms（彩信）类型。
 
 type SubmailSMSBuilder struct {
-	*BaseBuilder
+	*BaseBuilder[*SubmailSMSBuilder]
 
 	tag      string
 	sender   string
@@ -23,10 +23,11 @@ type SubmailSMSBuilder struct {
 }
 
 func newSubmailSMSBuilder() *SubmailSMSBuilder {
-	return &SubmailSMSBuilder{
-		BaseBuilder: &BaseBuilder{subProvider: SubProviderSubmail},
-		signType:    submailDefaultSignType,
+	b := &SubmailSMSBuilder{
+		signType: submailDefaultSignType,
 	}
+	b.BaseBuilder = &BaseBuilder[*SubmailSMSBuilder]{subProvider: SubProviderSubmail, self: b}
+	return b
 }
 
 // Tag sets the tag for Submail SMS.

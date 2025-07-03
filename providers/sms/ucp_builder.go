@@ -10,11 +10,11 @@ package sms
 // builder 仅支持 text（普通短信）类型。
 
 type UcpSMSBuilder struct {
-	BaseSMSBuilder
+	*BaseBuilder[*UcpSMSBuilder]
 }
 
 func newUcpSMSBuilder() *UcpSMSBuilder {
-	return &UcpSMSBuilder{
-		BaseSMSBuilder: BaseSMSBuilder{subProvider: SubProviderUcp},
-	}
+	b := &UcpSMSBuilder{}
+	b.BaseBuilder = &BaseBuilder[*UcpSMSBuilder]{subProvider: SubProviderUcp, self: b}
+	return b
 }

@@ -17,7 +17,7 @@ package sms
 
 // Cl253SMSBuilder provides CL253-specific SMS message creation.
 type Cl253SMSBuilder struct {
-	*BaseBuilder
+	*BaseBuilder[*Cl253SMSBuilder]
 
 	senderID string
 	tdFlag   int    // 退订开启标识，1 开启；0 或 null 关闭
@@ -26,9 +26,9 @@ type Cl253SMSBuilder struct {
 
 // newCl253SMSBuilder creates a new CL253 SMS builder.
 func newCl253SMSBuilder() *Cl253SMSBuilder {
-	return &Cl253SMSBuilder{
-		BaseBuilder: &BaseBuilder{subProvider: SubProviderCl253},
-	}
+	b := &Cl253SMSBuilder{}
+	b.BaseBuilder = &BaseBuilder[*Cl253SMSBuilder]{subProvider: SubProviderCl253, self: b}
+	return b
 }
 
 // SenderID sets the sender ID for CL253 international SMS.
