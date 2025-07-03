@@ -2,9 +2,109 @@
 
 # Webhook Provider | 通用 Webhook 推送组件
 
-This provider supports sending messages via HTTP webhooks to any endpoint that accepts HTTP requests.
+The Webhook Provider for go-sender allows you to send HTTP requests to any endpoint with full control over method, headers, path/query parameters, and body.
 
-本组件支持通过 HTTP Webhook 向任意支持 HTTP 请求的接口推送消息。
+本组件支持通过 HTTP Webhook 向任意支持 HTTP 请求的接口推送消息，支持自定义请求方法、Header、路径参数、查询参数和请求体。
+
+---
+
+## Usage | 用法
+
+### Constructing Webhook Messages | 构造 Webhook 消息
+
+Use the builder API for all options. 所有参数均通过 builder 链式设置。
+
+#### API
+
+- `Webhook()` - create a builder instance | 创建 builder 实例
+- `Body(body []byte)` - set request body | 设置请求体
+- `Method(method string)` - set HTTP method (e.g., http.MethodPost) | 设置 HTTP 方法（如 http.MethodPost）
+- `Header(key, value string)` - set a single header | 设置单个 Header
+- `Headers(headers map[string]string)` - set multiple headers | 批量设置 Header
+- `PathParam(key, value string)` - set a single path parameter | 设置单个路径参数
+- `PathParams(params map[string]string)` - set multiple path parameters | 批量设置路径参数
+- `Query(key, value string)` - set a single query parameter | 设置单个查询参数
+- `Queries(params map[string]string)` - set multiple query parameters | 批量设置查询参数
+- `Build()` - build the Message instance | 生成消息实例
+
+**Example | 示例**
+
+```go
+msg := webhook.Webhook().
+    Method(http.MethodPost). // English: Set HTTP method | 中文：设置 HTTP 方法
+    Body([]byte(`{"foo": "bar"}`)). // English: Set request body | 中文：设置请求体
+    Header("Authorization", "Bearer token"). // English: Set single header | 中文：设置单个 Header
+    Headers(map[string]string{"X-Custom": "value"}). // English: Set multiple headers | 中文：批量设置 Header
+    PathParam("id", "123"). // English: Set single path param | 中文：设置单个路径参数
+    Query("version", "v1"). // English: Set single query param | 中文：设置单个查询参数
+    Build()
+```
+
+---
+
+## Features | 功能特性
+
+- Supports all HTTP methods (GET, POST, PUT, DELETE, PATCH, etc.) | 支持所有 HTTP 方法（GET、POST、PUT、DELETE、PATCH 等）
+- Flexible headers, path and query parameters | 灵活设置 Header、路径参数、查询参数
+- Arbitrary request body (JSON, XML, form, etc.) | 支持任意请求体（JSON、XML、表单等）
+- Chainable builder API for type safety and clarity | 链式 builder API，类型安全、易于 IDE 补全
+
+---
+
+## Configuration Example | 配置示例
+
+```go
+import (
+    "github.com/shellvon/go-sender/core"
+    "github.com/shellvon/go-sender/providers/webhook"
+)
+
+config := webhook.Config{
+    Endpoints: []webhook.Endpoint{
+        {
+            Name:   "default", // 英文：端点名称
+            URL:    "https://example.com/webhook/{id}", // 英文：URL，支持路径参数
+            Method: http.MethodPost, // 英文：HTTP 方法
+            Headers: map[string]string{
+                "Authorization": "Bearer token", // 英文：Header
+            },
+        },
+    },
+}
+
+provider, err := webhook.New(config)
+if err != nil {
+    panic(err)
+}
+```
+
+---
+
+## Sending a Webhook | 发送 Webhook
+
+```go
+msg := webhook.Webhook().
+    Method(http.MethodPost).
+    Body([]byte(`{"foo": "bar"}`)).
+    PathParam("id", "123").
+    Query("version", "v1").
+    Build()
+
+err := provider.Send(context.Background(), msg, nil)
+if err != nil {
+    log.Printf("Failed to send webhook: %v", err) // 英文：发送失败 | 中文：发送失败
+}
+```
+
+---
+
+## Notes | 注意事项
+
+- All fields are optional; set only what you need. | 所有字段均为可选，按需设置。
+- If Method is not set, the provider or endpoint config may determine the default (usually POST or GET). | 如未设置 Method，将由 provider 或 endpoint 配置决定（通常为 POST 或 GET）。
+- Path and query parameters are merged into the endpoint URL. | 路径参数和查询参数会自动合并到 URL。
+- Headers can be set individually or in bulk. | Header 可单独或批量设置。
+- Body can be any []byte (JSON, XML, form, etc.). | 请求体可为任意 []byte（JSON、XML、表单等）。
 
 ---
 

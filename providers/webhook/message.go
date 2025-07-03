@@ -19,63 +19,6 @@ type Message struct {
 	QueryParams map[string]string `json:"query_params,omitempty"` // Query parameters to add to URL
 }
 
-// NewMessage creates a new webhook message.
-func NewMessage(body []byte, opts ...MessageOption) *Message {
-	msg := &Message{
-		Body: body,
-	}
-	for _, opt := range opts {
-		opt(msg)
-	}
-	return msg
-}
-
-// MessageOption is a function option for webhook messages.
-type MessageOption func(*Message)
-
-// WithHeaders adds headers to the webhook message.
-func WithHeaders(headers map[string]string) MessageOption {
-	return func(m *Message) {
-		if m.Headers == nil {
-			m.Headers = make(map[string]string)
-		}
-		for k, v := range headers {
-			m.Headers[k] = v
-		}
-	}
-}
-
-// WithMethod sets the HTTP method for this message.
-func WithMethod(method string) MessageOption {
-	return func(m *Message) {
-		m.Method = method
-	}
-}
-
-// WithPathParams sets path parameters for URL template replacement.
-func WithPathParams(params map[string]string) MessageOption {
-	return func(m *Message) {
-		if m.PathParams == nil {
-			m.PathParams = make(map[string]string)
-		}
-		for k, v := range params {
-			m.PathParams[k] = v
-		}
-	}
-}
-
-// WithQueryParams sets query parameters for the request.
-func WithQueryParams(params map[string]string) MessageOption {
-	return func(m *Message) {
-		if m.QueryParams == nil {
-			m.QueryParams = make(map[string]string)
-		}
-		for k, v := range params {
-			m.QueryParams[k] = v
-		}
-	}
-}
-
 // buildURL constructs the final URL by replacing path variables and adding query parameters.
 func (m *Message) buildURL(baseURL string) (string, error) {
 	// Replace path variables in the URL
@@ -105,6 +48,9 @@ func (m *Message) buildURL(baseURL string) (string, error) {
 }
 
 // Validate validates the webhook message.
+// Method can be empty and may be set by the sender/provider if not specified.
+// If provider config method is empty, it will be set to http.MethodPost.
+// so this method will always return nil.
 func (m *Message) Validate() error {
 	return nil
 }
@@ -112,4 +58,87 @@ func (m *Message) Validate() error {
 // ProviderType returns the provider type for webhook messages.
 func (m *Message) ProviderType() core.ProviderType {
 	return core.ProviderTypeWebhook
+}
+
+// WebhookBuilder provides a chainable API for constructing webhook messages.
+type WebhookBuilder struct {
+	body        []byte
+	headers     map[string]string
+	method      string
+	pathParams  map[string]string
+	queryParams map[string]string
+}
+
+// Webhook creates a new WebhookBuilder.
+func Webhook() *WebhookBuilder {
+	return &WebhookBuilder{
+		headers:     make(map[string]string),
+		pathParams:  make(map[string]string),
+		queryParams: make(map[string]string),
+	}
+}
+
+// Body sets the request body.
+func (b *WebhookBuilder) Body(body []byte) *WebhookBuilder {
+	b.body = body
+	return b
+}
+
+// Method sets the HTTP method. Should use http.MethodXXX constants.
+func (b *WebhookBuilder) Method(method string) *WebhookBuilder {
+	b.method = method
+	return b
+}
+
+// Header sets a single header key-value pair.
+func (b *WebhookBuilder) Header(key, value string) *WebhookBuilder {
+	b.headers[key] = value
+	return b
+}
+
+// Headers sets multiple headers at once.
+func (b *WebhookBuilder) Headers(headers map[string]string) *WebhookBuilder {
+	for k, v := range headers {
+		b.headers[k] = v
+	}
+	return b
+}
+
+// PathParam sets a single path parameter.
+func (b *WebhookBuilder) PathParam(key, value string) *WebhookBuilder {
+	b.pathParams[key] = value
+	return b
+}
+
+// PathParams sets multiple path parameters at once.
+func (b *WebhookBuilder) PathParams(params map[string]string) *WebhookBuilder {
+	for k, v := range params {
+		b.pathParams[k] = v
+	}
+	return b
+}
+
+// Query sets a single query parameter.
+func (b *WebhookBuilder) Query(key, value string) *WebhookBuilder {
+	b.queryParams[key] = value
+	return b
+}
+
+// Queries sets multiple query parameters at once.
+func (b *WebhookBuilder) Queries(params map[string]string) *WebhookBuilder {
+	for k, v := range params {
+		b.queryParams[k] = v
+	}
+	return b
+}
+
+// Build creates the webhook Message instance.
+func (b *WebhookBuilder) Build() *Message {
+	return &Message{
+		Body:        b.body,
+		Headers:     b.headers,
+		Method:      b.method,
+		PathParams:  b.pathParams,
+		QueryParams: b.queryParams,
+	}
 }

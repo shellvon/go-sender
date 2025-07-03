@@ -129,13 +129,13 @@ func runEmailDemo() {
 		log.Println("Init email provider failed:", err)
 		return
 	}
-	msg := email.NewMessage(
-		[]string{to},
-		"This is a test email from go-sender example.",
-		email.WithFrom(user),
-		email.WithSubject("Go-Sender Example"),
-		email.WithAttachments("main.go"),
-	)
+	msg := email.Email().
+		To(to).
+		Body("This is a test email from go-sender example.").
+		From(user).
+		Subject("Go-Sender Example").
+		Attach("main.go").
+		Build()
 	err = prov.Send(context.Background(), msg, nil)
 	if err != nil {
 		log.Println("Send failed:", err)

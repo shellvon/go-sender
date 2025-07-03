@@ -61,15 +61,13 @@ func TestMessageValidation(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "invalid CC email",
-			msg: email.NewMessage([]string{"test@example.com"}, "Test body",
-				email.WithCc("invalid-cc")),
+			name:    "invalid CC email",
+			msg:     email.Email().To("test@example.com").Cc("invalid-cc").Body("Test body").Build(),
 			wantErr: true,
 		},
 		{
-			name: "invalid BCC email",
-			msg: email.NewMessage([]string{"test@example.com"}, "Test body",
-				email.WithBcc("invalid-bcc")),
+			name:    "invalid BCC email",
+			msg:     email.Email().To("test@example.com").Bcc("invalid-bcc").Body("Test body").Build(),
 			wantErr: true,
 		},
 		{
@@ -78,10 +76,8 @@ func TestMessageValidation(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "valid with CC and BCC",
-			msg: email.NewMessage([]string{"test@example.com"}, "Test body",
-				email.WithCc("cc@example.com"),
-				email.WithBcc("bcc@example.com")),
+			name:    "valid with CC and BCC",
+			msg:     email.Email().To("test@example.com").Cc("cc@example.com").Bcc("bcc@example.com").Body("Test body").Build(),
 			wantErr: false,
 		},
 	}
@@ -97,17 +93,17 @@ func TestMessageValidation(t *testing.T) {
 }
 
 func TestMessageOptions(t *testing.T) {
-	msg := email.NewMessage(
-		[]string{"test@example.com"},
-		"Test body",
-		email.WithFrom("sender@example.com"),
-		email.WithSubject("Test Subject"),
-		email.WithCc("cc@example.com"),
-		email.WithBcc("bcc@example.com"),
-		email.WithReplyTo("reply1@example.com"),
-		email.WithHTML(),
-		email.WithAttachments("file1.txt", "file2.pdf"),
-	)
+	msg := email.Email().
+		To("test@example.com").
+		Body("Test body").
+		From("sender@example.com").
+		Subject("Test Subject").
+		Cc("cc@example.com").
+		Bcc("bcc@example.com").
+		ReplyTo("reply1@example.com").
+		HTML().
+		AddAttach("file1.txt", "file2.pdf").
+		Build()
 
 	if msg.From != "sender@example.com" {
 		t.Errorf("Expected From to be 'sender@example.com', got %s", msg.From)

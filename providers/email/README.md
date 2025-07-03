@@ -8,6 +8,55 @@ go-sender 的邮件组件支持通过 SMTP 协议发送邮件，底层基于 [go
 
 ---
 
+## Usage
+
+### Constructing Email Messages
+
+- Use the builder style for all advanced options.
+- For the simplest use case, use NewMessage for required fields only.
+
+#### API
+
+- `Email()` - create a builder instance
+- `To(recipients ...string)` - set recipients
+- `Subject(subject string)` - set subject
+- `Body(body string)` - set body
+- `From(from string)` - set sender
+- `Cc(cc ...string)` - set CC
+- `Bcc(bcc ...string)` - set BCC
+- `ReplyTo(replyTo string)` - set reply-to
+- `HTML()` - mark as HTML content
+- `Attach(files ...string)` - replace attachments
+- `AddAttach(files ...string)` - append attachments
+- `Build()` - build the Message instance
+
+**Example**
+
+```go
+msg := email.Email().
+    To("a@b.com").
+    Subject("Subject").
+    Body("Body").
+    From("noreply@b.com").
+    Cc("c@b.com").
+    Bcc("d@b.com").
+    ReplyTo("reply@b.com").
+    HTML().
+    Attach("a.txt").
+    AddAttach("b.txt", "c.pdf").
+    Build()
+```
+
+For the simplest use case:
+
+```go
+msg := email.NewMessage([]string{"user@example.com"}, "Hello!")
+```
+
+All advanced options (subject, from, cc, bcc, replyTo, html, attachments, etc.) must be set via the builder API.
+
+---
+
 ## Features | 功能特性
 
 - **Multiple Account Support 多账号支持**: Configure multiple email accounts with load balancing strategies | 支持多账号、负载均衡
@@ -137,25 +186,26 @@ msg := email.NewMessage(
 ### Email with Reply-To | 自定义回复地址
 
 ```go
-msg := email.NewMessage(
-    []string{"customer@example.com"},
-    "Thank you for your inquiry",
-    email.WithSubject("Customer Support"),
-    email.WithFrom("noreply@company.com"),
-    email.WithReplyTo("support@company.com"), // Replies will go to support team | 回复将发送到 support@company.com
-)
+msg := email.Email().
+    To("customer@example.com").
+    Body("Thank you for your inquiry").
+    Subject("Customer Support").
+    From("noreply@company.com").
+    ReplyTo("support@company.com"). // Replies will go to support team
+    Build()
 ```
 
 ### Email with Attachments | 带附件邮件
 
 ```go
-msg := email.NewMessage(
-    []string{"recipient@example.com"},
-    "Please find the attached report.",
-    email.WithSubject("Monthly Report"),
-    email.WithFrom("reports@company.com"),
-    email.WithAttachments("/path/to/report.pdf", "/path/to/data.xlsx"),
-)
+msg := email.Email().
+    To("recipient@example.com").
+    Body("Please find the attached report.").
+    Subject("Monthly Report").
+    From("reports@company.com").
+    Attach("/path/to/report.pdf").
+    AddAttach("/path/to/data.xlsx").
+    Build()
 ```
 
 ### Using with go-sender | 与 go-sender 集成
@@ -171,12 +221,12 @@ import (
 sender := gosender.New()
 sender.AddProvider(email.New(config))
 
-msg := email.NewMessage(
-    []string{"user@example.com"},
-    "Welcome to our service!",
-    email.WithSubject("Welcome"),
-    email.WithFrom("noreply@company.com"),
-)
+msg := email.Email().
+    To("user@example.com").
+    Body("Welcome to our service!").
+    Subject("Welcome").
+    From("noreply@company.com").
+    Build()
 
 err := sender.Send(context.Background(), msg)
 ```
@@ -188,31 +238,21 @@ err := sender.Send(context.Background(), msg)
 // 中文：获取 provider 实例并发送
 emailProvider := sender.GetProvider(core.ProviderTypeEmail).(*email.Provider)
 
-msg := email.NewMessage(
-    []string{"recipient@example.com"},
-    "Direct message",
-    email.WithSubject("Direct"),
-    email.WithFrom("direct@company.com"),
-)
+msg := email.Email().
+    To("recipient@example.com").
+    Body("Direct message").
+    Subject("Direct").
+    From("direct@company.com").
+    Build()
 
 err := emailProvider.Send(context.Background(), msg)
 ```
 
 ---
 
-## Message Options | 消息选项
+## Message Construction
 
-The email provider uses the functional options pattern for message construction:
-
-邮件组件采用函数式选项构造消息：
-
-- `WithFrom(from string)`: Set the sender email address (supports RFC 5322 format) | 设置发件人（支持 RFC 5322 格式）
-- `WithSubject(subject string)`: Set the email subject | 设置主题
-- `WithCc(cc ...string)`: Add CC recipients (supports RFC 5322 format) | 添加抄送（支持 RFC 5322 格式）
-- `WithBcc(bcc ...string)`: Add BCC recipients (supports RFC 5322 format) | 添加密送（支持 RFC 5322 格式）
-- `WithReplyTo(replyTo string)`: Set the Reply-To address (supports RFC 5322 format) | 设置回复地址（支持 RFC 5322 格式）
-- `WithHTML()`: Mark the email as HTML content | 标记为 HTML 邮件
-- `WithAttachments(attachments ...string)`: Add file attachments | 添加附件
+All advanced options (subject, from, cc, bcc, replyTo, html, attachments, etc.) must be set via the builder API.
 
 ---
 
@@ -336,3 +376,57 @@ config := email.Config{
 ## API Documentation | 官方文档
 
 - [Email Provider Guide | 邮件组件文档](https://github.com/shellvon/go-sender)
+
+### 构造邮件消息 Constructing Email Messages
+
+- 推荐使用 builder 风格（推荐）Recommended: Builder style
+- 也可直接用 NewMessage（仅支持必填参数）Or use NewMessage (required fields only)
+
+#### Builder API
+
+- `Email()`：创建 builder 实例 Create a builder instance
+- `To(recipients ...string)`：设置收件人 Set recipients
+- `Subject(subject string)`：设置主题 Set subject
+- `Body(body string)`：设置正文 Set body
+- `From(from string)`：设置发件人 Set sender
+- `Cc(cc ...string)`：设置抄送 Set CC
+- `Bcc(bcc ...string)`：设置密送 Set BCC
+- `ReplyTo(replyTo string)`：设置回复地址 Set reply-to
+- `HTML()`：标记为 HTML 内容 Mark as HTML content
+- `Attach(files ...string)`：替换附件列表 Set (replace) attachments
+- `AddAttach(files ...string)`：追加附件 Append attachments
+- `Build()`：生成 Message 实例 Build the Message instance
+
+**示例 Example**
+
+```go
+// builder 风格 Builder style
+msg := email.Email().
+    To("a@b.com").
+    Subject("Subject").
+    Body("Body").
+    From("noreply@b.com").
+    Cc("c@b.com").
+    Bcc("d@b.com").
+    ReplyTo("reply@b.com").
+    HTML().
+    Attach("a.txt").
+    AddAttach("b.txt", "c.pdf").
+    Build()
+
+// 只保留最后一次 SetAttach 的附件 Only the last SetAttach takes effect
+email.Email().To("a@b.com").Attach("a.txt").Attach("b.txt").Build() // 只包含 b.txt only b.txt attached
+
+// 追加多个附件 Append multiple attachments
+email.Email().To("a@b.com").AddAttach("a.txt").AddAttach("b.txt", "c.pdf").Build() // 包含 a.txt, b.txt, c.pdf
+```
+
+#### NewMessage API
+
+- `NewMessage(to []string, body string)`：仅支持必填参数 Only required fields supported
+
+**示例 Example**
+
+```go
+msg := email.NewMessage([]string{"a@b.com"}, "Body")
+```

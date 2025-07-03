@@ -25,26 +25,16 @@ type Message struct {
 	Attachments []string // List of attachment file paths
 }
 
-// MessageOption is a function that configures a Message.
-type MessageOption func(*Message)
-
 var (
 	_ core.Message = (*Message)(nil)
 )
 
-// NewMessage creates a new email message with required to and body, plus optional configurations.
-func NewMessage(to []string, body string, opts ...MessageOption) *Message {
-	msg := &Message{
+// NewMessage creates a new email message with required fields only.
+func NewMessage(to []string, body string) *Message {
+	return &Message{
 		To:   to,
 		Body: body,
 	}
-	// Apply optional configurations
-	for _, opt := range opts {
-		if opt != nil {
-			opt(msg)
-		}
-	}
-	return msg
 }
 
 // ProviderType returns the provider type for this message.
@@ -91,58 +81,109 @@ func validateEmail(email string) error {
 	return nil
 }
 
-// MessageOption functions
+// --- Builder Pattern for Email ---
 
-// WithFrom sets the sender email address.
-func WithFrom(from string) MessageOption {
-	return func(m *Message) {
-		m.From = from
-	}
+// EmailBuilder is used for building email messages in a chainable style.
+type EmailBuilder struct {
+	recipients  []string // Recipients
+	subject     string   // Subject
+	body        string   // Body
+	from        string   // Sender
+	cc          []string // CC
+	bcc         []string // BCC
+	replyTo     string   // Reply-To
+	html        bool     // Is HTML
+	attachments []string // Attachments
 }
 
-// WithSubject sets the email subject.
-func WithSubject(subject string) MessageOption {
-	return func(m *Message) {
-		m.Subject = subject
-	}
+// Email creates a new EmailBuilder as the entry point for builder style.
+func Email() *EmailBuilder {
+	return &EmailBuilder{}
 }
 
-// WithCc sets the CC email addresses.
-func WithCc(cc ...string) MessageOption {
-	return func(m *Message) {
-		m.Cc = cc
-	}
+// To sets the recipients.
+func (b *EmailBuilder) To(recipients ...string) *EmailBuilder {
+	b.recipients = append(b.recipients, recipients...)
+	return b
 }
 
-// WithBcc sets the BCC email addresses.
-func WithBcc(bcc ...string) MessageOption {
-	return func(m *Message) {
-		m.Bcc = bcc
-	}
+// Subject sets the subject.
+func (b *EmailBuilder) Subject(subject string) *EmailBuilder {
+	b.subject = subject
+	return b
 }
 
-// WithReplyTo sets the Reply-To email address.
-func WithReplyTo(replyTo string) MessageOption {
-	return func(m *Message) {
-		m.ReplyTo = replyTo
-	}
+// Body sets the body.
+func (b *EmailBuilder) Body(body string) *EmailBuilder {
+	b.body = body
+	return b
 }
 
-// WithHTML marks the email as HTML content.
-func WithHTML() MessageOption {
-	return func(m *Message) {
-		m.IsHTML = true
-	}
+// From sets the sender.
+func (b *EmailBuilder) From(from string) *EmailBuilder {
+	b.from = from
+	return b
 }
 
-// WithAttachments sets the attachment file paths.
-func WithAttachments(attachments ...string) MessageOption {
-	return func(m *Message) {
-		m.Attachments = attachments
-	}
+// Cc sets the CC recipients.
+func (b *EmailBuilder) Cc(cc ...string) *EmailBuilder {
+	b.cc = append(b.cc, cc...)
+	return b
 }
 
-// MsgID returns the unique id of the message.
-func (m *Message) MsgID() string {
-	return m.DefaultMessage.MsgID()
+// Bcc sets the BCC recipients.
+func (b *EmailBuilder) Bcc(bcc ...string) *EmailBuilder {
+	b.bcc = append(b.bcc, bcc...)
+	return b
+}
+
+// ReplyTo sets the reply-to address.
+func (b *EmailBuilder) ReplyTo(replyTo string) *EmailBuilder {
+	b.replyTo = replyTo
+	return b
+}
+
+// HTML marks the message as HTML content.
+func (b *EmailBuilder) HTML() *EmailBuilder {
+	b.html = true
+	return b
+}
+
+// Attach replaces the attachment list.
+func (b *EmailBuilder) Attach(files ...string) *EmailBuilder {
+	b.attachments = files
+	return b
+}
+
+// AddAttach appends files to the attachment list.
+func (b *EmailBuilder) AddAttach(files ...string) *EmailBuilder {
+	b.attachments = append(b.attachments, files...)
+	return b
+}
+
+// Build creates the Message instance from the builder.
+func (b *EmailBuilder) Build() *Message {
+	msg := NewMessage(b.recipients, b.body)
+	if b.subject != "" {
+		msg.Subject = b.subject
+	}
+	if b.from != "" {
+		msg.From = b.from
+	}
+	if len(b.cc) > 0 {
+		msg.Cc = b.cc
+	}
+	if len(b.bcc) > 0 {
+		msg.Bcc = b.bcc
+	}
+	if b.replyTo != "" {
+		msg.ReplyTo = b.replyTo
+	}
+	if b.html {
+		msg.IsHTML = true
+	}
+	if len(b.attachments) > 0 {
+		msg.Attachments = b.attachments
+	}
+	return msg
 }

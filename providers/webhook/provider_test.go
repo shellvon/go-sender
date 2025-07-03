@@ -130,9 +130,9 @@ func TestProvider_Send_Success(t *testing.T) {
 		t.Fatalf("Failed to create provider: %v", err)
 	}
 
-	msg := webhook.NewMessage([]byte(`{"test": "data"}`))
-
-	err = provider.Send(context.Background(), msg, nil)
+	err = provider.Send(context.Background(), webhook.Webhook().Body([]byte(`{"test": "data"}`)).Method("POST").Headers(map[string]string{
+		"Authorization": "Bearer token",
+	}).Build(), nil)
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
@@ -165,15 +165,10 @@ func TestProvider_Send_WithPathParams(t *testing.T) {
 		t.Fatalf("Failed to create provider: %v", err)
 	}
 
-	msg := webhook.NewMessage(
-		[]byte(`{"test": "data"}`),
-		webhook.WithPathParams(map[string]string{
-			"type": "user",
-			"id":   "123",
-		}),
-	)
-
-	err = provider.Send(context.Background(), msg, nil)
+	err = provider.Send(context.Background(), webhook.Webhook().Body([]byte(`{"test": "data"}`)).PathParams(map[string]string{
+		"type": "user",
+		"id":   "123",
+	}).Build(), nil)
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
@@ -206,14 +201,9 @@ func TestProvider_Send_WithQueryParams(t *testing.T) {
 		t.Fatalf("Failed to create provider: %v", err)
 	}
 
-	msg := webhook.NewMessage(
-		[]byte(`{"test": "data"}`),
-		webhook.WithQueryParams(map[string]string{
-			"version": "v1",
-		}),
-	)
-
-	err = provider.Send(context.Background(), msg, nil)
+	err = provider.Send(context.Background(), webhook.Webhook().Body([]byte(`{"test": "data"}`)).Queries(map[string]string{
+		"version": "v1",
+	}).Build(), nil)
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
@@ -246,12 +236,7 @@ func TestProvider_Send_WithMethodOverride(t *testing.T) {
 		t.Fatalf("Failed to create provider: %v", err)
 	}
 
-	msg := webhook.NewMessage(
-		[]byte(`{"test": "data"}`),
-		webhook.WithMethod("PUT"),
-	)
-
-	err = provider.Send(context.Background(), msg, nil)
+	err = provider.Send(context.Background(), webhook.Webhook().Body([]byte(`{"test": "data"}`)).Method("PUT").Build(), nil)
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
@@ -280,9 +265,7 @@ func TestProvider_Send_HTTPFailure(t *testing.T) {
 		t.Fatalf("Failed to create provider: %v", err)
 	}
 
-	msg := webhook.NewMessage([]byte(`{"test": "data"}`))
-
-	err = provider.Send(context.Background(), msg, nil)
+	err = provider.Send(context.Background(), webhook.Webhook().Body([]byte(`{"test": "data"}`)).Build(), nil)
 	if err == nil {
 		t.Error("Expected error for HTTP failure, got nil")
 	}
@@ -319,9 +302,7 @@ func TestProvider_Send_JSONResponseValidation(t *testing.T) {
 		t.Fatalf("Failed to create provider: %v", err)
 	}
 
-	msg := webhook.NewMessage([]byte(`{"test": "data"}`))
-
-	err = provider.Send(context.Background(), msg, nil)
+	err = provider.Send(context.Background(), webhook.Webhook().Body([]byte(`{"test": "data"}`)).Build(), nil)
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}

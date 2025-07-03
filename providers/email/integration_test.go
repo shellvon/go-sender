@@ -41,18 +41,18 @@ func TestEmailIntegration(t *testing.T) {
 	// 注册 email provider
 	s.RegisterProvider(core.ProviderTypeEmail, emailProvider, nil)
 
-	// 创建测试消息
-	msg := email.NewMessage(
-		[]string{"recipient@example.com"},
-		"Test email body",
-		email.WithSubject("Test Subject"),
-		email.WithFrom("sender@example.com"),
-		email.WithCc("cc@example.com"),
-		email.WithBcc("bcc@example.com"),
-		email.WithReplyTo("reply1@example.com"),
-		email.WithHTML(),
-		email.WithAttachments("test.txt"),
-	)
+	// Create test message using builder API
+	msg := email.Email().
+		To("recipient@example.com").
+		Body("Test email body").
+		Subject("Test Subject").
+		From("sender@example.com").
+		Cc("cc@example.com").
+		Bcc("bcc@example.com").
+		ReplyTo("reply1@example.com").
+		HTML().
+		AddAttach("test.txt").
+		Build()
 
 	// 验证消息
 	if validateErr := msg.Validate(); validateErr != nil {
@@ -134,18 +134,18 @@ func TestEmailProviderSelection(t *testing.T) {
 }
 
 func TestEmailMessageOptions(t *testing.T) {
-	// 测试所有消息选项的组合
-	msg := email.NewMessage(
-		[]string{"recipient1@example.com", "recipient2@example.com"},
-		"<h1>HTML Test Body</h1>",
-		email.WithFrom("Sender Name <sender@example.com>"),
-		email.WithSubject("Test Email Subject"),
-		email.WithCc("cc1@example.com", "cc2@example.com"),
-		email.WithBcc("bcc1@example.com", "bcc2@example.com"),
-		email.WithReplyTo("Reply Name <reply@example.com>"),
-		email.WithHTML(),
-		email.WithAttachments("file1.txt", "file2.pdf", "file3.jpg"),
-	)
+	// Test all message options using builder API
+	msg := email.Email().
+		To("recipient1@example.com", "recipient2@example.com").
+		Body("<h1>HTML Test Body</h1>").
+		From("Sender Name <sender@example.com>").
+		Subject("Test Email Subject").
+		Cc("cc1@example.com", "cc2@example.com").
+		Bcc("bcc1@example.com", "bcc2@example.com").
+		ReplyTo("Reply Name <reply@example.com>").
+		HTML().
+		AddAttach("file1.txt", "file2.pdf", "file3.jpg").
+		Build()
 
 	// 验证所有字段
 	if len(msg.To) != 2 {
