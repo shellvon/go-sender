@@ -1,6 +1,8 @@
 package emailapi
 
 import (
+	"time"
+
 	"github.com/shellvon/go-sender/core"
 )
 
@@ -42,6 +44,9 @@ type Message struct {
 
 	// Common callback field (unified interface)
 	CallbackURL string `json:"callback_url,omitempty"` // 统一回调地址 - 各平台内部适配
+
+	// ScheduledAt is the time to send the message.
+	ScheduledAt *time.Time `json:"scheduled_at,omitempty"` // 统一发送时间 - 各平台内部适配
 
 	// Extensions for platform-specific parameters
 	Extras map[string]interface{} `json:"extras"` // 扩展字段（平台特定参数）
