@@ -177,29 +177,6 @@ type TemplateCardMessage struct {
 	TemplateCard TemplateCard `json:"template_card"`
 }
 
-// NewTemplateCardMessage creates a new TemplateCardMessage with required fields and applies optional configurations.
-func NewTemplateCardMessage(
-	cardType TemplateCardType,
-	mainTitle MainTitle,
-	cardAction CardAction,
-	opts ...TemplateCardMessageOption,
-) *TemplateCardMessage {
-	msg := &TemplateCardMessage{
-		BaseMessage: BaseMessage{
-			MsgType: TypeTemplateCard,
-		},
-		TemplateCard: TemplateCard{
-			CardType:   cardType,
-			MainTitle:  mainTitle,
-			CardAction: cardAction,
-		},
-	}
-	for _, opt := range opts {
-		opt(msg)
-	}
-	return msg
-}
-
 // Validate validates the TemplateCardMessage according to WeCom API rules.
 func (m *TemplateCardMessage) Validate() error {
 	if err := m.validateCardType(); err != nil {
@@ -451,70 +428,4 @@ func (m *TemplateCardMessage) validateSource() error {
 		}
 	}
 	return nil
-}
-
-// TemplateCardMessageOption defines a function type for configuring TemplateCardMessage.
-type TemplateCardMessageOption func(*TemplateCardMessage)
-
-// WithSource sets the Source for the TemplateCardMessage.
-func WithSource(source *Source) TemplateCardMessageOption {
-	return func(m *TemplateCardMessage) {
-		m.TemplateCard.Source = source
-	}
-}
-
-// WithEmphasisContent sets the EmphasisContent for the TemplateCardMessage (text_notice only).
-func WithEmphasisContent(emphasis *EmphasisContent) TemplateCardMessageOption {
-	return func(m *TemplateCardMessage) {
-		m.TemplateCard.EmphasisContent = emphasis
-	}
-}
-
-// WithQuoteArea sets the QuoteArea for the TemplateCardMessage.
-func WithQuoteArea(quote *QuoteArea) TemplateCardMessageOption {
-	return func(m *TemplateCardMessage) {
-		m.TemplateCard.QuoteArea = quote
-	}
-}
-
-// WithSubTitleText sets the SubTitleText for the TemplateCardMessage (text_notice only).
-func WithSubTitleText(subTitle string) TemplateCardMessageOption {
-	return func(m *TemplateCardMessage) {
-		m.TemplateCard.SubTitleText = subTitle
-	}
-}
-
-// WithCardImage sets the CardImage for the TemplateCardMessage (news_notice only).
-func WithCardImage(image *CardImage) TemplateCardMessageOption {
-	return func(m *TemplateCardMessage) {
-		m.TemplateCard.CardImage = image
-	}
-}
-
-// WithImageTextArea sets the ImageTextArea for the TemplateCardMessage (news_notice only).
-func WithImageTextArea(imageText *ImageTextArea) TemplateCardMessageOption {
-	return func(m *TemplateCardMessage) {
-		m.TemplateCard.ImageTextArea = imageText
-	}
-}
-
-// WithVerticalContentList sets the VerticalContentList for the TemplateCardMessage (news_notice only).
-func WithVerticalContentList(list []VerticalContent) TemplateCardMessageOption {
-	return func(m *TemplateCardMessage) {
-		m.TemplateCard.VerticalContentList = list
-	}
-}
-
-// WithHorizontalContentList sets the HorizontalContentList for the TemplateCardMessage.
-func WithHorizontalContentList(list []HorizontalContent) TemplateCardMessageOption {
-	return func(m *TemplateCardMessage) {
-		m.TemplateCard.HorizontalContentList = list
-	}
-}
-
-// WithJumpList sets the JumpList for the TemplateCardMessage.
-func WithJumpList(list []Jump) TemplateCardMessageOption {
-	return func(m *TemplateCardMessage) {
-		m.TemplateCard.JumpList = list
-	}
 }
