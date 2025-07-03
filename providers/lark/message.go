@@ -3,7 +3,7 @@ package lark
 import "github.com/shellvon/go-sender/core"
 
 // Lark/Feishu group robot message
-// Reference: https://open.feishu.cn/document/ukTMukTMukTM/ucTM5YjL3ETO24yNxkjN
+// Reference: https://open.feishu.cn/document/client-docs/bot-v3/add-custom-bot#5a997364
 
 // MessageType defines the message types supported by Lark.
 type MessageType string
@@ -15,8 +15,6 @@ const (
 	TypePost MessageType = "post"
 	// TypeShareChat represents share chat message type.
 	TypeShareChat MessageType = "share_chat"
-	// TypeShareUser represents share user message type.
-	TypeShareUser MessageType = "share_user"
 	// TypeImage represents image message type.
 	TypeImage MessageType = "image"
 	// TypeInteractive represents interactive message type (card).
@@ -43,11 +41,7 @@ func (m *BaseMessage) GetMsgType() MessageType {
 	return m.MsgType
 }
 
-// WithLarkMsgID 设置 Lark 消息的 msg_id（可选，用于幂等、追踪等场景）
-//
-// 示例：WithLarkMsgID("custom-id-123").
-func WithLarkMsgID(id string) func(m *BaseMessage) {
-	return func(m *BaseMessage) {
-		m.MsgID = id
-	}
+// ProviderType returns the provider type.
+func (m *BaseMessage) ProviderType() core.ProviderType {
+	return core.ProviderTypeLark
 }

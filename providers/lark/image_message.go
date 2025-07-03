@@ -15,26 +15,39 @@ type ImageMessage struct {
 
 // ImageContent represents the content of an image message.
 type ImageContent struct {
-	Image Image `json:"image"`
+	Image ImagePayload `json:"image"`
 }
 
-// Image represents the image structure.
-type Image struct {
+// ImagePayload represents the image structure.
+type ImagePayload struct {
 	ImageKey string `json:"image_key"`
+}
+
+// imageMsgBuilder provides a fluent API to construct Lark image messages (unexported to avoid conflict).
+type imageMsgBuilder struct {
+	imageKey string
+}
+
+// Image creates a new imageMsgBuilder instance (user-facing API).
+func Image() *imageMsgBuilder { return &imageMsgBuilder{} }
+
+// ImageKey sets the image key.
+func (b *imageMsgBuilder) ImageKey(key string) *imageMsgBuilder {
+	b.imageKey = key
+	return b
+}
+
+// Build assembles a *ImageMessage.
+func (b *imageMsgBuilder) Build() *ImageMessage {
+	return &ImageMessage{
+		BaseMessage: BaseMessage{MsgType: TypeImage},
+		Content:     ImageContent{Image: ImagePayload{ImageKey: b.imageKey}},
+	}
 }
 
 // NewImageMessage creates a new image message.
 func NewImageMessage(imageKey string) *ImageMessage {
-	return &ImageMessage{
-		BaseMessage: BaseMessage{
-			MsgType: TypeImage,
-		},
-		Content: ImageContent{
-			Image: Image{
-				ImageKey: imageKey,
-			},
-		},
-	}
+	return Image().ImageKey(imageKey).Build()
 }
 
 // GetMsgType returns the message type.

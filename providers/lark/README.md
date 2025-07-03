@@ -1,17 +1,23 @@
 [⬅️ Back to Main README](../../README.md)
 
-# Lark/Feishu Provider
+# Lark / Feishu Provider | Lark / 飞书 消息推送组件
 
-This provider supports sending messages to Lark/Feishu group robots via webhooks.
+This provider supports sending messages to [Lark (飞书)](https://www.larksuite.com/) / [Feishu](https://www.feishu.cn/) group bots via webhooks.
 
-## Features
+本组件支持通过 webhook 向 [Lark (飞书)](https://www.larksuite.com/) / [Feishu](https://www.feishu.cn/) 群机器人发送消息。
 
-- **Multiple Account Support**: Configure multiple accounts with different strategies (round-robin, random, weighted)
-- **Message Types**: Support for text, post (rich text), share chat, share user, image, and interactive card messages
-- **Security**: Optional webhook signature verification
-- **Internationalization**: Support for Chinese and English content in post messages and interactive cards
+---
 
-## Configuration
+## Features | 功能特性
+
+- **Multiple Account Support 多账号支持**: Configure multiple bots/accounts with flexible load balancing | 支持多账号、灵活负载均衡
+- **Message Types 消息类型**: Text, Post (rich text), Image, **Interactive Card (schema 2.0, 推荐)**, Share Chat | 文本、富文本、图片、卡片（推荐）、群分享
+- **Internationalization 国际化**: Post and Card messages support both Chinese and English content | 富文本和卡片支持中英文内容
+- **Builder API 构建器风格**: All messages use a modern, chainable builder pattern | 所有消息均为链式 builder 构建
+
+---
+
+## Configuration | 配置示例
 
 ```go
 import (
@@ -19,47 +25,44 @@ import (
     "github.com/shellvon/go-sender/providers/lark"
 )
 
-// Create Lark configuration
 config := lark.Config{
     BaseConfig: core.BaseConfig{
-        Strategy: core.StrategyRoundRobin, // or StrategyRandom, StrategyWeighted
+        Strategy: core.StrategyRoundRobin, // 轮询、随机、加权等
     },
     Accounts: []core.Account{
         {
-            Name:    "lark-account-1",
-            Key:     "your-webhook-url", // The webhook URL key part
+            Name:    "main-bot",
+            Key:     "your-webhook-key", // webhook URL 末尾 /hook/ 后的部分
             Weight:  100,
             Disabled: false,
         },
-        {
-            Name:    "lark-account-2",
-            Key:     "your-backup-webhook-url",
-            Weight:  80,
-            Disabled: false,
-        },
+        // 可添加更多账号
     },
 }
 
-// Create provider
 provider, err := lark.New(config)
 if err != nil {
-    log.Fatalf("Failed to create Lark provider: %v", err)
+    log.Fatalf("Failed to create Lark provider: %v", err) // 创建 Lark provider 失败
 }
 ```
 
-## Message Types
+---
 
-### 1. Text Message
+## Message Types (Builder Style) | 消息类型（链式构建）
+
+### 1. Text Message | 文本消息
 
 ```go
-textMsg := lark.NewTextMessage("Hello from go-sender!")
+msg := lark.Text().
+    Content("Hello from go-sender! 你好，世界！").
+    Build()
 ```
 
-### 2. Post Message (Rich Text)
+### 2. Post (Rich Text) Message | 富文本消息
 
 ```go
-postMsg := lark.NewPostMessage().
-    SetChineseContent("测试标题", [][]lark.PostElement{
+msg := lark.Post().
+    ZhCN("测试标题", [][]lark.PostElement{
         {
             {Tag: "text", Text: "这是一条测试消息"},
         },
@@ -67,62 +70,53 @@ postMsg := lark.NewPostMessage().
             {Tag: "a", Text: "点击这里", Href: "https://www.feishu.cn"},
         },
     }).
-    SetEnglishContent("Test Title", [][]lark.PostElement{
+    EnUS("Test Title", [][]lark.PostElement{
         {
             {Tag: "text", Text: "This is a test message"},
         },
         {
             {Tag: "a", Text: "Click here", Href: "https://www.larksuite.com"},
         },
-    })
-```
-
-### 3. Interactive Card Message
-
-```go
-cardMsg := lark.NewInteractiveMessage().
-    SetHeader(&lark.CardHeader{
-        Title: &lark.CardText{
-            Tag:     "plain_text",
-            Content: "Interactive Card",
-        },
     }).
-    AddElement(lark.CardElement{
-        Tag: "div",
-        Text: &lark.CardText{
-            Tag:     "lark_md",
-            Content: "This is an interactive card message!",
-        },
-    }).
-    AddElement(lark.CardElement{
-        Tag: "action",
-        Action: &lark.CardAction{
-            Tag:  "button",
-            Text: &lark.CardText{Tag: "plain_text", Content: "Visit Website"},
-            URL:  "https://www.larksuite.com",
-        },
-    })
+    Build()
 ```
 
-### 4. Share Chat Message
+### 3. Image Message | 图片消息
 
 ```go
-shareChatMsg := lark.NewShareChatMessage("oc_1234567890abcdef")
+msg := lark.Image().
+    ImageKey("img_1234567890abcdef").
+    Build()
 ```
 
-### 5. Share User Message
+### 4. Interactive Card Message (schema 2.0, 推荐) | 交互卡片消息（schema 2.0，推荐）
 
 ```go
-shareUserMsg := lark.NewShareUserMessage("ou_1234567890abcdef")
+msg := lark.Interactive().
+    HeaderTitle("plain_text", "主标题 Main Title").
+    HeaderSubtitle("plain_text", "副标题 Subtitle").
+    HeaderTemplate("blue").
+    AddElement(divElement).
+    AddElement(actionElement).
+    BodyDirection("vertical").
+    Build()
 ```
 
-### 6. Image Message
+- You can use the builder to flexibly set config, card_link, header, body, elements, i18n, style, etc. | 你可以通过 builder 灵活设置 config、card_link、header、body、elements、i18n、style 等所有 schema 2.0 支持的字段。
+- elements support any JSON structure, covering all official components. | elements 支持任意 JSON 结构，满足所有官方组件。
+- See: [Card JSON 2.0 Structure (Official)](https://open.feishu.cn/document/feishu-cards/card-json-v2-structure) | 详见：[官方卡片 JSON 2.0 结构文档](https://open.feishu.cn/document/feishu-cards/card-json-v2-structure)
+
+### 5. Share Chat Message | 群分享消息
 
 ```go
-imageMsg := lark.NewImageMessage("img_1234567890abcdef")
+msg := lark.ShareChat().
+    ChatID("oc_1234567890abcdef").
+    Build()
 ```
 
-## Usage with Sender
+---
+
+## Usage with Sender | 与 Sender 结合使用
 
 ```go
 import (
@@ -131,95 +125,57 @@ import (
     "github.com/shellvon/go-sender/providers/lark"
 )
 
-// Create sender
 s := gosender.NewSender(nil)
-
-// Register Lark provider
 larkProvider, err := lark.New(config)
 if err != nil {
     log.Fatalf("Failed to create Lark provider: %v", err)
 }
 s.RegisterProvider(core.ProviderTypeLark, larkProvider, nil)
 
-// Send message
 ctx := context.Background()
-textMsg := lark.NewTextMessage("Hello from go-sender!")
-err = s.Send(ctx, textMsg)
+msg := lark.Text().Content("Hello from go-sender! 你好，世界！").Build()
+err = s.Send(ctx, msg)
 if err != nil {
     log.Printf("Failed to send message: %v", err)
 }
 ```
 
-## API Reference
+---
 
-### Config
+## API Reference | API 参考
 
-- `BaseConfig`: Common configuration fields
-  - `Disabled`: Whether the provider is disabled
-  - `Strategy`: Selection strategy (round_robin, random, weighted)
-- `Accounts`: Array of account configurations
+### Config | 配置
 
-### Account
+- `BaseConfig`: Common configuration fields (strategy, disabled, etc.) | 通用配置字段（策略、禁用等）
+- `Accounts`: List of bot accounts. Each account: | 账号列表，每个账号：
+  - `Name`: Logical name for the bot | 逻辑名称
+  - `Key`: The webhook key (from Lark/Feishu bot settings) | webhook key（飞书机器人设置中获取）
+  - `Weight`: Used for weighted load balancing | 加权负载均衡
+  - `Disabled`: Whether this account is disabled | 是否禁用
 
-- `Name`: Account name for identification
-- `Key`: Lark webhook URL key (the part after `/hook/`)
-- `Weight`: Weight for weighted strategy (default: 1)
-- `Disabled`: Whether this account is disabled
-- `Webhook`: Optional webhook URL (if different from standard format)
+### Message Types | 消息类型
 
-### Message Types
+- `TextMessage`: Plain text | 文本消息
+- `PostMessage`: Rich text (multi-language) | 富文本（多语言）
+- `ImageMessage`: Image (requires image_key) | 图片（需 image_key）
+- `InteractiveMessage`: **Card (schema 2.0, 推荐，支持所有官方组件)** | 卡片（schema 2.0，推荐，支持所有官方组件）
+- `ShareChatMessage`: Share a group chat | 群分享
 
-All message types implement the `core.Message` interface and include:
+All messages implement `core.Message` and have `Validate()` and `ProviderType()` methods. | 所有消息实现 `core.Message` 接口，包含 `Validate()` 和 `ProviderType()` 方法。
 
-- `Validate()`: Validates message content
-- `ProviderType()`: Returns `core.ProviderTypeLark`
-- `GetMsgType()`: Returns the specific message type
+---
 
-## Notes
+## Notes | 说明
 
-- **Webhook URL**: Get your webhook URL from Lark/Feishu group robot settings
-- **Key Format**: The provider automatically constructs the full webhook URL using the key
-- **Image Key**: For image messages, you need to upload the image to Lark first and get the image_key
-- **Chat ID**: For share chat messages, use the chat ID from Lark
-- **User ID**: For share user messages, use the user ID from Lark
+- **Webhook Key**: Get your key from Lark/Feishu bot settings (the part after `/hook/`) | webhook key 请在飞书机器人设置中获取（/hook/ 后的部分）
+- **Image Key**: For image messages, upload the image to Lark/Feishu to get the `image_key` | 图片消息需先上传图片获取 image_key
+- **Chat ID**: For share chat messages, use the correct IDs from Lark/Feishu | 分享消息请使用正确的 chat_id
+- **Interactive Card**: 推荐使用 schema 2.0 卡片，支持所有新特性和组件，详见官方文档 | 推荐使用 schema 2.0 卡片，详见官方文档
 
-## API Documentation
+---
 
-For detailed API documentation, visit:
+## 最新官方文档 | Official Documentation
 
-- [Lark Bot API](https://open.feishu.cn/document/ukTMukTMukTM/ucTM5YjL3ETO24yNxkjN)
-- [Feishu Bot API](https://open.feishu.cn/document/ukTMukTMukTM/ucTM5YjL3ETO24yNxkjN)
-
-## Security (Signature Verification)
-
-Lark/Feishu group bots support optional security signature verification. This provider supports both standard and signature-protected webhooks:
-
-- If the `webhook` field is set in the account, it will be used as the full webhook URL. If the `key` field is also set, the provider will automatically append `timestamp` and `sign` parameters using the key as the secret for signature calculation.
-- If only the `webhook` field is set (and `key` is empty), the provider will use the webhook as-is (you can manually append signature parameters if needed).
-- If the `webhook` field is empty, the provider will construct the webhook URL using the `key` field (no signature will be used).
-
-**Signature Calculation:**
-
-The signature is calculated as:
-
-```
-sign = base64(HMAC-SHA256(timestamp + "\n" + secret, secret))
-```
-
-**Example configuration with signature:**
-
-```go
-config := lark.Config{
-    Accounts: []core.Account{
-        {
-            Name:    "lark-secure-bot",
-            Webhook: "https://open.feishu.cn/open-apis/bot/v2/hook/your-webhook-id",
-            Key:     "your-signature-secret", // Secret for signature calculation
-        },
-    },
-}
-```
-
-For more details on Lark/Feishu bot security settings, see:
-
-- [Lark Bot Security Settings](https://open.feishu.cn/document/client-docs/bot-v3/add-custom-bot)
+- [Lark/Feishu Bot API](https://open.feishu.cn/document/ukTMukTMukTM/ucTM5YjL3ETO24yNxkjN)
+- [卡片消息 JSON 2.0 结构（推荐） | Card JSON 2.0 Structure](https://open.feishu.cn/document/feishu-cards/card-json-v2-structure)
+- [卡片消息开发指引 | Card Message Dev Guide](https://open.feishu.cn/document/client-docs/bot-v3/add-custom-bot#5a997364)
