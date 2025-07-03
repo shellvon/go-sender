@@ -4,8 +4,8 @@ import (
 	"github.com/shellvon/go-sender/core"
 )
 
-// Link represents the link content for a DingTalk message.
-type Link struct {
+// LinkContent represents the link content for a DingTalk message.
+type LinkContent struct {
 	// Title of the link message
 	Title string `json:"title"`
 	// Content of the link message
@@ -21,25 +21,12 @@ type Link struct {
 type LinkMessage struct {
 	BaseMessage
 
-	Link Link `json:"link"`
+	Link LinkContent `json:"link"`
 }
 
-// NewLinkMessage creates a new LinkMessage with required content and applies optional configurations.
-func NewLinkMessage(title, text, messageURL string, opts ...LinkMessageOption) *LinkMessage {
-	msg := &LinkMessage{
-		BaseMessage: BaseMessage{
-			MsgType: TypeLink,
-		},
-		Link: Link{
-			Title:      title,
-			Text:       text,
-			MessageURL: messageURL,
-		},
-	}
-	for _, opt := range opts {
-		opt(msg)
-	}
-	return msg
+// NewLinkMessage creates a new LinkMessage with required content.
+func NewLinkMessage(title, text, messageURL string) *LinkMessage {
+	return Link().Title(title).Text(text).MessageURL(messageURL).Build()
 }
 
 // Validate validates the LinkMessage to ensure it meets DingTalk API requirements.
@@ -55,14 +42,4 @@ func (m *LinkMessage) Validate() error {
 	}
 
 	return nil
-}
-
-// LinkMessageOption defines a function type for configuring LinkMessage.
-type LinkMessageOption func(*LinkMessage)
-
-// WithLinkPicURL sets the PicURL for LinkMessage.
-func WithLinkPicURL(picURL string) LinkMessageOption {
-	return func(m *LinkMessage) {
-		m.Link.PicURL = picURL
-	}
 }

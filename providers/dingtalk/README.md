@@ -47,20 +47,23 @@ if err != nil {
 }
 ```
 
-## Message Types
+## Message Types (Builder Style)
 
 ### 1. Text Message
 
 ```go
 // Simple text message
-textMsg := dingtalk.NewTextMessage("Hello from go-sender!")
+textMsg := dingtalk.Text().
+    Content("Hello from go-sender!").
+    Build()
 
 // Text message with @ mentions
-textMsg := dingtalk.NewTextMessage("Hello @all, this is a test message",
-    dingtalk.WithAtMobiles([]string{"13800138000"}),
-    dingtalk.WithAtUserIds([]string{"user123"}),
-    dingtalk.WithIsAtAll(true),
-)
+textMsg := dingtalk.Text().
+    Content("Hello @all, this is a test message").
+    AtMobiles([]string{"13800138000"}).
+    AtUserIDs([]string{"user123"}).
+    AtAll().
+    Build()
 ```
 
 ### 2. Markdown Message
@@ -77,71 +80,53 @@ markdownContent := `# 系统通知
 
 [查看详情](https://example.com)`
 
-markdownMsg := dingtalk.NewMarkdownMessage("系统通知", markdownContent,
-    dingtalk.WithAtMobiles([]string{"13800138000"}),
-    dingtalk.WithAtUserIds([]string{"user123"}),
-    dingtalk.WithIsAtAll(false),
-)
+markdownMsg := dingtalk.Markdown().
+    Title("系统通知").
+    Text(markdownContent).
+    AtMobiles([]string{"13800138000"}).
+    AtUserIDs([]string{"user123"}).
+    Build()
 ```
 
 ### 3. Link Message
 
 ```go
-linkMsg := dingtalk.NewLinkMessage(
-    "重要通知",
-    "这是一条重要通知的摘要内容",
-    "https://example.com",
-    "https://example.com/image.jpg",
-)
+linkMsg := dingtalk.Link().
+    Title("重要通知").
+    Text("这是一条重要通知的摘要内容").
+    MessageURL("https://example.com").
+    PicURL("https://example.com/image.jpg").
+    Build()
 ```
 
 ### 4. Action Card Message
 
 ```go
 // Single action card
-singleCardMsg := dingtalk.NewActionCardMessage(
-    "系统通知",
-    "系统已更新到最新版本，请查看详情",
-    "查看详情",
-    "https://example.com",
-    dingtalk.WithBtnOrientation("0"), // 0: vertical, 1: horizontal
-)
+singleCardMsg := dingtalk.ActionCard().
+    Title("系统通知").
+    Text("系统已更新到最新版本，请查看详情").
+    SingleButton("查看详情", "https://example.com").
+    BtnOrientation("0"). // 0: vertical, 1: horizontal
+    Build()
 
 // Multiple action card
-multipleCardMsg := dingtalk.NewActionCardMessage(
-    "系统通知",
-    "系统已更新到最新版本，请选择操作",
-    "", // No single button
-    "",
-    dingtalk.WithBtnOrientation("1"),
-    dingtalk.WithActionButtons([]dingtalk.ActionButton{
-        {
-            Title:     "查看详情",
-            ActionURL: "https://example.com/details",
-        },
-        {
-            Title:     "下载更新",
-            ActionURL: "https://example.com/download",
-        },
-    }),
-)
+multipleCardMsg := dingtalk.ActionCard().
+    Title("系统通知").
+    Text("系统已更新到最新版本，请选择操作").
+    BtnOrientation("1").
+    AddButton("查看详情", "https://example.com/details").
+    AddButton("下载更新", "https://example.com/download").
+    Build()
 ```
 
 ### 5. Feed Card Message
 
 ```go
-feedCardMsg := dingtalk.NewFeedCardMessage([]dingtalk.FeedCardLink{
-    {
-        Title:      "重要通知",
-        MessageURL: "https://example.com/notice1",
-        PicURL:     "https://example.com/image1.jpg",
-    },
-    {
-        Title:      "系统更新",
-        MessageURL: "https://example.com/notice2",
-        PicURL:     "https://example.com/image2.jpg",
-    },
-})
+feedCardMsg := dingtalk.FeedCard().
+    AddLink("重要通知", "https://example.com/notice1", "https://example.com/image1.jpg").
+    AddLink("系统更新", "https://example.com/notice2", "https://example.com/image2.jpg").
+    Build()
 ```
 
 ## Usage with Sender
@@ -165,32 +150,12 @@ s.RegisterProvider(core.ProviderTypeDingtalk, dingtalkProvider, nil)
 
 // Send message
 ctx := context.Background()
-textMsg := dingtalk.NewTextMessage("Hello from go-sender!")
+textMsg := dingtalk.Text().Content("Hello from go-sender!").Build()
 err = s.Send(ctx, textMsg)
 if err != nil {
     log.Printf("Failed to send message: %v", err)
 }
 ```
-
-## Message Options
-
-### Text Message Options
-
-- `WithAtMobiles(mobiles []string)`: @ mention users by mobile number
-- `WithAtUserIds(userIds []string)`: @ mention users by user ID
-- `WithIsAtAll(atAll bool)`: @ mention all users
-
-### Markdown Message Options
-
-- `WithAtMobiles(mobiles []string)`: @ mention users by mobile number
-- `WithAtUserIds(userIds []string)`: @ mention users by user ID
-- `WithIsAtAll(atAll bool)`: @ mention all users
-
-### Action Card Message Options
-
-- `WithBtnOrientation(orientation string)`: Set button orientation ("0": vertical, "1": horizontal)
-- `WithActionButtons(buttons []ActionButton)`: Set multiple action buttons
-- `WithHideAvatar(hide string)`: Hide avatar ("0": show, "1": hide)
 
 ## API Reference
 
@@ -238,4 +203,4 @@ if err != nil {
 For detailed API documentation, visit:
 
 - [DingTalk Bot API Documentation](https://open.dingtalk.com/document/robots/custom-robot-access)
-- [DingTalk Bot Message Types](https://open.dingtalk.com/document/robots/custom-robot-access)
+- [DingTalk Bot Message Types](https://open.dingtalk.com/document/orgapp/custom-bot-send-message-type)
