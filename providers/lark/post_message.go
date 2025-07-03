@@ -15,44 +15,75 @@ type PostMessage struct {
 
 // PostContent represents the content of a post message.
 type PostContent struct {
-	Post Post `json:"post"`
+	Post PostPayload `json:"post"`
 }
 
-// Post represents the post structure.
-type Post struct {
+// PostPayload represents the post structure.
+type PostPayload struct {
 	ZhCN *PostLang `json:"zh_cn,omitempty"`
 	EnUS *PostLang `json:"en_us,omitempty"`
 }
 
 // PostLang represents post content in a specific language.
 type PostLang struct {
+	// Title is the title of the post.
 	Title   string          `json:"title,omitempty"`
 	Content [][]PostElement `json:"content"`
 }
 
-// PostElement represents a post element (text, link, image, etc.)
 type PostElement struct {
-	Tag      string                 `json:"tag"`
-	Text     string                 `json:"text,omitempty"`
-	Href     string                 `json:"href,omitempty"`
-	UserID   string                 `json:"user_id,omitempty"`
-	UserName string                 `json:"user_name,omitempty"`
-	ImageKey string                 `json:"image_key,omitempty"`
-	Width    int                    `json:"width,omitempty"`
-	Height   int                    `json:"height,omitempty"`
-	Extra    map[string]interface{} `json:"extra,omitempty"`
+	Tag  string `json:"tag"`
+	Text string `json:"text,omitempty"`
+	// When tag is text, unescape is used to unescape the text. default is false.
+	UnEscape bool `json:"un_escape,omitempty"`
+	// When tag is a, href is used to set the href of the link.
+	Href string `json:"href,omitempty"`
+	// When tag is at, user_id is used to set the user id of the mention.
+	UserID string `json:"user_id,omitempty"`
+	// When tag is at, user_name is used to set the user name of the mention.
+	UserName string `json:"user_name,omitempty"`
+	// When tag is img, image_key is used to set the image key of the image.
+	// See https://open.feishu.cn/document/server-docs/im-v1/image/create
+	ImageKey string `json:"image_key,omitempty"`
+}
+
+// postBuilder provides a fluent API to construct Lark post (rich text) messages (unexported).
+type postBuilder struct {
+	zhCN *PostLang
+	enUS *PostLang
+}
+
+// Post creates a new postBuilder instance (user-facing API).
+func Post() *postBuilder { return &postBuilder{} }
+
+// ZhCN sets the Chinese content.
+func (b *postBuilder) ZhCN(title string, content [][]PostElement) *postBuilder {
+	b.zhCN = &PostLang{Title: title, Content: content}
+	return b
+}
+
+// EnUS sets the English content.
+func (b *postBuilder) EnUS(title string, content [][]PostElement) *postBuilder {
+	b.enUS = &PostLang{Title: title, Content: content}
+	return b
+}
+
+// Build assembles a *PostMessage.
+func (b *postBuilder) Build() *PostMessage {
+	return &PostMessage{
+		BaseMessage: BaseMessage{MsgType: TypePost},
+		Content: PostContent{
+			Post: PostPayload{
+				ZhCN: b.zhCN,
+				EnUS: b.enUS,
+			},
+		},
+	}
 }
 
 // NewPostMessage creates a new post message.
 func NewPostMessage() *PostMessage {
-	return &PostMessage{
-		BaseMessage: BaseMessage{
-			MsgType: TypePost,
-		},
-		Content: PostContent{
-			Post: Post{},
-		},
-	}
+	return Post().Build()
 }
 
 // SetChineseContent sets the Chinese content.
