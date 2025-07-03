@@ -39,22 +39,6 @@ func (m *BaseMessage) GetMsgType() MessageType {
 	return m.MsgType
 }
 
-func (m *TextMessage) ProviderType() core.ProviderType {
-	return core.ProviderTypeDingtalk
-}
-
-func (m *MarkdownMessage) ProviderType() core.ProviderType {
-	return core.ProviderTypeDingtalk
-}
-
-func (m *LinkMessage) ProviderType() core.ProviderType {
-	return core.ProviderTypeDingtalk
-}
-
-func (m *ActionCardMessage) ProviderType() core.ProviderType {
-	return core.ProviderTypeDingtalk
-}
-
-func (m *FeedCardMessage) ProviderType() core.ProviderType {
+func (m *BaseMessage) ProviderType() core.ProviderType {
 	return core.ProviderTypeDingtalk
 }
