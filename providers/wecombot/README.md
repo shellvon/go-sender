@@ -83,18 +83,12 @@ msg := wecombot.Markdown().
 ### 3. Image Message | 图片消息
 
 ```go
-// English: Upload image and send
-// 中文：上传图片并发送
-file, err := os.Open("image.jpg")
-if err != nil {
-    log.Fatalf("Failed to open image: %v", err)
-}
-defer file.Close()
-mediaId, account, err := provider.UploadMedia(ctx, "image.jpg", file)
-if err != nil {
-    log.Fatalf("Failed to upload image: %v", err)
-}
-msg := wecombot.Image().Base64(imgBase64).MD5(imgMD5).Build()
+// English: Send image with base64 and MD5
+// 中文：发送图片（需要提供base64和MD5）
+msg := wecombot.Image().
+    Base64(imgBase64).
+    MD5(imgMD5).
+    Build()
 ```
 
 ### 4. News Message | 新闻消息
@@ -115,23 +109,23 @@ msg := wecombot.Card(wecombot.CardTypeTextNotice).
     Build()
 ```
 
-### 6. File Message (Auto Upload) | 文件消息（自动上传）
+### 6. File Message | 文件消息
 
 ```go
-// English: Send a file by local path (auto upload)
-// 中文：通过本地路径发送文件（自动上传）
+// English: Send a file by local path
+// 中文：通过本地路径发送文件
 msg := wecombot.File().
-    LocalPath("/path/to/report.pdf"). // 自动上传，无需手动获取 media_id
+    LocalPath("/path/to/report.pdf").
     Build()
 ```
 
-### 7. Voice Message (Auto Upload) | 语音消息（自动上传）
+### 7. Voice Message | 语音消息
 
 ```go
-// English: Send a voice message by local path (auto upload, AMR format, ≤2MB, ≤60s)
-// 中文：通过本地路径发送语音（自动上传，仅支持AMR格式，≤2MB，≤60秒）
+// English: Send a voice message by local path (AMR format, ≤2MB, ≤60s)
+// 中文：通过本地路径发送语音（仅支持AMR格式，≤2MB，≤60秒）
 msg := wecombot.Voice().
-    LocalPath("/path/to/voice.amr"). // 自动上传，无需手动获取 media_id
+    LocalPath("/path/to/voice.amr").
     Build()
 ```
 
@@ -154,7 +148,7 @@ if err != nil {
 s.RegisterProvider(core.ProviderTypeWecombot, wecomProvider, nil)
 
 ctx := context.Background()
-msg := wecombot.File().LocalPath("/path/to/report.pdf").Build() // 文件自动上传
+msg := wecombot.File().LocalPath("/path/to/report.pdf").Build()
 err = s.Send(ctx, msg)
 if err != nil {
     log.Printf("Failed to send message: %v", err)
@@ -165,8 +159,8 @@ if err != nil {
 
 ## Media Upload | 媒体上传说明
 
-- **Auto Upload 自动上传**: For file/voice messages, you can use `.LocalPath("/path/to/file")` in the builder. The SDK will automatically upload the file/voice and fill in the media_id. No need to call UploadMedia manually.
-- **Manual Upload 手动上传**: For image messages, you can use `provider.UploadMedia(ctx, "image.jpg", file)` to get media_id, then use it in the builder.
+- **File/Voice Upload**: For file/voice messages, you can use `.LocalPath("/path/to/file")` in the builder. The SDK will upload the file/voice and fill in the media_id.
+- **Image Upload**: For image messages, you can use `provider.UploadMedia(ctx, "image.jpg", file)` to get media_id, then use it in the builder.
 - **Constraints 限制**:
   - File: ≤20MB
   - Voice: ≤2MB, ≤60s, AMR format only

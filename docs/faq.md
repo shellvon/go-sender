@@ -13,7 +13,7 @@ A: Yes, go-sender is designed for both monoliths and microservices.
 A: Use the built-in queue middleware. See [middleware.md](./middleware.md).
 
 **Q: How do I set a custom HTTP client?**  
-A: Use `core.WithSendHTTPClient(myClient)` when sending.
+A: Use `core.WithSendHTTPClient(myClient)` when calling `sender.Send()`. This allows you to configure timeouts, proxies, TLS settings, and other advanced HTTP features.
 
 **Q: How do I add rate limiting or retries?**  
 A: Use the built-in middleware. See [middleware.md](./middleware.md).
