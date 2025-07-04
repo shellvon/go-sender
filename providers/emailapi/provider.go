@@ -10,7 +10,7 @@ import (
 	"github.com/shellvon/go-sender/providers"
 )
 
-// Config is the type alias for core.BaseConfig[*Account]
+// Config is the type alias for core.BaseConfig[*Account].
 type Config = core.BaseConfig[*Account]
 
 // Provider is the main emailapi provider, supporting multiple API-based email services.

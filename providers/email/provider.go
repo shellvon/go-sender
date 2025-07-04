@@ -9,7 +9,7 @@ import (
 	"github.com/wneessen/go-mail"
 )
 
-// Config is a type alias for core.BaseConfig[*Account]
+// Config is a type alias for core.BaseConfig[*Account].
 type Config = core.BaseConfig[*Account]
 
 // Provider supports multiple accounts and strategy selection.

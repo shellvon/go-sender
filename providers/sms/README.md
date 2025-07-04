@@ -1,103 +1,139 @@
-[⬅️ Back to Main README](../../README.md)
+# SMS Providers
 
-# SMS Providers | 短信服务商组件
+> Unified SMS sending across Aliyun, Tencent Cloud, Huawei, CL253, Yunpian, and more.
 
-**⚠️ Warning: This project is under active development. APIs are not stable and may change without notice.**
+[⬅️ Back to project README](../../README.md)
 
-**⚠️ 警告：本项目处于活跃开发中，API 可能随时变更，请勿用于生产环境。**
+---
 
-This package provides SMS (Short Message Service) functionality with support for multiple SMS service providers.
+## Supported Providers
 
-本包支持多家主流短信服务商，提供统一的短信发送接口。
+| Provider (brand)  | Website                     |
+| ----------------- | --------------------------- |
+| **Aliyun**        | https://www.aliyun.com      |
+| **Tencent Cloud** | https://cloud.tencent.com   |
+| **CL253**         | http://www.cl253.com        |
+| **Huawei Cloud**  | https://www.huaweicloud.com |
+| **Juhe**          | https://www.juhe.cn         |
+| **Luosimao**      | https://luosimao.com        |
+| **Smsbao**        | https://www.smsbao.com      |
+| **Submail**       | https://www.submail.cn      |
+| **UCP**           | https://www.ucpaas.com      |
+| **Volcengine**    | https://www.volcengine.com  |
+| **Yuntongxun**    | https://www.yuntongxun.com  |
+| **Yunpian**       | https://www.yunpian.com     |
 
-## Supported SMS Providers | 支持的短信服务商
+---
 
-| Provider       | Description               | Website                                                    |
-| -------------- | ------------------------- | ---------------------------------------------------------- |
-| **Aliyun**     | Alibaba Cloud SMS Service | [https://www.aliyun.com](https://www.aliyun.com)           |
-| **Tencent**    | Tencent Cloud SMS Service | [https://cloud.tencent.com](https://cloud.tencent.com)     |
-| **CL253**      | CL253 SMS Service         | [http://www.cl253.com](http://www.cl253.com)               |
-| **Huawei**     | Huawei Cloud SMS Service  | [https://www.huaweicloud.com](https://www.huaweicloud.com) |
-| **Juhe**       | Juhe SMS Service          | [https://www.juhe.cn](https://www.juhe.cn)                 |
-| **Luosimao**   | Luosimao SMS Service      | [https://luosimao.com](https://luosimao.com)               |
-| **Smsbao**     | Smsbao SMS Service        | [https://www.smsbao.com](https://www.smsbao.com)           |
-| **Submail**    | Submail SMS Service       | [https://www.submail.cn](https://www.submail.cn)           |
-| **UCP**        | UCP SMS Service           | [https://www.ucpaas.com](https://www.ucpaas.com)           |
-| **Volc**       | Volcengine SMS Service    | [https://www.volcengine.com](https://www.volcengine.com)   |
-| **Yuntongxun** | Yuntongxun SMS Service    | [https://www.yuntongxun.com](https://www.yuntongxun.com)   |
-| **Yunpian**    | Yunpian SMS Service       | [https://www.yunpian.com](https://www.yunpian.com)         |
+## Capabilities
 
-## Message Types | 消息类型
+| Provider      | CN SMS | Intl SMS | Voice | MMS | Notes                        |
+| ------------- | ------ | -------- | ----- | --- | ---------------------------- |
+| Aliyun        | ✅     | ✅       | ✅    | ✅  | Single, batch & MMS APIs     |
+| Tencent Cloud | ✅     | ✅       | ✅    | ❌  | Voice via TTS / IVR          |
+| Huawei Cloud  | ✅     | ✅       | ✅    | ❌  | Voice call API               |
+| CL253         | ✅     | ❌       | ❌    | ❌  | Mainland only                |
+| Yunpian       | ✅     | ✅       | ❌    | ❌  | Separate intl endpoint       |
+| Volcengine    | ✅     | ✅       | ❌    | ❌  | Mainland & intl              |
+| Submail       | ✅     | ✅       | ✅    | ❌  | XSend voice supported        |
+| Juhe          | ✅     | ✅       | ❌    | ✅  | Mainland & intl; MMS support |
+| Luosimao      | ✅     | ❌       | ❌    | ❌  | Mainland only                |
+| Smsbao        | ✅     | ❌       | ❌    | ❌  | Mainland only                |
+| UCP           | ✅     | ✅       | ✅    | ❌  | Voice & intl                 |
+| Yuntongxun    | ✅     | ✅       | ✅    | ✅  | Rich APIs                    |
 
-All SMS providers support the following message types:
+---
 
-所有短信服务商均支持以下消息类型：
+## Features
 
-- **Text SMS 文本短信**: Standard text messages | 标准文本短信
-- **Voice SMS 语音短信**: Voice messages (supported by most providers) | 语音短信（大部分服务商支持）
-- **MMS 彩信**: Multimedia messages (supported by some providers) | 彩信（部分服务商支持）
+- Multiple accounts per provider with load-balancing strategies.
+- Builder API for Text SMS; provider-specific helpers (Aliyun, Tencent, …).
+- Template ID, sign, extra params per vendor.
+- Supports batch & international SMS, voice SMS (where available).
 
-## Quick Start (Chainable Builder Style) | 快速开始（链式构建）
+---
 
-```go
-import "github.com/shellvon/go-sender/providers/sms"
-
-// English: Aliyun SMS Example
-// 中文：阿里云短信示例
-msg := sms.Aliyun().
-    To("***REMOVED***").
-    Content("Hello from go-sender! 你好，世界！").
-    TemplateID("SMS_xxx").
-    Build()
-
-// English: Tencent SMS Example
-// 中文：腾讯云短信示例
-msg := sms.Tencent().
-    To("***REMOVED***").
-    Content("Your code is: 5678").
-    TemplateID("123456").
-    Sign("YourSign").
-    Build()
-
-// English: CL253 Example (with platform-specific params)
-// 中文：创蓝253短信示例（带平台参数）
-msg := sms.CL253().
-    To("***REMOVED***").
-    Content("Test message").
-    TDFlag(1). // int, see CL253 API doc | int，详见 CL253 API 文档
-    Build()
-```
-
-## Configuration | 配置说明
-
-Each SMS provider requires specific configuration including API credentials, endpoints, and other provider-specific settings. Please refer to the individual provider documentation for detailed configuration instructions.
-
-每个短信服务商都需要特定的配置（API 密钥、接口地址等），请参考各自的官方文档。
-
-## Features | 功能特性
-
-- **Multi-provider support 多服务商支持**: Switch between different SMS providers easily | 可灵活切换不同服务商
-- **Template support 模板支持**: Use pre-approved message templates | 支持模板短信
-- **International SMS 国际短信**: Support for international phone numbers | 支持国际短信
-- **Callback support 回调支持**: Receive delivery status notifications | 支持回执/状态回调
-- **Batch sending 批量发送**: Send messages to multiple recipients | 支持批量发送
-- **Error handling 错误处理**: Comprehensive error handling and retry mechanisms | 完善的错误处理与重试机制
-
-## SendVia Usage | SendVia 用法
-
-- `SendVia` is used to specify the account for sending (e.g., different sub-accounts or API keys for the same provider).
-- It cannot be used to send the same message object across different message types or providers.
-- Example:
-
-- `SendVia` 用于指定发送账号（如同一服务商下不同子账号或 API Key）。
-- 不能用于跨类型或跨服务商复用同一消息对象。
-- 示例：
+## Configuration
 
 ```go
-// English: Specify account for the same message type
-// 中文：同一类型消息指定账号发送
-err := sender.SendVia("aliyun-account-1", msg)
-if err != nil {
-    _ = sender.SendVia("aliyun-account-2", msg)
+import (
+    "github.com/shellvon/go-sender/core"
+    "github.com/shellvon/go-sender/providers/sms"
+)
+
+cfg := sms.Config{
+    ProviderMeta: core.ProviderMeta{
+        Strategy: core.StrategyRoundRobin,
+    },
+    Items: []*sms.Account{
+        {
+            BaseAccount: core.BaseAccount{
+                AccountMeta: core.AccountMeta{
+                    Name:   "aliyun-main",
+                    SubType: "aliyun",
+                },
+                Credentials: core.Credentials{
+                    APIKey:    "ALIYUN_ACCESS_KEY_ID",
+                    APISecret: "ALIYUN_ACCESS_KEY_SECRET",
+                },
+            },
+            Region: "cn-hangzhou", // optional
+        },
+    },
 }
 ```
+
+---
+
+## Quick Builder
+
+```go
+msg := sms.Aliyun().
+    To("***REMOVED***").
+    Content("Hello from go-sender!").
+    TemplateID("SMS_1234567").
+    Sign("YourSign").
+    Build()
+```
+
+---
+
+## Usage
+
+### 1. Direct Provider
+
+```go
+provider, _ := sms.New(&cfg)
+_ = provider.Send(context.Background(), msg, nil)
+```
+
+### 2. Using GoSender
+
+```go
+sender := gosender.NewSender()
+provider, _ := sms.New(&cfg)
+sender.RegisterProvider(core.ProviderTypeSMS, provider, nil)
+_ = sender.Send(context.Background(), msg)
+```
+
+---
+
+## SendVia Helper
+
+`SendVia(accountName, msg)` lets you choose a specific account (e.g., Aliyun-cn vs Aliyun-intl) at runtime:
+
+```go
+msg := sms.Aliyun().
+    To("+86***REMOVED***").
+    Content("Verification code: 5678").
+    TemplateID("SMS_1234567").
+    Build()
+
+// try primary aliyun account first
+if err := sender.SendVia("aliyun-main", msg); err != nil {
+    // fallback to backup account (maybe in another region)
+    _ = sender.SendVia("aliyun-backup", msg)
+}
+```
+
+SendVia only switches between accounts **inside the SMS provider**; it does not allow cross-provider reuse of one message instance.

@@ -12,12 +12,12 @@ import (
 func TestNewProvider(t *testing.T) {
 	tests := []struct {
 		name    string
-		config  email.Config
+		config  *email.Config
 		wantErr bool
 	}{
 		{
 			name: "valid config",
-			config: email.Config{
+			config: &email.Config{
 				ProviderMeta: core.ProviderMeta{},
 				Items: []*email.Account{
 					{
@@ -40,7 +40,7 @@ func TestNewProvider(t *testing.T) {
 		},
 		{
 			name: "disabled config",
-			config: email.Config{
+			config: &email.Config{
 				ProviderMeta: core.ProviderMeta{Disabled: true},
 				Items: []*email.Account{
 					{
@@ -63,7 +63,7 @@ func TestNewProvider(t *testing.T) {
 		},
 		{
 			name: "no accounts",
-			config: email.Config{
+			config: &email.Config{
 				ProviderMeta: core.ProviderMeta{},
 				Items:        []*email.Account{},
 			},
@@ -71,7 +71,7 @@ func TestNewProvider(t *testing.T) {
 		},
 		{
 			name: "all accounts disabled",
-			config: email.Config{
+			config: &email.Config{
 				ProviderMeta: core.ProviderMeta{},
 				Items: []*email.Account{
 					{
@@ -112,7 +112,7 @@ func TestNewProvider(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			provider, err := email.New(&tt.config)
+			provider, err := email.New(tt.config)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("New() error = %v, wantErr %v", err, tt.wantErr)
 				return

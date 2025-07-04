@@ -12,39 +12,18 @@ import (
 	"github.com/shellvon/go-sender/providers"
 )
 
-// mockConfig implements core.Selectable for testing.
-type mockConfig struct {
-	Items []*mockSelectable
-}
-
 type mockSelectable struct {
 	name    string
 	enabled bool
 	typ     string
 }
 
-// --- core.Selectable ---
+// --- core.Selectable ---.
 func (m *mockSelectable) GetName() string   { return m.name }
 func (m *mockSelectable) IsEnabled() bool   { return m.enabled }
 func (m *mockSelectable) GetType() string   { return m.typ }
 func (m *mockSelectable) GetWeight() int    { return 1 }
 func (m *mockSelectable) IsAvailable() bool { return m.enabled }
-
-// --- core.ProviderConfig[*mockSelectable] ---
-func (c *mockConfig) Validate() error {
-	if len(c.Items) == 0 {
-		return errors.New("no items")
-	}
-	for _, it := range c.Items {
-		if !it.IsEnabled() {
-			return errors.New("disabled item")
-		}
-	}
-	return nil
-}
-
-func (c *mockConfig) GetItems() []*mockSelectable    { return c.Items }
-func (c *mockConfig) GetStrategy() core.StrategyType { return core.StrategyRoundRobin }
 
 // mockMessage implements core.Message for testing.
 type mockMessage struct {
@@ -63,7 +42,7 @@ type mockTransformer struct {
 	handler    core.ResponseHandler
 }
 
-// Implements core.HTTPTransformer[*mockSelectable]
+// Implements core.HTTPTransformer[*mockSelectable].
 func (m *mockTransformer) CanTransform(_ core.Message) bool { return true }
 
 func (m *mockTransformer) Transform(

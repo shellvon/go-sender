@@ -87,7 +87,6 @@ func (p *Provider) uploadMediaType(
 	reader io.Reader,
 	httpClient *http.Client,
 ) (string, *Account, error) {
-
 	selectedAccount, err := p.Select(ctx, nil)
 	if err != nil {
 		return "", nil, err
