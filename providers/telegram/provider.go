@@ -1,12 +1,11 @@
 package telegram
 
 import (
-	"errors"
-
 	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/providers"
-	"github.com/shellvon/go-sender/utils"
 )
+
+type Config = core.BaseConfig[*Account]
 
 // Provider implements the Telegram provider using generic base.
 type Provider struct {
@@ -18,32 +17,16 @@ var (
 )
 
 // New creates a new Telegram provider instance.
-func New(config Config) (*Provider, error) {
-	if !config.IsConfigured() {
-		return nil, errors.New("telegram provider is not configured or is disabled")
-	}
-
-	accounts := config.Accounts
-
-	enabledAccounts, _, err := utils.InitProvider(&config, accounts)
-	if err != nil {
-		return nil, errors.New("no enabled telegram accounts found")
-	}
-
-	// 获取策略
-	strategy := utils.GetStrategy(config.GetStrategy())
-
-	// 创建泛型 provider
-	httpProvider := providers.NewHTTPProvider(
+func New(config *Config) (*Provider, error) {
+	httpProvider, err := providers.NewHTTPProvider(
 		string(core.ProviderTypeTelegram),
-		enabledAccounts,
 		&telegramTransformer{},
-		strategy,
+		config,
 	)
-
-	return &Provider{
-		HTTPProvider: httpProvider,
-	}, nil
+	if err != nil {
+		return nil, err
+	}
+	return &Provider{HTTPProvider: httpProvider}, nil
 }
 
 // Name returns the provider name.

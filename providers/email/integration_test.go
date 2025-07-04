@@ -15,7 +15,7 @@ func TestEmailIntegration(t *testing.T) {
 	// 创建 email provider 配置
 	emailConfig := email.Config{
 		ProviderMeta: core.ProviderMeta{},
-		Accounts: []*email.Account{
+		Items: []*email.Account{
 			{
 				BaseAccount: core.BaseAccount{
 					AccountMeta: core.AccountMeta{
@@ -35,7 +35,7 @@ func TestEmailIntegration(t *testing.T) {
 	}
 
 	// 创建 email provider
-	emailProvider, err := email.New(emailConfig)
+	emailProvider, err := email.New(&emailConfig)
 	if err != nil {
 		t.Fatalf("Failed to create email provider: %v", err)
 	}
@@ -94,7 +94,7 @@ func TestEmailProviderSelection(t *testing.T) {
 		ProviderMeta: core.ProviderMeta{
 			Strategy: core.StrategyRoundRobin,
 		},
-		Accounts: []*email.Account{
+		Items: []*email.Account{
 			{
 				BaseAccount: core.BaseAccount{
 					AccountMeta: core.AccountMeta{
@@ -129,7 +129,7 @@ func TestEmailProviderSelection(t *testing.T) {
 	}
 
 	// 创建 email provider
-	emailProvider, err := email.New(emailConfig)
+	emailProvider, err := email.New(&emailConfig)
 	if err != nil {
 		t.Fatalf("Failed to create email provider: %v", err)
 	}
@@ -220,7 +220,7 @@ func TestEmailConfigValidation(t *testing.T) {
 			name: "valid config",
 			config: email.Config{
 				ProviderMeta: core.ProviderMeta{},
-				Accounts: []*email.Account{
+				Items: []*email.Account{
 					{
 						BaseAccount: core.BaseAccount{
 							AccountMeta: core.AccountMeta{
@@ -243,7 +243,7 @@ func TestEmailConfigValidation(t *testing.T) {
 			name: "disabled config",
 			config: email.Config{
 				ProviderMeta: core.ProviderMeta{Disabled: true},
-				Accounts: []*email.Account{
+				Items: []*email.Account{
 					{
 						BaseAccount: core.BaseAccount{
 							AccountMeta: core.AccountMeta{
@@ -266,7 +266,7 @@ func TestEmailConfigValidation(t *testing.T) {
 			name: "no accounts",
 			config: email.Config{
 				ProviderMeta: core.ProviderMeta{},
-				Accounts:     []*email.Account{},
+				Items:        []*email.Account{},
 			},
 			wantErr: true,
 		},
@@ -274,7 +274,7 @@ func TestEmailConfigValidation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := email.New(tt.config)
+			_, err := email.New(&tt.config)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("email.New() error = %v, wantErr %v", err, tt.wantErr)
 			}

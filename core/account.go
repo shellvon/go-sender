@@ -1,6 +1,8 @@
 // Package core provides the core functionality for the go-sender library.
 package core
 
+import "errors"
+
 // ProviderMeta contains the minimal cross-cutting configuration that every
 // Provider needs, regardless of the concrete business domain.
 //
@@ -25,9 +27,6 @@ func (m *ProviderMeta) GetStrategy() StrategyType {
 	}
 	return m.Strategy
 }
-
-// IsDisabled reports whether the provider has been disabled.
-func (m *ProviderMeta) IsDisabled() bool { return m.Disabled }
 
 // AccountMeta holds cross-cutting metadata for an account. It is the only information
 // the core load-balancing / middleware layer relies on.
@@ -91,9 +90,25 @@ type BaseAccount struct {
 // BaseAccount implements core.Selectable and core.BasicAccount.
 var _ Selectable = (*BaseAccount)(nil)
 var _ BasicAccount = (*BaseAccount)(nil)
+var _ Validatable = (*BaseAccount)(nil)
 
 // GetMeta returns the embedded metadata.
 func (a *BaseAccount) GetMeta() *AccountMeta { return &a.AccountMeta }
 
 // GetCredentials returns the embedded credentials.
 func (a *BaseAccount) GetCredentials() *Credentials { return &a.Credentials }
+
+func (a *BaseAccount) Validate() error {
+	if a.AccountMeta.Provider == "" {
+		return errors.New("provider is required")
+	}
+	if a.AccountMeta.Name == "" {
+		return errors.New("name is required")
+	}
+
+	if a.Credentials.AppID == "" && a.Credentials.APIKey == "" && a.Credentials.APISecret == "" {
+		return errors.New("credentials are required")
+	}
+
+	return nil
+}

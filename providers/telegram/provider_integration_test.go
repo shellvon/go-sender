@@ -30,7 +30,7 @@ func (rt rewriteRoundTripper) RoundTrip(req *http.Request) (*http.Response, erro
 func TestProvider_Send_AllMessageTypes(t *testing.T) {
 	// Prepare provider configuration.
 	cfg := telegram.Config{
-		Accounts: []*telegram.Account{
+		Items: []*telegram.Account{
 			{
 				BaseAccount: core.BaseAccount{
 					AccountMeta: core.AccountMeta{Name: "primary"},
@@ -39,7 +39,7 @@ func TestProvider_Send_AllMessageTypes(t *testing.T) {
 			},
 		},
 	}
-	provider, err := telegram.New(cfg)
+	provider, err := telegram.New(&cfg)
 	if err != nil {
 		t.Fatalf("failed to create telegram provider: %v", err)
 	}

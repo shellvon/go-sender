@@ -8,8 +8,9 @@ import (
 
 	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/providers"
-	"github.com/shellvon/go-sender/utils"
 )
+
+type Config = core.BaseConfig[*Account]
 
 type Provider struct {
 	*providers.HTTPProvider[*Account]
@@ -75,18 +76,16 @@ func (t *smsTransformer) Transform(
 }
 
 // New creates a new SMS provider instance.
-func New(config Config) (*Provider, error) {
-	// 创建泛型 provider
-	httpProvider := providers.NewHTTPProvider(
+func New(config *Config) (*Provider, error) {
+	httpProvider, err := providers.NewHTTPProvider(
 		string(core.ProviderTypeSMS),
-		config.Accounts,
 		&smsTransformer{},
-		utils.GetStrategy(config.Strategy),
+		config,
 	)
-
-	return &Provider{
-		HTTPProvider: httpProvider,
-	}, nil
+	if err != nil {
+		return nil, err
+	}
+	return &Provider{HTTPProvider: httpProvider}, nil
 }
 
 func (p *Provider) Name() string {

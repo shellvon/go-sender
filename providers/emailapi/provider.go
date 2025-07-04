@@ -8,8 +8,10 @@ import (
 
 	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/providers"
-	"github.com/shellvon/go-sender/utils"
 )
+
+// Config is the type alias for core.BaseConfig[*Account]
+type Config = core.BaseConfig[*Account]
 
 // Provider is the main emailapi provider, supporting multiple API-based email services.
 type Provider struct {
@@ -75,21 +77,16 @@ func (t *emailAPITransformer) Transform(
 }
 
 // New creates a new emailapi Provider with the given config.
-func New(config Config) (*Provider, error) {
-	if !config.IsConfigured() {
-		return nil, errors.New("emailapi provider is not configured or is disabled")
-	}
-
-	// Create generic provider
-	httpProvider := providers.NewHTTPProvider(
+func New(config *Config) (*Provider, error) {
+	httpProvider, err := providers.NewHTTPProvider(
 		string(core.ProviderTypeEmailAPI),
-		config.Accounts,
 		&emailAPITransformer{},
-		utils.GetStrategy(config.Strategy),
+		config,
 	)
-	return &Provider{
-		HTTPProvider: httpProvider,
-	}, nil
+	if err != nil {
+		return nil, err
+	}
+	return &Provider{HTTPProvider: httpProvider}, nil
 }
 
 // Name returns the provider type.

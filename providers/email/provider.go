@@ -6,33 +6,29 @@ import (
 	"fmt"
 
 	"github.com/shellvon/go-sender/core"
-	"github.com/shellvon/go-sender/utils"
 	"github.com/wneessen/go-mail"
 )
 
+// Config is a type alias for core.BaseConfig[*Account]
+type Config = core.BaseConfig[*Account]
+
 // Provider supports multiple accounts and strategy selection.
 type Provider struct {
-	accounts []*Account
-	strategy core.SelectionStrategy
+	config *Config
 }
 
 var _ core.Provider = (*Provider)(nil)
 
 // New creates a new email provider instance.
-func New(config Config) (*Provider, error) {
-	if !config.IsConfigured() {
-		return nil, errors.New("email provider is not configured or is disabled")
+func New(config *Config) (*Provider, error) {
+	if config == nil {
+		return nil, errors.New("config is nil")
 	}
-
-	// Use common initialization logic
-	enabledAccounts, strategy, err := utils.InitProvider(&config, config.Accounts)
-	if err != nil {
-		return nil, errors.New("no enabled email accounts found")
+	if err := config.Validate(); err != nil {
+		return nil, err
 	}
-
 	return &Provider{
-		accounts: enabledAccounts,
-		strategy: strategy,
+		config: config,
 	}, nil
 }
 
@@ -42,31 +38,13 @@ func (p *Provider) Send(ctx context.Context, message core.Message, _ *core.Provi
 	if !ok {
 		return core.NewParamError(fmt.Sprintf("invalid message type: expected *email.Message, got %T", message))
 	}
-
 	if err := emailMsg.Validate(); err != nil {
 		return err
 	}
-
-	// 转换为 Selectable 接口
-	selectables := make([]core.Selectable, len(p.accounts))
-	for i, account := range p.accounts {
-		selectables[i] = account
+	account, err := p.config.Select(ctx, nil)
+	if err != nil {
+		return err
 	}
-
-	selected := utils.Select(ctx, selectables, p.strategy)
-	if selected == nil {
-		return errors.New("no available account")
-	}
-
-	// 找到对应的账号
-	var account *Account
-	for _, acc := range p.accounts {
-		if acc.GetName() == selected.GetName() {
-			account = acc
-			break
-		}
-	}
-
 	return p.doSendEmail(ctx, account, emailMsg)
 }
 

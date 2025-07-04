@@ -1,12 +1,11 @@
 package dingtalk
 
 import (
-	"errors"
-
 	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/providers"
-	"github.com/shellvon/go-sender/utils"
 )
+
+type Config = core.BaseConfig[*Account]
 
 // Provider implements the DingTalk provider using generic base.
 type Provider struct {
@@ -16,22 +15,16 @@ type Provider struct {
 var _ core.Provider = (*Provider)(nil)
 
 // New creates a new DingTalk provider instance.
-func New(config Config) (*Provider, error) {
-	if !config.IsConfigured() {
-		return nil, errors.New("dingtalk provider is not configured or is disabled")
-	}
-	strategy := utils.GetStrategy(config.GetStrategy())
-
-	httpProvider := providers.NewHTTPProvider(
+func New(config *Config) (*Provider, error) {
+	httpProvider, err := providers.NewHTTPProvider(
 		string(core.ProviderTypeDingtalk),
-		config.Accounts,
 		newDingTalkTransformer(),
-		strategy,
+		config,
 	)
-
-	return &Provider{
-		HTTPProvider: httpProvider,
-	}, nil
+	if err != nil {
+		return nil, err
+	}
+	return &Provider{HTTPProvider: httpProvider}, nil
 }
 
 // Name returns the provider name.
