@@ -24,13 +24,14 @@ type Validatable interface {
 // of the global validation.
 type BaseConfig[T Selectable] struct {
 	ProviderMeta `json:",inline" yaml:",inline"`
+
 	// Items holds all accounts / endpoints / whatever a provider selects from.
 	Items []T `json:"items" yaml:"items"`
 
 	mu sync.RWMutex
 }
 
-// Compile-time assertion: BaseConfig[T] implements ProviderConfig[T]
+// Compile-time assertion: BaseConfig[T] implements ProviderConfig[T].
 type _dummySelectable struct{}
 
 func (_dummySelectable) GetName() string { return "" }
@@ -151,7 +152,7 @@ func (c *BaseConfig[T]) Update(item T) error {
 // 0. Filter items by filter function to get a subset of items
 // 1. Item name from context (if specified)
 // 2. Strategy from context (if specified)
-// 3. Default strategy
+// 3. Default strategy.
 func (c *BaseConfig[T]) Select(ctx context.Context, filter func(T) bool) (T, error) {
 	var filtered []T
 	for _, item := range c.Items {
@@ -203,7 +204,7 @@ func (c *BaseConfig[T]) findEnabledByName(name string, items []T) (T, error) {
 	return zero, errors.New("no item found with the given name")
 }
 
-// toSelectables converts []T to []Selectable
+// toSelectables converts []T to []Selectable.
 func toSelectables[T Selectable](items []T) []Selectable {
 	selectables := make([]Selectable, len(items))
 	for i, item := range items {

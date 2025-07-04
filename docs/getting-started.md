@@ -26,11 +26,21 @@ import (
 func main() {
     // Create SMS provider
     config := sms.Config{
-        Accounts: []*core.Account{{
-            Name:      "default",
-            Type:      "aliyun",
-            APIKey:    "your-access-key",
-            APISecret: "your-secret-key",
+        ProviderMeta: core.ProviderMeta{
+            Strategy: core.StrategyRoundRobin,
+        },
+        Items: []*sms.Account{{
+            BaseAccount: core.BaseAccount{
+                AccountMeta: core.AccountMeta{
+                    Name:   "default",
+                    SubType: "aliyun",
+                },
+                Credentials: core.Credentials{
+                    APIKey:    "your-access-key",
+                    APISecret: "your-secret-key",
+                },
+            },
+            // 可选: Region, Callback 等 sms.Account 字段
         }},
     }
 
@@ -73,11 +83,21 @@ func main() {
 
     // Create and register SMS provider
     config := sms.Config{
-        Accounts: []*core.Account{{
-            Name:      "default",
-            Type:      "aliyun",
-            APIKey:    "your-access-key",
-            APISecret: "your-secret-key",
+        ProviderMeta: core.ProviderMeta{
+            Strategy: core.StrategyRoundRobin,
+        },
+        Items: []*sms.Account{{
+            BaseAccount: core.BaseAccount{
+                AccountMeta: core.AccountMeta{
+                    Name:   "default",
+                    SubType: "aliyun",
+                },
+                Credentials: core.Credentials{
+                    APIKey:    "your-access-key",
+                    APISecret: "your-secret-key",
+                },
+            },
+            // 可选: Region, Callback 等 sms.Account 字段
         }},
     }
 
