@@ -155,17 +155,20 @@ msg2 := serverchan.Text().
     Build()
 ```
 
-// Available channels | 可用渠道：
-// - android (98): Android
-// - wecom (66): WeCom
-// - wecom_bot (1): WeCom Bot
-// - dingtalk (2): DingTalk
-// - feishu (3): Lark/Feishu
-// - bark (8): Bark
-// - test (0): Test
-// - custom (88): Custom
-// - pushdeer (18): PushDeer
-// - service (9): Service
+**Available channels | 可用渠道：**
+
+| Channel Name | Code | Description | 描述           |
+| ------------ | ---- | ----------- | -------------- |
+| android      | 98   | Android     | Android        |
+| wecom        | 66   | WeCom       | 企业微信       |
+| wecom_bot    | 1    | WeCom Bot   | 企业微信机器人 |
+| dingtalk     | 2    | DingTalk    | 钉钉           |
+| feishu       | 3    | Lark/Feishu | 飞书           |
+| bark         | 8    | Bark        | Bark           |
+| test         | 0    | Test        | 测试           |
+| custom       | 88   | Custom      | 自定义         |
+| pushdeer     | 18   | PushDeer    | PushDeer       |
+| service      | 9    | Service     | 服务           |
 
 ---
 
@@ -180,9 +183,9 @@ import (
 
 // English: Register and send
 // 中文：注册 provider 并发送
-sender := gosender.New()
+sender := gosender.NewSender()
 serverchanProvider, _ := serverchan.New(config)
-sender.AddProvider(serverchanProvider)
+sender.RegisterProvider(core.ProviderTypeServerChan, serverchanProvider, nil)
 
 msg := serverchan.Text().
     Title("Test Message").

@@ -159,8 +159,9 @@ msg := telegram.Poll().
     Build()
 ```
 
-// ... (other message types can be added similarly using their respective builders)
-// ... 其他类型消息可参考源码使用对应 builder
+> **Note**: Other message types can be added similarly using their respective builders. See source code for all available builders.
+>
+> **注意**：其他类型消息可参考源码使用对应 builder。所有可用的 builder 请参考源码。
 
 ---
 
@@ -205,83 +206,6 @@ if err != nil {
 - **Markdown/HTML**: Use `ParseMode("Markdown")` or `ParseMode("HTML")` for rich formatting | 富文本格式请用 `ParseMode("Markdown")` 或 `ParseMode("HTML")`
 - **Polls**: Use `telegram.Poll()` builder for regular and quiz polls | 投票请用 `telegram.Poll()` builder
 - **Dice/Other Types**: See source code for additional builder types | 骰子等其他类型请参考源码
-
----
-
-## File Sending Limitations | 文件发送限制
-
-According to the [Telegram Bot API documentation](https://core.telegram.org/bots/api#sending-files), this provider has the following limitations:
-
-根据 [Telegram Bot API 文档](https://core.telegram.org/bots/api#sending-files)，本组件有如下限制：
-
-### File Sources | 文件来源
-
-- **file_id**: Existing file ID on Telegram servers | Telegram 服务器上的 file_id
-- **HTTP URL**: Publicly accessible file URL that Telegram can download | Telegram 可访问的公网 HTTPS URL
-- **Local file upload**: Not supported (no multipart/form-data upload) | 不支持本地文件直传（不支持 multipart/form-data）
-
-### File Size Limits | 文件大小限制
-
-- Photos: 10 MB maximum | 图片最大 10MB
-- Audio: 50 MB maximum | 音频最大 50MB
-- Documents: 50 MB maximum | 文档最大 50MB
-- Videos: 50 MB maximum | 视频最大 50MB
-- Animations: 50 MB maximum | 动图最大 50MB
-- Voice messages: 50 MB maximum | 语音最大 50MB
-- Video notes: 50 MB maximum | 视频便签最大 50MB
-
-### URL Requirements | URL 要求
-
-- Must be HTTPS URLs | 必须为 HTTPS URL
-- Files must be publicly accessible | 文件需公网可访问
-- Telegram servers must be able to download the file | Telegram 服务器需可下载
-- File format must be supported by Telegram | 文件格式需被 Telegram 支持
-
-### Best Practices | 最佳实践
-
-1. **Prefer file_id**: Use existing file IDs when possible for better performance | 优先使用 file_id，性能最佳
-2. **Use reliable URLs**: Ensure URLs are stable and accessible | 确保 URL 稳定可访问
-3. **Check file formats**: Verify files are in supported formats | 检查文件格式是否受支持
-4. **Monitor file sizes**: Stay within Telegram's size limits | 文件大小需在限制内
-
----
-
-## Error Handling | 错误处理
-
-The provider returns detailed error messages including:
-
-本组件会返回详细的错误信息，包括：
-
-- HTTP request errors | HTTP 请求错误
-- Telegram API error codes and descriptions | Telegram API 错误码与描述
-- Parameter validation errors | 参数校验错误
-
-```go
-err := provider.Send(ctx, message)
-if err != nil {
-    // Error format: telegram API error 400: Bad Request: wrong type of the web page content
-    // 错误示例：telegram API error 400: Bad Request: wrong type of the web page content
-    log.Printf("Failed to send message: %v", err)
-}
-```
-
----
-
-## Testing | 测试
-
-Run unit tests | 运行单元测试：
-
-```bash
-go test ./providers/telegram/...
-```
-
-Run integration tests (requires environment variables) | 运行集成测试（需设置环境变量）：
-
-```bash
-export TELEGRAM_BOT_TOKEN="your-bot-token"
-export TELEGRAM_CHAT_ID="your-chat-id"
-go test ./providers/telegram/... -v -run TestTelegramProviderIntegration
-```
 
 ---
 

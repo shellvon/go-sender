@@ -101,18 +101,3 @@ if err != nil {
     _ = sender.SendVia("aliyun-account-2", msg)
 }
 ```
-
-## Development Status | 开发状态
-
-This project is currently under active development. Please note:
-
-本项目处于活跃开发阶段，请注意：
-
-- APIs may change without notice | API 可能随时变更
-- Some features may be incomplete or experimental | 部分功能尚未完善或为实验性
-- Documentation may be outdated | 文档可能未及时更新
-- Breaking changes are expected in future releases | 未来版本可能有不兼容变更
-
-For production use, please ensure you thoroughly test the APIs and monitor for updates.
-
-如需生产环境使用，请务必充分测试并关注更新。

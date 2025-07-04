@@ -44,72 +44,6 @@ msg := webhook.Webhook().
 
 ## Features | 功能特性
 
-- Supports all HTTP methods (GET, POST, PUT, DELETE, PATCH, etc.) | 支持所有 HTTP 方法（GET、POST、PUT、DELETE、PATCH 等）
-- Flexible headers, path and query parameters | 灵活设置 Header、路径参数、查询参数
-- Arbitrary request body (JSON, XML, form, etc.) | 支持任意请求体（JSON、XML、表单等）
-- Chainable builder API for type safety and clarity | 链式 builder API，类型安全、易于 IDE 补全
-
----
-
-## Configuration Example | 配置示例
-
-```go
-import (
-    "github.com/shellvon/go-sender/core"
-    "github.com/shellvon/go-sender/providers/webhook"
-)
-
-config := webhook.Config{
-    Endpoints: []webhook.Endpoint{
-        {
-            Name:   "default", // 英文：端点名称
-            URL:    "https://example.com/webhook/{id}", // 英文：URL，支持路径参数
-            Method: http.MethodPost, // 英文：HTTP 方法
-            Headers: map[string]string{
-                "Authorization": "Bearer token", // 英文：Header
-            },
-        },
-    },
-}
-
-provider, err := webhook.New(config)
-if err != nil {
-    panic(err)
-}
-```
-
----
-
-## Sending a Webhook | 发送 Webhook
-
-```go
-msg := webhook.Webhook().
-    Method(http.MethodPost).
-    Body([]byte(`{"foo": "bar"}`)).
-    PathParam("id", "123").
-    Query("version", "v1").
-    Build()
-
-err := provider.Send(context.Background(), msg, nil)
-if err != nil {
-    log.Printf("Failed to send webhook: %v", err) // 英文：发送失败 | 中文：发送失败
-}
-```
-
----
-
-## Notes | 注意事项
-
-- All fields are optional; set only what you need. | 所有字段均为可选，按需设置。
-- If Method is not set, the provider or endpoint config may determine the default (usually POST or GET). | 如未设置 Method，将由 provider 或 endpoint 配置决定（通常为 POST 或 GET）。
-- Path and query parameters are merged into the endpoint URL. | 路径参数和查询参数会自动合并到 URL。
-- Headers can be set individually or in bulk. | Header 可单独或批量设置。
-- Body can be any []byte (JSON, XML, form, etc.). | 请求体可为任意 []byte（JSON、XML、表单等）。
-
----
-
-## Features | 功能特性
-
 - **Universal HTTP Support 通用 HTTP 支持**: Send messages to any HTTP endpoint | 支持任意 HTTP 接口
 - **Multiple Methods 多种请求方法**: Support for GET, POST, PUT, PATCH, DELETE methods | 支持 GET、POST、PUT、PATCH、DELETE 等方法
 - **Custom Headers 自定义请求头**: Add custom headers for authentication and content type | 支持自定义请求头
@@ -118,6 +52,7 @@ if err != nil {
 - **Multiple Response Types 多种响应类型**: Support for JSON, text, and XML response validation | 支持 JSON、文本、XML 响应校验
 - **Custom Status Codes 自定义状态码**: Configure custom success status codes | 支持自定义成功状态码
 - **Multiple Endpoints 多端点支持**: Support multiple webhook endpoints with load balancing | 支持多端点负载均衡
+- **Chainable Builder API**: Type-safe and IDE-friendly message construction | 链式 Builder API，类型安全且支持 IDE 补全
 
 ---
 
@@ -172,9 +107,10 @@ jsonData := map[string]interface{}{
 }
 body, _ := json.Marshal(jsonData)
 
-msg := webhook.NewMessage(body, webhook.WithHeaders(map[string]string{
-    "Content-Type": "application/json",
-}))
+msg := webhook.Webhook().
+    Body(body).
+    Header("Content-Type", "application/json").
+    Build()
 ```
 
 ### 2. Form Data Message | 表单消息
@@ -185,9 +121,10 @@ msg := webhook.NewMessage(body, webhook.WithHeaders(map[string]string{
 formData := "action=notify&message=Hello from webhook&priority=high"
 body := []byte(formData)
 
-msg := webhook.NewMessage(body, webhook.WithHeaders(map[string]string{
-    "Content-Type": "application/x-www-form-urlencoded",
-}))
+msg := webhook.Webhook().
+    Body(body).
+    Header("Content-Type", "application/x-www-form-urlencoded").
+    Build()
 ```
 
 ### 3. Raw Text Message | 纯文本消息
@@ -197,9 +134,10 @@ msg := webhook.NewMessage(body, webhook.WithHeaders(map[string]string{
 // 中文：发送纯文本
 body := []byte("Simple text message")
 
-msg := webhook.NewMessage(body, webhook.WithHeaders(map[string]string{
-    "Content-Type": "text/plain",
-}))
+msg := webhook.Webhook().
+    Body(body).
+    Header("Content-Type", "text/plain").
+    Build()
 ```
 
 ### 4. GET Request with Query Parameters | GET 请求带查询参数
@@ -207,22 +145,11 @@ msg := webhook.NewMessage(body, webhook.WithHeaders(map[string]string{
 ```go
 // English: GET request with query params
 // 中文：GET 请求带查询参数
-config := webhook.Config{
-    Endpoints: []webhook.Endpoint{
-        {
-            Name:   "get-webhook",
-            URL:    "https://api.example.com/webhook",
-            Method: "GET",
-            QueryParams: map[string]string{
-                "action": "ping",
-                "timestamp": fmt.Sprintf("%d", time.Now().Unix()),
-            },
-        },
-    },
-}
-
-// Empty body for GET requests | GET 请求 body 为空
-msg := webhook.NewMessage([]byte{})
+msg := webhook.Webhook().
+    Method("GET").
+    Query("action", "ping").
+    Query("timestamp", fmt.Sprintf("%d", time.Now().Unix())).
+    Build()
 ```
 
 ---
@@ -236,7 +163,7 @@ import (
     "github.com/shellvon/go-sender/providers/webhook"
 )
 
-s := gosender.NewSender(nil)
+s := gosender.NewSender()
 webhookProvider, err := webhook.New(config)
 if err != nil {
     log.Fatalf("Failed to create webhook provider: %v", err)
@@ -250,9 +177,10 @@ jsonData := map[string]interface{}{
 }
 body, _ := json.Marshal(jsonData)
 
-msg := webhook.NewMessage(body, webhook.WithHeaders(map[string]string{
-    "Content-Type": "application/json",
-}))
+msg := webhook.Webhook().
+    Body(body).
+    Header("Content-Type", "application/json").
+    Build()
 
 err = s.Send(ctx, msg)
 if err != nil {
@@ -260,13 +188,136 @@ if err != nil {
 }
 ```
 
----
+### Using SendVia for Multiple Endpoints | 多端点使用 SendVia
 
-## Message Options | 消息选项
+When you have multiple webhook endpoints, it's recommended to use `SendVia` to specify the exact endpoint by name. This ensures messages are sent to the correct destination and prevents misrouting.
 
-### Header Options | 请求头选项
+当你有多个 webhook 端点时，建议使用 `SendVia` 通过名称指定具体的端点。这确保消息发送到正确的目标，避免错误分发。
 
-- `WithHeaders(headers map[string]string)`: Set custom headers | 设置自定义请求头
+```go
+// English: Multiple endpoints configuration
+// 中文：多端点配置
+config := webhook.Config{
+    Endpoints: []webhook.Endpoint{
+        {
+            Name:   "slack-notifications",
+            URL:    "https://hooks.slack.com/services/YOUR/WEBHOOK/URL",
+            Method: "POST",
+        },
+        {
+            Name:   "discord-alerts",
+            URL:    "https://discord.com/api/webhooks/YOUR/WEBHOOK/URL",
+            Method: "POST",
+        },
+        {
+            Name:   "custom-api",
+            URL:    "https://api.example.com/webhook",
+            Method: "POST",
+        },
+    },
+}
+
+// English: Send to specific endpoint by name
+// 中文：通过名称发送到指定端点
+err := sender.SendVia(ctx, "slack-notifications", msg)
+if err != nil {
+    log.Printf("Failed to send to Slack: %v", err)
+}
+
+err = sender.SendVia(ctx, "discord-alerts", msg)
+if err != nil {
+    log.Printf("Failed to send to Discord: %v", err)
+}
+
+// English: Fallback to another endpoint if first fails
+// 中文：如果第一个端点失败，回退到另一个端点
+err := sender.SendVia(ctx, "slack-notifications", msg)
+if err != nil {
+    log.Printf("Slack failed, trying Discord: %v", err)
+    err = sender.SendVia(ctx, "discord-alerts", msg)
+    if err != nil {
+        log.Printf("Discord also failed: %v", err)
+    }
+}
+
+// English: Fallback with compatible message format
+// 中文：使用兼容格式进行回退
+slackMsg := webhook.Webhook().
+    Body(slackBody).
+    Header("Content-Type", "application/json").
+    Build()
+
+discordMsg := webhook.Webhook().
+    Body(discordBody).
+    Header("Content-Type", "application/json").
+    Build()
+
+// English: Try Slack first, then Discord with compatible format
+// 中文：先尝试 Slack，然后用兼容格式尝试 Discord
+err := sender.SendVia(ctx, "slack-notifications", slackMsg)
+if err != nil {
+    log.Printf("Slack failed, trying Discord: %v", err)
+    err = sender.SendVia(ctx, "discord-alerts", discordMsg)
+    if err != nil {
+        log.Printf("Discord also failed: %v", err)
+    }
+}
+```
+
+**Why use SendVia? | 为什么使用 SendVia？**
+
+- **Precise Control 精确控制**: Specify exactly which endpoint to use | 精确指定使用哪个端点
+- **Avoid Misrouting 避免错误分发**: Prevent messages from going to wrong endpoints | 防止消息发送到错误的端点
+- **Better Error Handling 更好的错误处理**: Know which specific endpoint failed | 知道具体哪个端点失败了
+- **Fallback Strategy 回退策略**: Easily implement failover between endpoints | 轻松实现端点间的故障切换
+
+**Important: Data Format Compatibility | 重要：数据格式兼容性**
+
+When implementing fallback between different endpoints, ensure the message format is compatible with each endpoint's requirements:
+
+在实现不同端点间的回退时，确保消息格式与每个端点的要求兼容：
+
+- **HTTP Method**: Different endpoints may require different HTTP methods (GET vs POST) | HTTP 方法：不同端点可能需要不同的 HTTP 方法（GET vs POST）
+- **Content-Type**: Headers must match the endpoint's expected format | 内容类型：请求头必须匹配端点期望的格式
+- **Request Body**: JSON structure, form data, or query parameters may differ | 请求体：JSON 结构、表单数据或查询参数可能不同
+- **Authentication**: Different endpoints may use different auth methods | 认证：不同端点可能使用不同的认证方法
+
+**Example: Slack vs Discord Format | 示例：Slack vs Discord 格式**
+
+```go
+// English: Slack format
+// 中文：Slack 格式
+slackData := map[string]interface{}{
+    "text": "Hello from go-sender!",
+    "channel": "#general",
+}
+slackBody, _ := json.Marshal(slackData)
+
+// English: Discord format (different structure)
+// 中文：Discord 格式（不同结构）
+discordData := map[string]interface{}{
+    "content": "Hello from go-sender!",
+    "embeds": []map[string]interface{}{
+        {
+            "title": "Notification",
+            "description": "This is a test message",
+        },
+    },
+}
+discordBody, _ := json.Marshal(discordData)
+
+// English: Create separate messages for each endpoint
+// 中文：为每个端点创建独立的消息
+slackMsg := webhook.Webhook().
+    Body(slackBody).
+    Header("Content-Type", "application/json").
+    Build()
+
+discordMsg := webhook.Webhook().
+    Body(discordBody).
+    Header("Content-Type", "application/json").
+    Build()
+```
 
 ---
 
@@ -387,6 +438,8 @@ msg := webhook.NewMessage(body, webhook.WithHeaders(map[string]string{
 ### 4. Use Multiple Endpoints for Reliability | 多端点提升可靠性
 
 - Configure multiple endpoints for failover and load balancing | 配置多个端点以实现故障切换和负载均衡
+- **Always use SendVia for multiple endpoints** | **多端点时务必使用 SendVia**
+- Specify endpoint names clearly for better maintainability | 明确指定端点名称以便维护
 
 ---
 
@@ -428,9 +481,10 @@ slackData := map[string]interface{}{
 }
 body, _ := json.Marshal(slackData)
 
-msg := webhook.NewMessage(body, webhook.WithHeaders(map[string]string{
-    "Content-Type": "application/json",
-}))
+msg := webhook.Webhook().
+    Body(body).
+    Header("Content-Type", "application/json").
+    Build()
 ```
 
 ### 2. Discord Webhook Integration
@@ -468,9 +522,10 @@ discordData := map[string]interface{}{
 }
 body, _ := json.Marshal(discordData)
 
-msg := webhook.NewMessage(body, webhook.WithHeaders(map[string]string{
-    "Content-Type": "application/json",
-}))
+msg := webhook.Webhook().
+    Body(body).
+    Header("Content-Type", "application/json").
+    Build()
 ```
 
 ### 3. Bark (iOS Push) Integration
@@ -486,7 +541,7 @@ config := webhook.Config{
     },
 }
 
-msg := webhook.NewMessage([]byte{})
+msg := webhook.Webhook().Build()
 ```
 
 ### 4. PushDeer Integration
@@ -502,7 +557,7 @@ config := webhook.Config{
     },
 }
 
-msg := webhook.NewMessage([]byte{})
+msg := webhook.Webhook().Build()
 ```
 
 ### 5. Pushover Integration
@@ -522,7 +577,9 @@ config := webhook.Config{
 }
 
 form := "token=YOUR_APP_TOKEN&user=USER_KEY&message=Hello+from+go-sender"
-msg := webhook.NewMessage([]byte(form))
+msg := webhook.Webhook().
+    Body([]byte(form)).
+    Build()
 ```
 
 ### 6. SimplePush Integration
@@ -542,7 +599,9 @@ config := webhook.Config{
 }
 
 body := []byte(`{"key":"YOUR_KEY","msg":"Hello from go-sender!"}`)
-msg := webhook.NewMessage(body)
+msg := webhook.Webhook().
+    Body(body).
+    Build()
 ```
 
 ### 7. Custom API Integration (with JSON Response Validation)
@@ -573,25 +632,27 @@ apiData := map[string]interface{}{
 }
 body, _ := json.Marshal(apiData)
 
-msg := webhook.NewMessage(body, webhook.WithHeaders(map[string]string{
-    "Content-Type": "application/json",
-    "Authorization": "Bearer your-token",
-    "X-Event-Type":  "user.created",
-}))
+msg := webhook.Webhook().
+    Body(body).
+    Header("Content-Type", "application/json").
+    Header("Authorization", "Bearer your-token").
+    Header("X-Event-Type", "user.created").
+    Build()
 ```
 
 ### 8. go-sender Unified Send Example
 
 ```go
 import (
-    "github.com/shellvon/go-sender"
+    gosender "github.com/shellvon/go-sender"
+    "github.com/shellvon/go-sender/core"
     "github.com/shellvon/go-sender/providers/webhook"
     "context"
 )
 
-sender := gosender.New()
+sender := gosender.NewSender()
 webhookProvider, _ := webhook.New(config)
-sender.AddProvider(webhookProvider)
+sender.RegisterProvider(core.ProviderTypeWebhook, webhookProvider, nil)
 
 err := sender.Send(context.Background(), msg)
 if err != nil {
