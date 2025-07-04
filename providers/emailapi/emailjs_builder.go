@@ -3,6 +3,7 @@ package emailapi
 // EmailjsMessageBuilder provides a builder for EmailJS messages, supporting both standard fields and template params.
 type EmailjsMessageBuilder struct {
 	BaseBuilder[*EmailjsMessageBuilder]
+
 	serviceID string
 }
 

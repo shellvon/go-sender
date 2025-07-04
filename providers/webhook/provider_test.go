@@ -130,9 +130,13 @@ func TestProvider_Send_Success(t *testing.T) {
 		t.Fatalf("Failed to create provider: %v", err)
 	}
 
-	err = provider.Send(context.Background(), webhook.Webhook().Body([]byte(`{"test": "data"}`)).Method("POST").Headers(map[string]string{
-		"Authorization": "Bearer token",
-	}).Build(), nil)
+	err = provider.Send(
+		context.Background(),
+		webhook.Webhook().Body([]byte(`{"test": "data"}`)).Method("POST").Headers(map[string]string{
+			"Authorization": "Bearer token",
+		}).Build(),
+		nil,
+	)
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
@@ -165,10 +169,14 @@ func TestProvider_Send_WithPathParams(t *testing.T) {
 		t.Fatalf("Failed to create provider: %v", err)
 	}
 
-	err = provider.Send(context.Background(), webhook.Webhook().Body([]byte(`{"test": "data"}`)).PathParams(map[string]string{
-		"type": "user",
-		"id":   "123",
-	}).Build(), nil)
+	err = provider.Send(
+		context.Background(),
+		webhook.Webhook().Body([]byte(`{"test": "data"}`)).PathParams(map[string]string{
+			"type": "user",
+			"id":   "123",
+		}).Build(),
+		nil,
+	)
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
@@ -201,9 +209,13 @@ func TestProvider_Send_WithQueryParams(t *testing.T) {
 		t.Fatalf("Failed to create provider: %v", err)
 	}
 
-	err = provider.Send(context.Background(), webhook.Webhook().Body([]byte(`{"test": "data"}`)).Queries(map[string]string{
-		"version": "v1",
-	}).Build(), nil)
+	err = provider.Send(
+		context.Background(),
+		webhook.Webhook().Body([]byte(`{"test": "data"}`)).Queries(map[string]string{
+			"version": "v1",
+		}).Build(),
+		nil,
+	)
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
@@ -236,7 +248,11 @@ func TestProvider_Send_WithMethodOverride(t *testing.T) {
 		t.Fatalf("Failed to create provider: %v", err)
 	}
 
-	err = provider.Send(context.Background(), webhook.Webhook().Body([]byte(`{"test": "data"}`)).Method("PUT").Build(), nil)
+	err = provider.Send(
+		context.Background(),
+		webhook.Webhook().Body([]byte(`{"test": "data"}`)).Method("PUT").Build(),
+		nil,
+	)
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}

@@ -150,7 +150,7 @@ func (m *Message) IsIntl() bool {
 
 // IsDomestic 判断是否为中国大陆短信（regionCode == 0 或 86）.
 func (m *Message) IsDomestic() bool {
-	return m.RegionCode == 0 || m.RegionCode == 86
+	return !m.IsIntl()
 }
 
 // HasMultipleRecipients returns true if the message has multiple recipients.

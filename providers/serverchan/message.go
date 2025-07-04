@@ -142,7 +142,7 @@ func (b *TextBuilder) Short(short string) *TextBuilder {
 //   - pushdeer(18): 推送宝
 //   - service(9): 方糖服务号
 //
-// If not specified, the default channel(s) configured on the website will be used
+// If not specified, the default channel(s) configured on the website will be used.
 func (b *TextBuilder) Channel(channel string) *TextBuilder {
 	b.channel = channel
 	return b

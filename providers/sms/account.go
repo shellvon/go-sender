@@ -13,8 +13,9 @@ import "github.com/shellvon/go-sender/core"
 // overridden on a per-message basis via Message.Extras.
 type Account struct {
 	core.BaseAccount
+
 	// Region is the SMS service region.
-	Region string `json:"region,omitempty" yaml:"region,omitempty"`
+	Region string `json:"region,omitempty"   yaml:"region,omitempty"`
 	// Callback is the callback URL for delivery reports.
 	Callback string `json:"callback,omitempty" yaml:"callback,omitempty"`
 }

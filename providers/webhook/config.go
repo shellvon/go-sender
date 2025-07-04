@@ -4,13 +4,12 @@ import (
 	"github.com/shellvon/go-sender/core"
 )
 
+// Config holds configuration for the Webhook provider.
 // Webhook provider uses Endpoint instead of Account because:
 //   - Webhook is essentially calling different endpoints, not managing accounts
 //   - Endpoint directly contains URL, Method, Headers and other webhook-specific configurations
 //   - This design better fits the webhook usage scenario
 //   - Endpoint implements core.Selectable interface to maintain architectural compatibility
-//
-// Config holds configuration for the Webhook provider.
 type Config struct {
 	core.ProviderMeta
 

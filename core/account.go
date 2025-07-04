@@ -33,13 +33,13 @@ func (m *ProviderMeta) IsDisabled() bool { return m.Disabled }
 // the core load-balancing / middleware layer relies on.
 type AccountMeta struct {
 	// Provider is the provider name. common values are sms / email / webhook …
-	Provider string `json:"provider" yaml:"provider"`
+	Provider string `json:"provider"           yaml:"provider"`
 	// SubType is the subtype of the provider. common values are aliyun / tencent / mailgun …
-	SubType string `json:"subtype,omitempty" yaml:"subtype,omitempty"` // aliyun / tencent / mailgun …
+	SubType string `json:"subtype,omitempty"  yaml:"subtype,omitempty"` // aliyun / tencent / mailgun …
 	// Name is the unique identifier inside same provider.
-	Name string `json:"name" yaml:"name"`
+	Name string `json:"name"               yaml:"name"`
 	// Weight is the load-balancing weight (>=1)
-	Weight int `json:"weight" yaml:"weight"`
+	Weight int `json:"weight"             yaml:"weight"`
 	// Disabled is whether the account is disabled.
 	Disabled bool `json:"disabled,omitempty" yaml:"disabled,omitempty"`
 }
@@ -67,9 +67,9 @@ func (m *AccountMeta) GetType() string { return m.SubType }
 // APISecret can represent password / secretKey / appSecret, etc.
 type Credentials struct {
 	// AppID can represent smsAccount / domain / AppId, etc.
-	AppID string `json:"app_id,omitempty" yaml:"app_id,omitempty"`
+	AppID string `json:"app_id,omitempty"     yaml:"app_id,omitempty"`
 	// APIKey can represent username / accessKey / appKey, etc.
-	APIKey string `json:"api_key" yaml:"api_key"`
+	APIKey string `json:"api_key"              yaml:"api_key"`
 	// APISecret can represent password / secretKey / appSecret, etc.
 	APISecret string `json:"api_secret,omitempty" yaml:"api_secret,omitempty"`
 }

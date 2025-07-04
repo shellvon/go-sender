@@ -23,22 +23,22 @@ type ImagePayload struct {
 	ImageKey string `json:"image_key"`
 }
 
-// imageMsgBuilder provides a fluent API to construct Lark image messages (unexported to avoid conflict).
-type imageMsgBuilder struct {
+// ImageBuilder provides a fluent API to construct Lark image messages.
+type ImageBuilder struct {
 	imageKey string
 }
 
-// Image creates a new imageMsgBuilder instance (user-facing API).
-func Image() *imageMsgBuilder { return &imageMsgBuilder{} }
+// Image creates a new ImageMsgBuilder instance (user-facing API).
+func Image() *ImageBuilder { return &ImageBuilder{} }
 
 // ImageKey sets the image key.
-func (b *imageMsgBuilder) ImageKey(key string) *imageMsgBuilder {
+func (b *ImageBuilder) ImageKey(key string) *ImageBuilder {
 	b.imageKey = key
 	return b
 }
 
 // Build assembles a *ImageMessage.
-func (b *imageMsgBuilder) Build() *ImageMessage {
+func (b *ImageBuilder) Build() *ImageMessage {
 	return &ImageMessage{
 		BaseMessage: BaseMessage{MsgType: TypeImage},
 		Content:     ImageContent{Image: ImagePayload{ImageKey: b.imageKey}},

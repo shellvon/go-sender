@@ -25,7 +25,14 @@ func TestAliyunProvider_Send_Success(t *testing.T) {
 	fakeTransformer := &fakeAliyunTransformer{url: ts.URL}
 	httpProvider := providers.NewHTTPProvider(
 		"aliyun",
-		[]*sms.Account{{BaseAccount: core.BaseAccount{AccountMeta: core.AccountMeta{Name: "test", Disabled: false}, Credentials: core.Credentials{APIKey: "ak", APISecret: "sk"}}}},
+		[]*sms.Account{
+			{
+				BaseAccount: core.BaseAccount{
+					AccountMeta: core.AccountMeta{Name: "test", Disabled: false},
+					Credentials: core.Credentials{APIKey: "ak", APISecret: "sk"},
+				},
+			},
+		},
 		fakeTransformer,
 		utils.GetStrategy(core.StrategyRoundRobin),
 	)
@@ -75,7 +82,14 @@ func TestAliyunProvider_Send_Error(t *testing.T) {
 	fakeTransformer := &fakeAliyunTransformer{url: ts.URL}
 	httpProvider := providers.NewHTTPProvider(
 		"aliyun",
-		[]*sms.Account{{BaseAccount: core.BaseAccount{AccountMeta: core.AccountMeta{Name: "test", Disabled: false}, Credentials: core.Credentials{APIKey: "ak", APISecret: "sk"}}}},
+		[]*sms.Account{
+			{
+				BaseAccount: core.BaseAccount{
+					AccountMeta: core.AccountMeta{Name: "test", Disabled: false},
+					Credentials: core.Credentials{APIKey: "ak", APISecret: "sk"},
+				},
+			},
+		},
 		fakeTransformer,
 		utils.GetStrategy(core.StrategyRoundRobin),
 	)

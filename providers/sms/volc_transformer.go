@@ -80,7 +80,7 @@ func (t *volcTransformer) transformTextSMS(
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	body := map[string]interface{}{
-		"SmsAccount":   msg.GetExtraStringOrDefault(volcSmsAccountKey, ""),
+		"SmsAccount":   msg.GetExtraStringOrDefault(volcSmsAccountKey, account.AppID),
 		"Sign":         msg.SignName,
 		"TemplateID":   msg.TemplateID,
 		"PhoneNumbers": strings.Join(msg.Mobiles, ","),

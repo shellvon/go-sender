@@ -9,6 +9,7 @@ type ResendTag struct {
 // ResendMessageBuilder provides a builder for Resend email messages.
 type ResendMessageBuilder struct {
 	BaseBuilder[*ResendMessageBuilder]
+
 	tags []ResendTag
 }
 

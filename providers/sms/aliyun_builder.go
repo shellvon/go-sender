@@ -1,5 +1,9 @@
 package sms
 
+import (
+	"github.com/shellvon/go-sender/utils"
+)
+
 // AliyunSMSBuilder provides Aliyun-specific SMS message creation.
 type AliyunSMSBuilder struct {
 	*BaseBuilder[*AliyunSMSBuilder]
@@ -159,47 +163,22 @@ func (b *AliyunSMSBuilder) Region(region string) *AliyunSMSBuilder {
 func (b *AliyunSMSBuilder) Build() *Message {
 	msg := b.BaseBuilder.Build()
 	// 阿里云专属参数写入Extras
-	extra := map[string]interface{}{}
-	if b.calledShowNumber != "" {
-		extra[aliyunCalledShowNumberKey] = b.calledShowNumber
+	fields := map[string]interface{}{
+		aliyunCalledShowNumberKey:     b.calledShowNumber,
+		aliyunPlayTimesKey:            b.playTimes,
+		aliyunVolumeKey:               b.volume,
+		aliyunSpeedKey:                b.speed,
+		aliyunOutIDKey:                b.outID,
+		aliyunFallbackTypeKey:         b.fallbackType,
+		aliyunSmsTemplateCodeKey:      b.smsTemplateCode,
+		aliyunDigitalTemplateCodeKey:  b.digitalTemplateCode,
+		aliyunSmsTemplateParamKey:     b.smsTemplateParam,
+		aliyunDigitalTemplateParamKey: b.digitalTemplateParam,
+		aliyunSmsUpExtendCodeKey:      b.smsUpExtendCode,
+		aliyunCardObjectsKey:          b.cardObjects,
+		aliyunRegionKey:               b.region,
 	}
-	if b.playTimes != 0 {
-		extra[aliyunPlayTimesKey] = b.playTimes
-	}
-	if b.volume != 0 {
-		extra[aliyunVolumeKey] = b.volume
-	}
-	if b.speed != 0 {
-		extra[aliyunSpeedKey] = b.speed
-	}
-	if b.outID != "" {
-		extra[aliyunOutIDKey] = b.outID
-	}
-	if b.fallbackType != "" {
-		extra[aliyunFallbackTypeKey] = b.fallbackType
-	}
-	if b.smsTemplateCode != "" {
-		extra[aliyunSmsTemplateCodeKey] = b.smsTemplateCode
-	}
-	if b.digitalTemplateCode != "" {
-		extra[aliyunDigitalTemplateCodeKey] = b.digitalTemplateCode
-	}
-	if b.smsTemplateParam != "" {
-		extra[aliyunSmsTemplateParamKey] = b.smsTemplateParam
-	}
-	if b.digitalTemplateParam != "" {
-		extra[aliyunDigitalTemplateParamKey] = b.digitalTemplateParam
-	}
-	if b.smsUpExtendCode != "" {
-		extra[aliyunSmsUpExtendCodeKey] = b.smsUpExtendCode
-	}
-	if b.cardObjects != "" {
-		extra[aliyunCardObjectsKey] = b.cardObjects
-	}
-	if b.region != "" {
-		extra[aliyunRegionKey] = b.region
-	}
-	if len(extra) > 0 {
+	if extra := utils.BuildExtras(fields); len(extra) > 0 {
 		msg.Extras = extra
 	}
 	return msg

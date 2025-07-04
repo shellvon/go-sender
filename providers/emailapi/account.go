@@ -14,7 +14,7 @@ type Account struct {
 	core.BaseAccount
 
 	// Region is the API service region.
-	Region string `json:"region,omitempty" yaml:"region,omitempty"`
+	Region string `json:"region,omitempty"   yaml:"region,omitempty"`
 	// Callback is the callback URL for webhooks.
 	Callback string `json:"callback,omitempty" yaml:"callback,omitempty"`
 }

@@ -76,8 +76,13 @@ func TestMessageValidation(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "valid with CC and BCC",
-			msg:     email.Email().To("test@example.com").Cc("cc@example.com").Bcc("bcc@example.com").Body("Test body").Build(),
+			name: "valid with CC and BCC",
+			msg: email.Email().
+				To("test@example.com").
+				Cc("cc@example.com").
+				Bcc("bcc@example.com").
+				Body("Test body").
+				Build(),
 			wantErr: false,
 		},
 	}
