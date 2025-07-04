@@ -30,13 +30,33 @@ import (
     "github.com/shellvon/go-sender/providers/sms"
 )
 
+package main
+
+import (
+	"context"
+	"github.com/yourpackage/gosender"
+	"github.com/yourpackage/sms"
+)
+
 func main() {
-    sender := gosender.NewSender()
+	// Initialize a new sender instance
+	sender := gosender.NewSender()
+
+	// Create an SMS message using Aliyun provider
 	msg := sms.Aliyun().
 		To("13800138000").
 		Content("Hello from go-sender!").
 		TemplateID("SMS_xxx").
 		Build()
+
+	// Option 1: Send directly using provider
+	provider, _ := sms.New(&cfg)
+	provider.Send(context.Background(), msg, nil)
+
+	// Option 2: Send using GoSender with registered provider
+	sender.RegisterProvider(core.ProviderTypeSMS, provider, nil)
+	// Automatically applies middleware chain
+	sender.Send(context.Background(), msg)
 }
 ```
 
