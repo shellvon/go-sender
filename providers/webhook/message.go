@@ -60,8 +60,8 @@ func (m *Message) ProviderType() core.ProviderType {
 	return core.ProviderTypeWebhook
 }
 
-// WebhookBuilder provides a chainable API for constructing webhook messages.
-type WebhookBuilder struct {
+// Builder provides a chainable API for constructing webhook messages.
+type Builder struct {
 	body        []byte
 	headers     map[string]string
 	method      string
@@ -69,9 +69,9 @@ type WebhookBuilder struct {
 	queryParams map[string]string
 }
 
-// Webhook creates a new WebhookBuilder.
-func Webhook() *WebhookBuilder {
-	return &WebhookBuilder{
+// Webhook creates a new Builder.
+func Webhook() *Builder {
+	return &Builder{
 		headers:     make(map[string]string),
 		pathParams:  make(map[string]string),
 		queryParams: make(map[string]string),
@@ -79,25 +79,25 @@ func Webhook() *WebhookBuilder {
 }
 
 // Body sets the request body.
-func (b *WebhookBuilder) Body(body []byte) *WebhookBuilder {
+func (b *Builder) Body(body []byte) *Builder {
 	b.body = body
 	return b
 }
 
 // Method sets the HTTP method. Should use http.MethodXXX constants.
-func (b *WebhookBuilder) Method(method string) *WebhookBuilder {
+func (b *Builder) Method(method string) *Builder {
 	b.method = method
 	return b
 }
 
 // Header sets a single header key-value pair.
-func (b *WebhookBuilder) Header(key, value string) *WebhookBuilder {
+func (b *Builder) Header(key, value string) *Builder {
 	b.headers[key] = value
 	return b
 }
 
 // Headers sets multiple headers at once.
-func (b *WebhookBuilder) Headers(headers map[string]string) *WebhookBuilder {
+func (b *Builder) Headers(headers map[string]string) *Builder {
 	for k, v := range headers {
 		b.headers[k] = v
 	}
@@ -105,13 +105,13 @@ func (b *WebhookBuilder) Headers(headers map[string]string) *WebhookBuilder {
 }
 
 // PathParam sets a single path parameter.
-func (b *WebhookBuilder) PathParam(key, value string) *WebhookBuilder {
+func (b *Builder) PathParam(key, value string) *Builder {
 	b.pathParams[key] = value
 	return b
 }
 
 // PathParams sets multiple path parameters at once.
-func (b *WebhookBuilder) PathParams(params map[string]string) *WebhookBuilder {
+func (b *Builder) PathParams(params map[string]string) *Builder {
 	for k, v := range params {
 		b.pathParams[k] = v
 	}
@@ -119,13 +119,13 @@ func (b *WebhookBuilder) PathParams(params map[string]string) *WebhookBuilder {
 }
 
 // Query sets a single query parameter.
-func (b *WebhookBuilder) Query(key, value string) *WebhookBuilder {
+func (b *Builder) Query(key, value string) *Builder {
 	b.queryParams[key] = value
 	return b
 }
 
 // Queries sets multiple query parameters at once.
-func (b *WebhookBuilder) Queries(params map[string]string) *WebhookBuilder {
+func (b *Builder) Queries(params map[string]string) *Builder {
 	for k, v := range params {
 		b.queryParams[k] = v
 	}
@@ -133,7 +133,7 @@ func (b *WebhookBuilder) Queries(params map[string]string) *WebhookBuilder {
 }
 
 // Build creates the webhook Message instance.
-func (b *WebhookBuilder) Build() *Message {
+func (b *Builder) Build() *Message {
 	return &Message{
 		Body:        b.body,
 		Headers:     b.headers,

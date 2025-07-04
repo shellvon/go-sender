@@ -7,6 +7,6 @@ package emailapi
 
 // Resend specific constants.
 const (
-	// Resend keys
+	// Resend keys.
 	resendTagsKey = "tags"
 )

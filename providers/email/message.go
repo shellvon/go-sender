@@ -83,8 +83,8 @@ func validateEmail(email string) error {
 
 // --- Builder Pattern for Email ---
 
-// EmailBuilder is used for building email messages in a chainable style.
-type EmailBuilder struct {
+// Builder is used for building email messages in a chainable style.
+type Builder struct {
 	recipients  []string // Recipients
 	subject     string   // Subject
 	body        string   // Body
@@ -96,82 +96,82 @@ type EmailBuilder struct {
 	attachments []string // Attachments
 }
 
-// Email creates a new EmailBuilder as the entry point for builder style.
-func Email() *EmailBuilder {
-	return &EmailBuilder{}
+// Email creates a new Builder as the entry point for builder style.
+func Email() *Builder {
+	return &Builder{}
 }
 
 // To sets the recipients.
-func (b *EmailBuilder) To(recipients ...string) *EmailBuilder {
+func (b *Builder) To(recipients ...string) *Builder {
 	b.recipients = append(b.recipients, recipients...)
 	return b
 }
 
 // Subject sets the subject.
-func (b *EmailBuilder) Subject(subject string) *EmailBuilder {
+func (b *Builder) Subject(subject string) *Builder {
 	b.subject = subject
 	return b
 }
 
 // Body sets the body.
-func (b *EmailBuilder) Body(body string) *EmailBuilder {
+func (b *Builder) Body(body string) *Builder {
 	b.body = body
 	return b
 }
 
 // From sets the sender.
-func (b *EmailBuilder) From(from string) *EmailBuilder {
+func (b *Builder) From(from string) *Builder {
 	b.from = from
 	return b
 }
 
 // Cc sets the CC recipients.
-func (b *EmailBuilder) Cc(cc ...string) *EmailBuilder {
+func (b *Builder) Cc(cc ...string) *Builder {
 	b.cc = append(b.cc, cc...)
 	return b
 }
 
 // Bcc sets the BCC recipients.
-func (b *EmailBuilder) Bcc(bcc ...string) *EmailBuilder {
+func (b *Builder) Bcc(bcc ...string) *Builder {
 	b.bcc = append(b.bcc, bcc...)
 	return b
 }
 
 // ReplyTo sets the reply-to address.
-func (b *EmailBuilder) ReplyTo(replyTo string) *EmailBuilder {
+func (b *Builder) ReplyTo(replyTo string) *Builder {
 	b.replyTo = replyTo
 	return b
 }
 
 // HTML marks the message as HTML content.
-func (b *EmailBuilder) HTML() *EmailBuilder {
+func (b *Builder) HTML() *Builder {
 	b.html = true
 	return b
 }
 
 // Attach replaces the attachment list.
-func (b *EmailBuilder) Attach(files ...string) *EmailBuilder {
+func (b *Builder) Attach(files ...string) *Builder {
 	b.attachments = files
 	return b
 }
 
 // AddAttach appends files to the attachment list.
-func (b *EmailBuilder) AddAttach(files ...string) *EmailBuilder {
+func (b *Builder) AddAttach(files ...string) *Builder {
 	b.attachments = append(b.attachments, files...)
 	return b
 }
 
 // Build creates the Message instance from the builder.
-func (b *EmailBuilder) Build() *Message {
+func (b *Builder) Build() *Message {
 	msg := &Message{
-		To:     b.recipients,
-		Body:   b.body,
-		Subject: b.subject,
-		From:   b.from,
-		Cc:     b.cc,
-		Bcc:    b.bcc,
-		ReplyTo: b.replyTo,
-		IsHTML: b.html,
+		To:          b.recipients,
+		Body:        b.body,
+		Subject:     b.subject,
+		From:        b.from,
+		Cc:          b.cc,
+		Bcc:         b.bcc,
+		ReplyTo:     b.replyTo,
+		IsHTML:      b.html,
 		Attachments: b.attachments,
 	}
 	return msg

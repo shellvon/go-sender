@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/shellvon/go-sender/core"
+	"github.com/shellvon/go-sender/utils"
 )
 
 // @ProviderName: Tencent / 腾讯云
@@ -114,10 +115,15 @@ func (t *tencentTransformer) transformTextSMS(
 		params["SenderId"] = senderID
 	}
 
+	region := utils.FirstNonEmpty(
+		msg.GetExtraStringOrDefault(tencentRegionKey, ""),
+		account.Region,
+		tencentDefaultRegion,
+	)
 	requestBody := map[string]interface{}{
 		"Action":  tencentSmsAction,
 		"Version": "2021-01-11",
-		"Region":  msg.GetExtraStringOrDefault(tencentRegionKey, tencentDefaultRegion),
+		"Region":  region,
 		"Request": params,
 	}
 
@@ -134,7 +140,7 @@ func (t *tencentTransformer) transformTextSMS(
 		Endpoint:  endpoint,
 		Action:    tencentSmsAction,
 		Version:   "2021-01-11",
-		Region:    msg.GetExtraStringOrDefault(tencentRegionKey, tencentDefaultRegion),
+		Region:    region,
 		AppSecret: account.APISecret,
 		BodyData:  bodyData,
 		Timestamp: timestamp,
@@ -182,10 +188,15 @@ func (t *tencentTransformer) transformVoiceSMS(
 		params["PlayTimes"] = playTimes
 	}
 
+	voiceRegion := utils.FirstNonEmpty(
+		msg.GetExtraStringOrDefault(tencentRegionKey, ""),
+		account.Region,
+		tencentDefaultRegion,
+	)
 	requestBody := map[string]interface{}{
 		"Action":  action,
 		"Version": tencentVoiceVersion,
-		"Region":  msg.GetExtraStringOrDefault("Region", tencentDefaultRegion),
+		"Region":  voiceRegion,
 		"Request": params,
 	}
 
@@ -202,7 +213,7 @@ func (t *tencentTransformer) transformVoiceSMS(
 		Endpoint:  endpoint,
 		Action:    action,
 		Version:   tencentVoiceVersion,
-		Region:    msg.GetExtraStringOrDefault(tencentRegionKey, tencentDefaultRegion),
+		Region:    voiceRegion,
 		AppSecret: account.APISecret,
 		BodyData:  bodyData,
 		Timestamp: timestamp,

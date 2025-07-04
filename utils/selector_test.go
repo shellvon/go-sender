@@ -2,6 +2,7 @@ package utils_test
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
 	"github.com/shellvon/go-sender/core"
@@ -79,5 +80,108 @@ func TestDefaultStringIfEmpty(t *testing.T) {
 	}
 	if got := utils.DefaultStringIfEmpty("abc", "def"); got != "abc" {
 		t.Error("DefaultStringIfEmpty failed for non-empty")
+	}
+}
+
+func TestFirstNonEmpty(t *testing.T) {
+	tests := []struct {
+		name     string
+		values   []string
+		expected string
+	}{
+		{
+			name:     "first value non-empty",
+			values:   []string{"first", "second", "third"},
+			expected: "first",
+		},
+		{
+			name:     "first value empty, second non-empty",
+			values:   []string{"", "second", "third"},
+			expected: "second",
+		},
+		{
+			name:     "all values empty",
+			values:   []string{"", "", ""},
+			expected: "",
+		},
+		{
+			name:     "no values",
+			values:   []string{},
+			expected: "",
+		},
+		{
+			name:     "mixed empty and non-empty",
+			values:   []string{"", "non-empty", "", "ignored"},
+			expected: "non-empty",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := utils.FirstNonEmpty(tt.values...)
+			if result != tt.expected {
+				t.Errorf("FirstNonEmpty(%v) = %q, want %q", tt.values, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestBuildExtras(t *testing.T) {
+	tests := []struct {
+		name     string
+		fields   map[string]interface{}
+		expected map[string]interface{}
+	}{
+		{
+			name:     "empty fields",
+			fields:   map[string]interface{}{},
+			expected: map[string]interface{}{},
+		},
+		{
+			name: "all empty values",
+			fields: map[string]interface{}{
+				"key1": "",
+				"key2": 0,
+				"key3": "",
+			},
+			expected: map[string]interface{}{},
+		},
+		{
+			name: "mixed values",
+			fields: map[string]interface{}{
+				"key1": "",
+				"key2": "value2",
+				"key3": 0,
+				"key4": "value4",
+				"key5": 5,
+			},
+			expected: map[string]interface{}{
+				"key2": "value2",
+				"key4": "value4",
+				"key5": 5,
+			},
+		},
+		{
+			name: "all non-empty values",
+			fields: map[string]interface{}{
+				"key1": "value1",
+				"key2": 2,
+				"key3": "value3",
+			},
+			expected: map[string]interface{}{
+				"key1": "value1",
+				"key2": 2,
+				"key3": "value3",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := utils.BuildExtras(tt.fields)
+			if !reflect.DeepEqual(result, tt.expected) {
+				t.Errorf("BuildExtras() = %v, want %v", result, tt.expected)
+			}
+		})
 	}
 }

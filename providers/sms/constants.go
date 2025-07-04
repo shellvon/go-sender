@@ -91,6 +91,9 @@ const (
 const (
 	// huaweiFromKey is the key for Huawei from field.
 	huaweiFromKey = "from"
+
+	// huaweiRegionKey is the key for Huawei region.
+	huaweiRegionKey = "region"
 )
 
 // SMSBao specific constants.
@@ -139,6 +142,9 @@ const (
 	// yuntongxunMediaNameKey is the key for YunTongXun media name.
 	yuntongxunMediaNameKey = "mediaName"
 
+	// yuntongxunMediaNameTypeKey is the key for YunTongXun media name type.
+	yuntongxunMediaNameTypeKey = "mediaNameType"
+
 	// yuntongxunDisplayNumKey is the key for YunTongXun display num.
 	yuntongxunDisplayNumKey = "displayNum"
 
@@ -147,6 +153,30 @@ const (
 
 	// yuntongxunMaxCallTimeKey is the key for YunTongXun max call time.
 	yuntongxunMaxCallTimeKey = "maxCallTime"
+
+	// yuntongxunWelcomePromptKey is the key for YunTongXun welcome prompt.
+	yuntongxunWelcomePromptKey = "welcomePrompt"
+
+	// yuntongxunPlayVerifyCodeKey is the key for YunTongXun play verify code.
+	yuntongxunPlayVerifyCodeKey = "playVerifyCode"
+
+	// yuntongxunRegionKey is the key for YunTongXun region.
+	yuntongxunRegionKey = "region"
+
+	// yuntongxunTxtSpeedKey is the key for YunTongXun txt speed.
+	yuntongxunTxtSpeedKey = "txtSpeed"
+
+	// yuntongxunTxtPitchKey is the key for YunTongXun txt pitch.
+	yuntongxunTxtPitchKey = "txtPitch"
+
+	// yuntongxunTxtVolumeKey is the key for YunTongXun txt volume.
+	yuntongxunTxtVolumeKey = "txtVolume"
+
+	// yuntongxunTxtBgsoundKey is the key for YunTongXun txt bgsound.
+	yuntongxunTxtBgsoundKey = "txtBgsound"
+
+	// yuntongxunPlayModeKey is the key for YunTongXun play mode.
+	yuntongxunPlayModeKey = "playMode"
 )
 
 // Luosimao specific constants.

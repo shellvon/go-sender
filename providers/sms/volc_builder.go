@@ -1,4 +1,7 @@
+//nolint:dupl  // Volc builder 和 Huawei builder 结构类似但业务独立，重复为误报。
 package sms
+
+import "github.com/shellvon/go-sender/utils"
 
 // @ProviderName: Volc / 火山引擎
 // @Website: https://www.volcengine.com
@@ -30,7 +33,7 @@ func (b *VolcSMSBuilder) Tag(tag string) *VolcSMSBuilder {
 	return b
 }
 
-// SmsAccount 消息组 ID, 对于火山云API必须设置。
+// SmsAccount 消息组 ID, 对于火山云API必须设置。您可以通过账号的AppID进行配置
 //   - 短信API: https://www.volcengine.com/docs/6361/67380
 func (b *VolcSMSBuilder) SmsAccount(smsAccount string) *VolcSMSBuilder {
 	b.smsAccount = smsAccount
@@ -39,14 +42,11 @@ func (b *VolcSMSBuilder) SmsAccount(smsAccount string) *VolcSMSBuilder {
 
 func (b *VolcSMSBuilder) Build() *Message {
 	msg := b.BaseBuilder.Build()
-	extra := map[string]interface{}{}
-	if b.smsAccount != "" {
-		extra[volcSmsAccountKey] = b.smsAccount
+	fields := map[string]interface{}{
+		volcSmsAccountKey: b.smsAccount,
+		volcTagKey:        b.tag,
 	}
-	if b.tag != "" {
-		extra[volcTagKey] = b.tag
-	}
-	if len(extra) > 0 {
+	if extra := utils.BuildExtras(fields); len(extra) > 0 {
 		msg.Extras = extra
 	}
 	return msg

@@ -16,7 +16,14 @@ func TestConfig_IsConfigured(t *testing.T) {
 		{
 			name: "valid config",
 			config: telegram.Config{
-				Accounts: []*telegram.Account{{BaseAccount: core.BaseAccount{AccountMeta: core.AccountMeta{Name: "test"}, Credentials: core.Credentials{APIKey: "bot123:token"}}}},
+				Accounts: []*telegram.Account{
+					{
+						BaseAccount: core.BaseAccount{
+							AccountMeta: core.AccountMeta{Name: "test"},
+							Credentials: core.Credentials{APIKey: "bot123:token"},
+						},
+					},
+				},
 			},
 			expected: true,
 		},
@@ -29,7 +36,14 @@ func TestConfig_IsConfigured(t *testing.T) {
 			name: "disabled config",
 			config: telegram.Config{
 				ProviderMeta: core.ProviderMeta{Disabled: true},
-				Accounts:     []*telegram.Account{{BaseAccount: core.BaseAccount{AccountMeta: core.AccountMeta{Name: "test"}, Credentials: core.Credentials{APIKey: "bot123:token"}}}},
+				Accounts: []*telegram.Account{
+					{
+						BaseAccount: core.BaseAccount{
+							AccountMeta: core.AccountMeta{Name: "test"},
+							Credentials: core.Credentials{APIKey: "bot123:token"},
+						},
+					},
+				},
 			},
 			expected: false,
 		},

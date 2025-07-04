@@ -47,29 +47,29 @@ type PostElement struct {
 	ImageKey string `json:"image_key,omitempty"`
 }
 
-// postBuilder provides a fluent API to construct Lark post (rich text) messages (unexported).
-type postBuilder struct {
+// PostBuilder provides a fluent API to construct Lark post (rich text) messages (unexported).
+type PostBuilder struct {
 	zhCN *PostLang
 	enUS *PostLang
 }
 
 // Post creates a new postBuilder instance (user-facing API).
-func Post() *postBuilder { return &postBuilder{} }
+func Post() *PostBuilder { return &PostBuilder{} }
 
 // ZhCN sets the Chinese content.
-func (b *postBuilder) ZhCN(title string, content [][]PostElement) *postBuilder {
+func (b *PostBuilder) ZhCN(title string, content [][]PostElement) *PostBuilder {
 	b.zhCN = &PostLang{Title: title, Content: content}
 	return b
 }
 
 // EnUS sets the English content.
-func (b *postBuilder) EnUS(title string, content [][]PostElement) *postBuilder {
+func (b *PostBuilder) EnUS(title string, content [][]PostElement) *PostBuilder {
 	b.enUS = &PostLang{Title: title, Content: content}
 	return b
 }
 
 // Build assembles a *PostMessage.
-func (b *postBuilder) Build() *PostMessage {
+func (b *PostBuilder) Build() *PostMessage {
 	return &PostMessage{
 		BaseMessage: BaseMessage{MsgType: TypePost},
 		Content: PostContent{

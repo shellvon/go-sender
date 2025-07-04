@@ -33,8 +33,10 @@ func init() {
 }
 
 const (
-	cl253DomesticEndpoint = "smssh1.253.com"
-	cl253IntlEndpoint     = "intapi.253.com"
+	cl253DomesticEndpoint      = "smssh1.253.com"
+	cl253IntlSingaporeEndpoint = "sgap.253.com"
+	cl253IntlShanghaiEndpoint  = "intapi.253.com"
+	cl253DefaultRegion         = "sh" // 默认使用上海节点
 )
 
 // cl253Transformer implements HTTPRequestTransformer for CL253 SMS.
@@ -103,7 +105,7 @@ func (t *cl253Transformer) transformDomesticSMS(
 		"msg":         utils.AddSignature(msg.Content, msg.SignName),
 		"phone":       strings.Join(msg.Mobiles, ","),
 		"report":      msg.GetExtraStringOrDefault(cl253ReportKey, ""),
-		"callbackUrl": msg.CallbackURL,
+		"callbackUrl": utils.FirstNonEmpty(msg.CallbackURL, account.Callback),
 		"uid":         msg.UID,
 		"extend":      msg.Extend,
 	}
@@ -128,13 +130,19 @@ func (t *cl253Transformer) transformDomesticSMS(
 // transformIntlSMS transforms international SMS message to HTTP request
 //
 //   - 国际短信 API: https://doc.chuanglan.com/document/O58743GF76M7754H
+//
+// 国际短信包含多个节点，默认使用上海节点，如果需要使用新加坡节点，请在 account 中配置 region 为 sg。
 func (t *cl253Transformer) transformIntlSMS(
 	_ context.Context,
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
-	url := "https://" + cl253IntlEndpoint + "/send/sms"
-
+	var ep string
+	if account.Region == cl253DefaultRegion {
+		ep = cl253IntlShanghaiEndpoint
+	} else {
+		ep = cl253IntlSingaporeEndpoint
+	}
 	// 手机号码，格式(区号+手机号码)，例如：8615800000000，其中 86 为中国的区号， 区号前不使用 00 开头,15800000000 为接收短信的真实手机号码。5-20 位
 	params := map[string]interface{}{
 		"account":     account.APIKey,
@@ -143,7 +151,7 @@ func (t *cl253Transformer) transformIntlSMS(
 		"msg":         utils.AddSignature(msg.Content, msg.SignName),
 		"tdFlag":      msg.GetExtraIntOrDefault(cl253TDFlagKey, 0),
 		"report":      msg.GetExtraStringOrDefault(cl253ReportKey, ""),
-		"callbackUrl": msg.CallbackURL,
+		"callbackUrl": utils.FirstNonEmpty(msg.CallbackURL, account.Callback),
 		"uid":         msg.UID,
 		"extend":      msg.Extend,
 		"templateId":  msg.TemplateID,
@@ -153,7 +161,7 @@ func (t *cl253Transformer) transformIntlSMS(
 	body, _ := json.Marshal(params)
 	reqSpec := &core.HTTPRequestSpec{
 		Method:   http.MethodPost,
-		URL:      url,
+		URL:      fmt.Sprintf("https://%s/send/sms", ep),
 		Headers:  t.buildHeaders(nil),
 		Body:     body,
 		BodyType: core.BodyTypeJSON,

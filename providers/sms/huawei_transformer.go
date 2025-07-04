@@ -27,8 +27,9 @@ import (
 // transformer 仅支持 text（模板短信）类型。
 
 const (
-	huaweiAPIPath     = "https://api.rtc.huaweicloud.com:10443/sms/batchSendSms/v1"
-	huaweiSuccessCode = "000000"
+	huaweiAPIPath       = "https://api.rtc.huaweicloud.com:10443/sms/batchSendSms/v1"
+	huaweiSuccessCode   = "000000"
+	huaweiDefaultRegion = "cn-north-1"
 )
 
 // huaweiTransformer implements HTTPRequestTransformer for Huawei Cloud SMS.
@@ -117,7 +118,7 @@ func (t *huaweiTransformer) transformSMS(
 	// 如果设置了该字段，则该消息的状态报告将通过"接收状态报告"接口直接通知客户。
 	// 如果未设置该字段，则短信平台收到运营商短信中心返回的状态报告不会推送给客户，该状态报告将在短信平台中保存1个小时，超时后系统会自动删除。
 	// 回调地址推荐使用域名。
-	params.Set("statusCallback", msg.CallbackURL)
+	params.Set("statusCallback", utils.FirstNonEmpty(msg.CallbackURL, account.Callback))
 	// 扩展参数，在状态报告中会原样返回。
 	// 不允许赋空值，不允许携带以下字符："{","}"（即大括号）。
 	params.Set("extend", msg.Extend)
@@ -128,9 +129,11 @@ func (t *huaweiTransformer) transformSMS(
 	appSecret := account.APISecret
 
 	headers := t.buildHeaders(appKey, appSecret)
+
+	region := utils.FirstNonEmpty(msg.GetExtraStringOrDefault(huaweiRegionKey, ""), account.Region, huaweiDefaultRegion)
 	reqSpec := &core.HTTPRequestSpec{
 		Method:   http.MethodPost,
-		URL:      huaweiAPIPath,
+		URL:      fmt.Sprintf("https://%s.myhuaweicloud.com/sms/batchSendSms/v1", region),
 		Headers:  headers,
 		Body:     body,
 		BodyType: core.BodyTypeForm,

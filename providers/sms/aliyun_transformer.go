@@ -45,6 +45,7 @@ func init() {
 const (
 	aliyunDefaultSmsEndpoint   = "dysmsapi.aliyuncs.com"
 	aliyunDefaultVoiceEndpoint = "dyvmsapi.aliyuncs.com"
+	aliyunDefaultRegion        = "cn-hangzhou"
 )
 
 // aliyunTransformer implements HTTPTransformer[*Account] for Aliyun SMS.
@@ -318,7 +319,13 @@ func (t *aliyunTransformer) transformSMS(
 		params["OutId"] = v
 	}
 
-	endpoint := t.getEndpointByRegion(msg.Type, msg.GetExtraStringOrDefault(aliyunRegionKey, ""))
+	region := utils.FirstNonEmpty(
+		// 优先使用消息中的 region，其次使用 account 中的 region，最后使用默认值
+		msg.GetExtraStringOrDefault(aliyunRegionKey, ""),
+		account.Region,
+		aliyunDefaultRegion,
+	)
+	endpoint := t.getEndpointByRegion(msg.Type, region)
 
 	reqSpec := &core.HTTPRequestSpec{
 		Method: http.MethodPost,
@@ -407,7 +414,12 @@ func (t *aliyunTransformer) transformVoice(
 		action = "SingleCallByTts"
 	}
 
-	endpoint := t.getEndpointByRegion(msg.Type, msg.GetExtraStringOrDefault(aliyunRegionKey, ""))
+	region := utils.FirstNonEmpty(
+		msg.GetExtraStringOrDefault(aliyunRegionKey, ""),
+		account.Region,
+		aliyunDefaultRegion,
+	)
+	endpoint := t.getEndpointByRegion(msg.Type, region)
 
 	reqSpec := &core.HTTPRequestSpec{
 		Method: "POST",

@@ -4,7 +4,7 @@ import (
 	"github.com/shellvon/go-sender/core"
 )
 
-// ActionCard represents the action card content for a DingTalk message.
+// ActionCardContent represents the action card content for a DingTalk message.
 type ActionCardContent struct {
 	// Title of the action card
 	Title string `json:"title"`

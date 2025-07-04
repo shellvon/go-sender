@@ -11,6 +11,7 @@ import (
 //   - https://open.feishu.cn/document/feishu-cards/card-json-v2-structure
 type InteractiveMessage struct {
 	BaseMessage
+
 	Card Card `json:"card"`
 }
 
@@ -86,6 +87,7 @@ type CardLink struct {
 	PCURL      string `json:"pc_url,omitempty"`
 }
 
+// CardHeader represents the header component of a card.
 // https://open.feishu.cn/document/feishu-cards/card-json-v2-components/content-components/title
 type CardHeader struct {
 	Title       *CardText     `json:"title"`

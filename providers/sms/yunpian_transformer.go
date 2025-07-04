@@ -118,7 +118,7 @@ func (t *yunpianTransformer) transformSingleSMS(
 		"text":         utils.AddSignature(msg.Content, msg.SignName),
 		"extend":       msg.Extend,
 		"uid":          msg.UID,
-		"callback_url": msg.CallbackURL,
+		"callback_url": utils.FirstNonEmpty(msg.CallbackURL, account.Callback),
 		"register":     strconv.FormatBool(msg.GetExtraBoolOrDefault(yunpianRegisterKey, false)),
 		"mobile_stat":  strconv.FormatBool(msg.GetExtraBoolOrDefault(yunpianMobileStatKey, false)),
 	}
@@ -138,7 +138,7 @@ func (t *yunpianTransformer) transformBatchSMS(
 		"text":         utils.AddSignature(msg.Content, msg.SignName),
 		"extend":       msg.Extend,
 		"uid":          msg.UID,
-		"callback_url": msg.CallbackURL,
+		"callback_url": utils.FirstNonEmpty(msg.CallbackURL, account.Callback),
 		"register":     strconv.FormatBool(msg.GetExtraBoolOrDefault(yunpianRegisterKey, false)),
 		"mobile_stat":  strconv.FormatBool(msg.GetExtraBoolOrDefault(yunpianMobileStatKey, false)),
 	}
@@ -159,7 +159,7 @@ func (t *yunpianTransformer) transformTplSMS(
 		"tpl_value":    t.buildTemplateValue(msg.TemplateParams),
 		"extend":       msg.Extend,
 		"uid":          msg.UID,
-		"callback_url": msg.CallbackURL,
+		"callback_url": utils.FirstNonEmpty(msg.CallbackURL, account.Callback),
 	}
 
 	return t.buildRequest(endpoint, params)
@@ -178,7 +178,7 @@ func (t *yunpianTransformer) transformTplBatchSMS(
 		"tpl_value":    t.buildTemplateValue(msg.TemplateParams),
 		"extend":       msg.Extend,
 		"uid":          msg.UID,
-		"callback_url": msg.CallbackURL,
+		"callback_url": utils.FirstNonEmpty(msg.CallbackURL, account.Callback),
 	}
 
 	return t.buildRequest(endpoint, params)
@@ -196,7 +196,7 @@ func (t *yunpianTransformer) transformIntlSMS(
 		"text":         utils.AddSignature(msg.Content, msg.SignName),
 		"extend":       msg.Extend,
 		"uid":          msg.UID,
-		"callback_url": msg.CallbackURL,
+		"callback_url": utils.FirstNonEmpty(msg.CallbackURL, account.Callback),
 	}
 
 	return t.buildRequest(endpoint, params)
@@ -214,7 +214,7 @@ func (t *yunpianTransformer) transformVoiceSMS(
 		"code":         msg.Content,
 		"extend":       msg.Extend,
 		"uid":          msg.UID,
-		"callback_url": msg.CallbackURL,
+		"callback_url": utils.FirstNonEmpty(msg.CallbackURL, account.Callback),
 	}
 
 	return t.buildRequest(endpoint, params)
@@ -233,7 +233,7 @@ func (t *yunpianTransformer) transformMMSSMS(
 		"tpl_value":    t.buildTemplateValue(msg.TemplateParams),
 		"extend":       msg.Extend,
 		"uid":          msg.UID,
-		"callback_url": msg.CallbackURL,
+		"callback_url": utils.FirstNonEmpty(msg.CallbackURL, account.Callback),
 	}
 
 	return t.buildRequest(endpoint, params)
