@@ -25,14 +25,6 @@ See our [Project Roadmap & Task Tracking](https://github.com/shellvon/go-sender/
 
 ```go
 import (
-    "context"
-    "github.com/shellvon/go-sender"
-    "github.com/shellvon/go-sender/providers/sms"
-)
-
-package main
-
-import (
 	"context"
 	"github.com/yourpackage/gosender"
 	"github.com/yourpackage/sms"
