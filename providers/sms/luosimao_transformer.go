@@ -64,7 +64,7 @@ func (t *luosimaoTransformer) CanTransform(msg core.Message) bool {
 func (t *luosimaoTransformer) Transform(
 	ctx context.Context,
 	msg core.Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
@@ -110,7 +110,7 @@ func (t *luosimaoTransformer) buildLuosimaoRequestSpec(
 	_ context.Context,
 	params url.Values,
 	requestURL string,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	body := []byte(params.Encode())
 	authHeader := "Basic " + utils.Base64EncodeBytes([]byte("api:key-"+account.APISecret))
@@ -129,7 +129,7 @@ func (t *luosimaoTransformer) buildLuosimaoRequestSpec(
 func (t *luosimaoTransformer) transformSingleSMS(
 	ctx context.Context,
 	msg *Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	params := url.Values{}
 	params.Set("mobile", msg.Mobiles[0])
@@ -145,7 +145,7 @@ func (t *luosimaoTransformer) transformSingleSMS(
 func (t *luosimaoTransformer) transformBatchSMS(
 	ctx context.Context,
 	msg *Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	params := url.Values{}
 	params.Set("mobile_list", strings.Join(msg.Mobiles, ","))
@@ -167,7 +167,7 @@ func (t *luosimaoTransformer) transformBatchSMS(
 func (t *luosimaoTransformer) transformVoiceSMS(
 	ctx context.Context,
 	msg *Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	params := url.Values{}
 	params.Set("mobile", msg.Mobiles[0])

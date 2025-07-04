@@ -35,7 +35,7 @@ const (
 type resendTransformer struct{}
 
 // newResendTransformer creates a new Resend transformer.
-func newResendTransformer() core.HTTPTransformer[*core.Account] {
+func newResendTransformer() core.HTTPTransformer[*Account] {
 	return &resendTransformer{}
 }
 
@@ -52,7 +52,7 @@ func (t *resendTransformer) CanTransform(msg core.Message) bool {
 func (t *resendTransformer) Transform(
 	ctx context.Context,
 	msg core.Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	emailMsg, ok := msg.(*Message)
 	if !ok {
@@ -90,7 +90,7 @@ func (t *resendTransformer) validateMessage(msg *Message) error {
 func (t *resendTransformer) transformEmail(
 	_ context.Context,
 	msg *Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	// Build request parameters
 	params := map[string]interface{}{

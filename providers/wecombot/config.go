@@ -6,9 +6,9 @@ import (
 
 // Config holds configuration for the WeCom Bot provider.
 type Config struct {
-	core.BaseConfig
+	core.ProviderMeta
 
-	Accounts []core.Account `json:"accounts"` // Multiple accounts configuration
+	Accounts []*Account `json:"accounts"` // Multiple accounts configuration
 }
 
 // IsConfigured checks if the WeCom Bot configuration is valid.

@@ -49,7 +49,7 @@ func (t *ucpTransformer) CanTransform(msg core.Message) bool {
 func (t *ucpTransformer) Transform(
 	ctx context.Context,
 	msg core.Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
@@ -76,7 +76,7 @@ func (t *ucpTransformer) validateMessage(msg *Message) error {
 func (t *ucpTransformer) transformTextSMS(
 	_ context.Context,
 	msg *Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	// 根据手机号数量选择API
 	var apiPath string

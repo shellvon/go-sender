@@ -34,7 +34,7 @@ func (t *larkTransformer) CanTransform(msg core.Message) bool {
 func (t *larkTransformer) Transform(
 	_ context.Context,
 	msg core.Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	larkMsg, ok := msg.(Message)
 	if !ok {
@@ -94,7 +94,7 @@ func (t *larkTransformer) handleLarkResponse(statusCode int, body []byte) error 
 }
 
 // newLarkTransformer 创建 Lark 的 transformer 实例
-// 返回实现 core.HTTPTransformer[*core.Account] 的 larkTransformer.
-func newLarkTransformer() core.HTTPTransformer[*core.Account] {
+// 返回实现 core.HTTPTransformer[*Account] 的 larkTransformer.
+func newLarkTransformer() core.HTTPTransformer[*Account] {
 	return &larkTransformer{}
 }

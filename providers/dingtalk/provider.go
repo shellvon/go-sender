@@ -10,7 +10,7 @@ import (
 
 // Provider implements the DingTalk provider using generic base.
 type Provider struct {
-	*providers.HTTPProvider[*core.Account]
+	*providers.HTTPProvider[*Account]
 }
 
 var _ core.Provider = (*Provider)(nil)

@@ -27,7 +27,7 @@ type uploadTarget interface {
 
 // Provider implements the WeCom Bot provider.
 type Provider struct {
-	*providers.HTTPProvider[*core.Account]
+	*providers.HTTPProvider[*Account]
 }
 
 var _ core.Provider = (*Provider)(nil)
@@ -38,11 +38,7 @@ func New(config Config) (*Provider, error) {
 		return nil, errors.New("wecombot provider is not configured or is disabled")
 	}
 
-	// Convert to pointer slice
-	accounts := make([]*core.Account, len(config.Accounts))
-	for i := range config.Accounts {
-		accounts[i] = &config.Accounts[i]
-	}
+	accounts := config.Accounts
 
 	// Use common initialization logic
 	enabledAccounts, _, err := utils.InitProvider(&config, accounts)
@@ -105,7 +101,7 @@ func (p *Provider) uploadMediaType(
 	filePath, mediaType string,
 	reader io.Reader,
 	httpClient *http.Client,
-) (string, *core.Account, error) {
+) (string, *Account, error) {
 	selectedAccount := p.SelectConfig(ctx)
 	if selectedAccount == nil {
 		return "", nil, errors.New("no available account")

@@ -23,10 +23,7 @@ func TestAliyun_Integration_SendTextSMS(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	acc := &core.Account{
-		APIKey:    "ak",
-		APISecret: "sk",
-	}
+	acc := &sms.Account{BaseAccount: core.BaseAccount{Credentials: core.Credentials{APIKey: "ak", APISecret: "sk"}}}
 	msg := sms.Aliyun()
 	msg.To("***REMOVED***")
 	msg.Content("hi")
@@ -103,18 +100,14 @@ func TestSender_DispatchToAliyun_EndToEnd(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	acc := &core.Account{
-		Name:      "test",
-		APIKey:    "ak",
-		APISecret: "sk",
-	}
+	acc := &sms.Account{BaseAccount: core.BaseAccount{Credentials: core.Credentials{APIKey: "ak", APISecret: "sk"}}}
 	tr, ok := sms.GetTransformer("aliyun")
 	if !ok {
 		t.Fatal("Aliyun transformer not registered")
 	}
 	httpProvider := providers.NewHTTPProvider(
 		"aliyun",
-		[]*core.Account{acc},
+		[]*sms.Account{acc},
 		tr,
 		utils.GetStrategy(core.StrategyRoundRobin),
 	)

@@ -26,7 +26,7 @@ const (
 	endpointSendVenue     = "sendVenue"
 )
 
-// telegramTransformer 实现 providers.HTTPTransformer[*core.Account].
+// telegramTransformer 实现 providers.HTTPTransformer[*Account].
 type telegramTransformer struct{}
 
 // CanTransform 判断是否为 Telegram 消息.
@@ -47,7 +47,7 @@ func (t *telegramTransformer) CanTransform(msg core.Message) bool {
 func (t *telegramTransformer) Transform(
 	_ context.Context,
 	msg core.Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	var endpoint string
 	switch msg.(type) {

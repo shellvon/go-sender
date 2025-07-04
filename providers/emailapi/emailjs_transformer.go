@@ -32,7 +32,7 @@ const (
 type emailJSTransformer struct{}
 
 // newEmailJSTransformer creates a new EmailJS transformer.
-func newEmailJSTransformer() core.HTTPTransformer[*core.Account] {
+func newEmailJSTransformer() core.HTTPTransformer[*Account] {
 	return &emailJSTransformer{}
 }
 
@@ -49,7 +49,7 @@ func (t *emailJSTransformer) CanTransform(msg core.Message) bool {
 func (t *emailJSTransformer) Transform(
 	ctx context.Context,
 	msg core.Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	emailMsg, ok := msg.(*Message)
 	if !ok {
@@ -75,7 +75,7 @@ func (t *emailJSTransformer) validateMessage(msg *Message) error {
 func (t *emailJSTransformer) transformEmail(
 	_ context.Context,
 	msg *Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	// Get required parameters
 	serviceID := msg.From

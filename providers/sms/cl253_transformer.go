@@ -55,7 +55,7 @@ func (t *cl253Transformer) CanTransform(msg core.Message) bool {
 func (t *cl253Transformer) Transform(
 	_ context.Context,
 	msg core.Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
@@ -94,7 +94,7 @@ func (t *cl253Transformer) validateMessage(msg *Message) error {
 func (t *cl253Transformer) transformDomesticSMS(
 	_ context.Context,
 	msg *Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	url := "https://" + cl253DomesticEndpoint + "/msg/v1/send/json"
 	params := map[string]interface{}{
@@ -131,7 +131,7 @@ func (t *cl253Transformer) transformDomesticSMS(
 func (t *cl253Transformer) transformIntlSMS(
 	_ context.Context,
 	msg *Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	url := "https://" + cl253IntlEndpoint + "/send/sms"
 

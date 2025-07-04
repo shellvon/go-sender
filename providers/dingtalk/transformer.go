@@ -11,12 +11,12 @@ import (
 	"github.com/shellvon/go-sender/utils"
 )
 
-// dingTalkTransformer implements core.HTTPTransformer[*core.Account] for DingTalk
+// dingTalkTransformer implements core.HTTPTransformer[*Account] for DingTalk
 // It is stateless and does not hold any config.
 type dingTalkTransformer struct{}
 
 // newDingTalkTransformer creates a new DingTalk transformer (stateless).
-func newDingTalkTransformer() core.HTTPTransformer[*core.Account] {
+func newDingTalkTransformer() core.HTTPTransformer[*Account] {
 	return &dingTalkTransformer{}
 }
 
@@ -29,7 +29,7 @@ func (t *dingTalkTransformer) CanTransform(msg core.Message) bool {
 func (t *dingTalkTransformer) Transform(
 	_ context.Context,
 	msg core.Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	dingMsg, ok := msg.(Message)
 	if !ok {

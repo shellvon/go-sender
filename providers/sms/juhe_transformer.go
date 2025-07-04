@@ -48,7 +48,7 @@ func (t *juheTransformer) CanTransform(msg core.Message) bool {
 func (t *juheTransformer) Transform(
 	_ context.Context,
 	msg core.Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
@@ -82,7 +82,7 @@ func (t *juheTransformer) validateMessage(msg *Message) error {
 func (t *juheTransformer) transformDomesticSMS(
 	_ context.Context,
 	msg *Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	params := url.Values{}
 	params.Set("mobile", msg.Mobiles[0])
@@ -107,7 +107,7 @@ func (t *juheTransformer) transformDomesticSMS(
 func (t *juheTransformer) transformIntlSMS(
 	_ context.Context,
 	msg *Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	params := url.Values{}
 	params.Set("mobile", msg.Mobiles[0])
@@ -132,7 +132,7 @@ func (t *juheTransformer) transformIntlSMS(
 func (t *juheTransformer) transformMMSSMS(
 	_ context.Context,
 	msg *Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	params := url.Values{}
 	params.Set("mobile", strings.Join(msg.Mobiles, ","))

@@ -25,7 +25,7 @@ func TestAliyunProvider_Send_Success(t *testing.T) {
 	fakeTransformer := &fakeAliyunTransformer{url: ts.URL}
 	httpProvider := providers.NewHTTPProvider(
 		"aliyun",
-		[]*core.Account{{Name: "test", APIKey: "ak", APISecret: "sk", Disabled: false}},
+		[]*sms.Account{{BaseAccount: core.BaseAccount{AccountMeta: core.AccountMeta{Name: "test", Disabled: false}, Credentials: core.Credentials{APIKey: "ak", APISecret: "sk"}}}},
 		fakeTransformer,
 		utils.GetStrategy(core.StrategyRoundRobin),
 	)
@@ -48,7 +48,7 @@ func (f *fakeAliyunTransformer) CanTransform(_ core.Message) bool { return true 
 func (f *fakeAliyunTransformer) Transform(
 	_ context.Context,
 	_ core.Message,
-	_ *core.Account,
+	_ *sms.Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	return &core.HTTPRequestSpec{
 			Method:   "POST",
@@ -75,7 +75,7 @@ func TestAliyunProvider_Send_Error(t *testing.T) {
 	fakeTransformer := &fakeAliyunTransformer{url: ts.URL}
 	httpProvider := providers.NewHTTPProvider(
 		"aliyun",
-		[]*core.Account{{Name: "test", APIKey: "ak", APISecret: "sk", Disabled: false}},
+		[]*sms.Account{{BaseAccount: core.BaseAccount{AccountMeta: core.AccountMeta{Name: "test", Disabled: false}, Credentials: core.Credentials{APIKey: "ak", APISecret: "sk"}}}},
 		fakeTransformer,
 		utils.GetStrategy(core.StrategyRoundRobin),
 	)

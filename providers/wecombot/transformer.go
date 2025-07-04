@@ -11,11 +11,11 @@ import (
 	"github.com/shellvon/go-sender/utils"
 )
 
-// wecombotTransformer implements core.HTTPTransformer[*core.Account] for WeCom Bot.
+// wecombotTransformer implements core.HTTPTransformer[*Account] for WeCom Bot.
 type wecombotTransformer struct{}
 
 // newWecombotTransformer creates a new WeCom Bot transformer (stateless).
-func newWecombotTransformer() core.HTTPTransformer[*core.Account] {
+func newWecombotTransformer() core.HTTPTransformer[*Account] {
 	return &wecombotTransformer{}
 }
 
@@ -28,7 +28,7 @@ func (t *wecombotTransformer) CanTransform(msg core.Message) bool {
 func (t *wecombotTransformer) Transform(
 	_ context.Context,
 	msg core.Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	wecomMsg, ok := msg.(Message)
 	if !ok {

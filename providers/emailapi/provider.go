@@ -13,7 +13,7 @@ import (
 
 // Provider is the main emailapi provider, supporting multiple API-based email services.
 type Provider struct {
-	*providers.HTTPProvider[*core.Account]
+	*providers.HTTPProvider[*Account]
 }
 
 var _ core.Provider = (*Provider)(nil)
@@ -21,7 +21,7 @@ var _ core.Provider = (*Provider)(nil)
 // transformerRegistry global transformer registry.
 //
 //nolint:gochecknoglobals // Reason: transformerRegistry is a global registry for emailapi transformers
-var transformerRegistry = make(map[string]core.HTTPTransformer[*core.Account])
+var transformerRegistry = make(map[string]core.HTTPTransformer[*Account])
 
 // registryMutex global mutex for transformerRegistry.
 //
@@ -29,21 +29,21 @@ var transformerRegistry = make(map[string]core.HTTPTransformer[*core.Account])
 var registryMutex sync.RWMutex
 
 // RegisterTransformer registers transformer to global registry.
-func RegisterTransformer(subProvider string, transformer core.HTTPTransformer[*core.Account]) {
+func RegisterTransformer(subProvider string, transformer core.HTTPTransformer[*Account]) {
 	registryMutex.Lock()
 	defer registryMutex.Unlock()
 	transformerRegistry[subProvider] = transformer
 }
 
 // GetTransformer gets transformer from registry.
-func GetTransformer(subProvider string) (core.HTTPTransformer[*core.Account], bool) {
+func GetTransformer(subProvider string) (core.HTTPTransformer[*Account], bool) {
 	registryMutex.RLock()
 	defer registryMutex.RUnlock()
 	transformer, exists := transformerRegistry[subProvider]
 	return transformer, exists
 }
 
-// emailAPITransformer implements core.HTTPTransformer[*core.Account], selects specific transformer based on SubProvider.
+// emailAPITransformer implements core.HTTPTransformer[*Account], selects specific transformer based on SubProvider.
 type emailAPITransformer struct{}
 
 // CanTransform checks if this is an EmailAPI message.
@@ -55,7 +55,7 @@ func (t *emailAPITransformer) CanTransform(msg core.Message) bool {
 func (t *emailAPITransformer) Transform(
 	ctx context.Context,
 	msg core.Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	emailMsg, ok := msg.(*Message)
 	if !ok {
