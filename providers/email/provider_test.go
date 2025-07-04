@@ -19,7 +19,7 @@ func TestNewProvider(t *testing.T) {
 			name: "valid config",
 			config: email.Config{
 				ProviderMeta: core.ProviderMeta{},
-				Accounts: []*email.Account{
+				Items: []*email.Account{
 					{
 						BaseAccount: core.BaseAccount{
 							AccountMeta: core.AccountMeta{
@@ -42,7 +42,7 @@ func TestNewProvider(t *testing.T) {
 			name: "disabled config",
 			config: email.Config{
 				ProviderMeta: core.ProviderMeta{Disabled: true},
-				Accounts: []*email.Account{
+				Items: []*email.Account{
 					{
 						BaseAccount: core.BaseAccount{
 							AccountMeta: core.AccountMeta{
@@ -65,7 +65,7 @@ func TestNewProvider(t *testing.T) {
 			name: "no accounts",
 			config: email.Config{
 				ProviderMeta: core.ProviderMeta{},
-				Accounts:     []*email.Account{},
+				Items:        []*email.Account{},
 			},
 			wantErr: true,
 		},
@@ -73,7 +73,7 @@ func TestNewProvider(t *testing.T) {
 			name: "all accounts disabled",
 			config: email.Config{
 				ProviderMeta: core.ProviderMeta{},
-				Accounts: []*email.Account{
+				Items: []*email.Account{
 					{
 						BaseAccount: core.BaseAccount{
 							AccountMeta: core.AccountMeta{
@@ -112,7 +112,7 @@ func TestNewProvider(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			provider, err := email.New(tt.config)
+			provider, err := email.New(&tt.config)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("New() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -127,7 +127,7 @@ func TestNewProvider(t *testing.T) {
 func TestProviderName(t *testing.T) {
 	config := email.Config{
 		ProviderMeta: core.ProviderMeta{},
-		Accounts: []*email.Account{
+		Items: []*email.Account{
 			{
 				BaseAccount: core.BaseAccount{
 					AccountMeta: core.AccountMeta{
@@ -145,7 +145,7 @@ func TestProviderName(t *testing.T) {
 		},
 	}
 
-	provider, err := email.New(config)
+	provider, err := email.New(&config)
 	if err != nil {
 		t.Fatalf("Failed to create provider: %v", err)
 	}
@@ -159,7 +159,7 @@ func TestProviderName(t *testing.T) {
 func TestProviderSendInvalidMessageType(t *testing.T) {
 	config := email.Config{
 		ProviderMeta: core.ProviderMeta{},
-		Accounts: []*email.Account{
+		Items: []*email.Account{
 			{
 				BaseAccount: core.BaseAccount{
 					AccountMeta: core.AccountMeta{
@@ -177,7 +177,7 @@ func TestProviderSendInvalidMessageType(t *testing.T) {
 		},
 	}
 
-	provider, err := email.New(config)
+	provider, err := email.New(&config)
 	if err != nil {
 		t.Fatalf("Failed to create provider: %v", err)
 	}
@@ -195,7 +195,7 @@ func TestProviderSendInvalidMessageType(t *testing.T) {
 func TestProviderSendInvalidMessage(t *testing.T) {
 	config := email.Config{
 		ProviderMeta: core.ProviderMeta{},
-		Accounts: []*email.Account{
+		Items: []*email.Account{
 			{
 				BaseAccount: core.BaseAccount{
 					AccountMeta: core.AccountMeta{
@@ -213,7 +213,7 @@ func TestProviderSendInvalidMessage(t *testing.T) {
 		},
 	}
 
-	provider, err := email.New(config)
+	provider, err := email.New(&config)
 	if err != nil {
 		t.Fatalf("Failed to create provider: %v", err)
 	}
@@ -282,7 +282,7 @@ func TestAccountMethods(t *testing.T) {
 func TestConfigMethods(t *testing.T) {
 	config := email.Config{
 		ProviderMeta: core.ProviderMeta{},
-		Accounts: []*email.Account{
+		Items: []*email.Account{
 			{
 				BaseAccount: core.BaseAccount{
 					AccountMeta: core.AccountMeta{
@@ -298,24 +298,6 @@ func TestConfigMethods(t *testing.T) {
 				From: "test@example.com",
 			},
 		},
-	}
-
-	// Test IsConfigured
-	if !config.IsConfigured() {
-		t.Error("Expected IsConfigured() to return true for valid config")
-	}
-
-	// Test disabled config
-	config.Disabled = true
-	if config.IsConfigured() {
-		t.Error("Expected IsConfigured() to return false for disabled config")
-	}
-
-	// Test empty accounts
-	config.Disabled = false
-	config.Accounts = []*email.Account{}
-	if config.IsConfigured() {
-		t.Error("Expected IsConfigured() to return false for empty accounts")
 	}
 
 	// Test GetStrategy default

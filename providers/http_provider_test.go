@@ -14,16 +14,37 @@ import (
 
 // mockConfig implements core.Selectable for testing.
 type mockConfig struct {
+	Items []*mockSelectable
+}
+
+type mockSelectable struct {
 	name    string
 	enabled bool
 	typ     string
 }
 
-func (m *mockConfig) GetName() string   { return m.name }
-func (m *mockConfig) IsEnabled() bool   { return m.enabled }
-func (m *mockConfig) GetType() string   { return m.typ }
-func (m *mockConfig) GetWeight() int    { return 1 }
-func (m *mockConfig) IsAvailable() bool { return m.enabled }
+// --- core.Selectable ---
+func (m *mockSelectable) GetName() string   { return m.name }
+func (m *mockSelectable) IsEnabled() bool   { return m.enabled }
+func (m *mockSelectable) GetType() string   { return m.typ }
+func (m *mockSelectable) GetWeight() int    { return 1 }
+func (m *mockSelectable) IsAvailable() bool { return m.enabled }
+
+// --- core.ProviderConfig[*mockSelectable] ---
+func (c *mockConfig) Validate() error {
+	if len(c.Items) == 0 {
+		return errors.New("no items")
+	}
+	for _, it := range c.Items {
+		if !it.IsEnabled() {
+			return errors.New("disabled item")
+		}
+	}
+	return nil
+}
+
+func (c *mockConfig) GetItems() []*mockSelectable    { return c.Items }
+func (c *mockConfig) GetStrategy() core.StrategyType { return core.StrategyRoundRobin }
 
 // mockMessage implements core.Message for testing.
 type mockMessage struct {
@@ -42,12 +63,13 @@ type mockTransformer struct {
 	handler    core.ResponseHandler
 }
 
+// Implements core.HTTPTransformer[*mockSelectable]
 func (m *mockTransformer) CanTransform(_ core.Message) bool { return true }
 
 func (m *mockTransformer) Transform(
 	_ context.Context,
 	_ core.Message,
-	_ *mockConfig,
+	_ *mockSelectable,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	if m.shouldFail {
 		return nil, nil, errors.New("transform failed")
@@ -56,14 +78,17 @@ func (m *mockTransformer) Transform(
 }
 
 func TestNewHTTPProvider(t *testing.T) {
-	configs := []*mockConfig{
-		{name: "test1", enabled: true, typ: "type1"},
-		{name: "test2", enabled: true, typ: "type2"},
+	config := &core.BaseConfig[*mockSelectable]{
+		Items: []*mockSelectable{
+			{name: "test1", enabled: true, typ: "type1"},
+			{name: "test2", enabled: true, typ: "type2"},
+		},
 	}
 	transformer := &mockTransformer{}
-	strategy := &core.RoundRobinStrategy{}
-
-	provider := providers.NewHTTPProvider("test-provider", configs, transformer, strategy)
+	provider, err := providers.NewHTTPProvider("test-provider", transformer, config)
+	if err != nil {
+		t.Fatalf("unexpected error creating provider: %v", err)
+	}
 
 	if provider.Name() != "test-provider" {
 		t.Errorf("Expected name 'test-provider', got '%s'", provider.Name())
@@ -84,8 +109,10 @@ func TestHTTPProvider_Send_SingleConfig(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	configs := []*mockConfig{
-		{name: "test", enabled: true, typ: "type1"},
+	config := &core.BaseConfig[*mockSelectable]{
+		Items: []*mockSelectable{
+			{name: "test", enabled: true, typ: "type1"},
+		},
 	}
 
 	reqSpec := &core.HTTPRequestSpec{
@@ -105,56 +132,49 @@ func TestHTTPProvider_Send_SingleConfig(t *testing.T) {
 		},
 	}
 
-	provider := providers.NewHTTPProvider("test-provider", configs, transformer, &core.RoundRobinStrategy{})
+	provider, err := providers.NewHTTPProvider[*mockSelectable]("test-provider", transformer, config)
+	if err != nil {
+		t.Fatalf("unexpected error creating provider: %v", err)
+	}
 	msg := &mockMessage{}
 
-	err := provider.Send(context.Background(), msg, nil)
+	err = provider.Send(context.Background(), msg, nil)
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
 }
 
 func TestHTTPProvider_Send_NoConfigs(t *testing.T) {
-	configs := []*mockConfig{}
+	config := &core.BaseConfig[*mockSelectable]{Items: []*mockSelectable{}}
 	transformer := &mockTransformer{}
-	provider := providers.NewHTTPProvider("test-provider", configs, transformer, &core.RoundRobinStrategy{})
-	msg := &mockMessage{}
 
-	err := provider.Send(context.Background(), msg, nil)
+	_, err := providers.NewHTTPProvider[*mockSelectable]("test-provider", transformer, config)
 	if err == nil {
 		t.Error("Expected error for no configs, got nil")
-	}
-	if err.Error() != "no available config" {
-		t.Errorf("Expected 'no available config' error, got '%s'", err.Error())
 	}
 }
 
 func TestHTTPProvider_Send_DisabledConfig(t *testing.T) {
-	configs := []*mockConfig{
-		{name: "test", enabled: false, typ: "type1"},
-	}
+	config := &core.BaseConfig[*mockSelectable]{Items: []*mockSelectable{{name: "test", enabled: false, typ: "type1"}}}
 	transformer := &mockTransformer{}
-	provider := providers.NewHTTPProvider("test-provider", configs, transformer, &core.RoundRobinStrategy{})
-	msg := &mockMessage{}
 
-	err := provider.Send(context.Background(), msg, nil)
+	_, err := providers.NewHTTPProvider[*mockSelectable]("test-provider", transformer, config)
 	if err == nil {
 		t.Error("Expected error for disabled config, got nil")
-	}
-	if err.Error() != "the selected account is disabled" {
-		t.Errorf("Expected 'the selected account is disabled' error, got '%s'", err.Error())
 	}
 }
 
 func TestHTTPProvider_Send_TransformFailure(t *testing.T) {
-	configs := []*mockConfig{
-		{name: "test", enabled: true, typ: "type1"},
-	}
+	config := &core.BaseConfig[*mockSelectable]{Items: []*mockSelectable{{name: "test", enabled: true, typ: "type1"}}}
 	transformer := &mockTransformer{shouldFail: true}
-	provider := providers.NewHTTPProvider("test-provider", configs, transformer, &core.RoundRobinStrategy{})
+
+	provider, err := providers.NewHTTPProvider[*mockSelectable]("test-provider", transformer, config)
+	if err != nil {
+		t.Fatalf("unexpected error creating provider: %v", err)
+	}
 	msg := &mockMessage{}
 
-	err := provider.Send(context.Background(), msg, nil)
+	err = provider.Send(context.Background(), msg, nil)
 	if err == nil {
 		t.Error("Expected error for transform failure, got nil")
 	}
@@ -186,11 +206,14 @@ func TestHTTPProvider_ExecuteHTTPRequest_WithQueryParams(t *testing.T) {
 	}
 
 	transformer := &mockTransformer{reqSpec: reqSpec}
-	configs := []*mockConfig{{name: "test", enabled: true, typ: "type1"}}
-	provider := providers.NewHTTPProvider("test-provider", configs, transformer, &core.RoundRobinStrategy{})
+	config := &core.BaseConfig[*mockSelectable]{Items: []*mockSelectable{{name: "test", enabled: true, typ: "type1"}}}
+	provider, err := providers.NewHTTPProvider[*mockSelectable]("test-provider", transformer, config)
+	if err != nil {
+		t.Fatalf("unexpected error creating provider: %v", err)
+	}
 	msg := &mockMessage{}
 
-	err := provider.Send(context.Background(), msg, nil)
+	err = provider.Send(context.Background(), msg, nil)
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
@@ -205,11 +228,14 @@ func TestHTTPProvider_ExecuteHTTPRequest_InvalidURL(t *testing.T) {
 	}
 
 	transformer := &mockTransformer{reqSpec: reqSpec}
-	configs := []*mockConfig{{name: "test", enabled: true, typ: "type1"}}
-	provider := providers.NewHTTPProvider("test-provider", configs, transformer, &core.RoundRobinStrategy{})
+	config := &core.BaseConfig[*mockSelectable]{Items: []*mockSelectable{{name: "test", enabled: true, typ: "type1"}}}
+	provider, err := providers.NewHTTPProvider[*mockSelectable]("test-provider", transformer, config)
+	if err != nil {
+		t.Fatalf("unexpected error creating provider: %v", err)
+	}
 	msg := &mockMessage{}
 
-	err := provider.Send(context.Background(), msg, nil)
+	err = provider.Send(context.Background(), msg, nil)
 	if err == nil {
 		t.Error("Expected error for invalid URL, got nil")
 	}
@@ -231,11 +257,14 @@ func TestHTTPProvider_ExecuteHTTPRequest_HTTPFailure(t *testing.T) {
 	}
 
 	transformer := &mockTransformer{reqSpec: reqSpec}
-	configs := []*mockConfig{{name: "test", enabled: true, typ: "type1"}}
-	provider := providers.NewHTTPProvider("test-provider", configs, transformer, &core.RoundRobinStrategy{})
+	config := &core.BaseConfig[*mockSelectable]{Items: []*mockSelectable{{name: "test", enabled: true, typ: "type1"}}}
+	provider, err := providers.NewHTTPProvider[*mockSelectable]("test-provider", transformer, config)
+	if err != nil {
+		t.Fatalf("unexpected error creating provider: %v", err)
+	}
 	msg := &mockMessage{}
 
-	err := provider.Send(context.Background(), msg, nil)
+	err = provider.Send(context.Background(), msg, nil)
 	if err == nil {
 		t.Error("Expected error for HTTP failure, got nil")
 	}
@@ -273,15 +302,28 @@ func TestHTTPProvider_ExecuteHTTPRequest_CustomHandler(t *testing.T) {
 		reqSpec: reqSpec,
 		handler: customHandler,
 	}
-	configs := []*mockConfig{{name: "test", enabled: true, typ: "type1"}}
-	provider := providers.NewHTTPProvider("test-provider", configs, transformer, &core.RoundRobinStrategy{})
+	config := &core.BaseConfig[*mockSelectable]{Items: []*mockSelectable{{name: "test", enabled: true, typ: "type1"}}}
+	provider, err := providers.NewHTTPProvider[*mockSelectable]("test-provider", transformer, config)
+	if err != nil {
+		t.Fatalf("unexpected error creating provider: %v", err)
+	}
 	msg := &mockMessage{}
 
-	err := provider.Send(context.Background(), msg, nil)
+	err = provider.Send(context.Background(), msg, nil)
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
 	if !customHandlerCalled {
 		t.Error("Expected custom handler to be called")
+	}
+}
+
+func TestHTTPProvider_New_AllDisabled(t *testing.T) {
+	config := &core.BaseConfig[*mockSelectable]{Items: []*mockSelectable{{name: "test", enabled: false, typ: "type1"}}}
+	transformer := &mockTransformer{}
+
+	_, err := providers.NewHTTPProvider[*mockSelectable]("test-provider", transformer, config)
+	if err == nil {
+		t.Error("Expected error when all configs are disabled, got nil")
 	}
 }

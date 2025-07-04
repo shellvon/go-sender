@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -16,6 +15,8 @@ import (
 	"github.com/shellvon/go-sender/providers"
 	"github.com/shellvon/go-sender/utils"
 )
+
+type Config = core.BaseConfig[*Account]
 
 // uploadTarget abstracts Voice/File messages that need auto media upload.
 type uploadTarget interface {
@@ -33,32 +34,16 @@ type Provider struct {
 var _ core.Provider = (*Provider)(nil)
 
 // New creates a new WeCom Bot provider instance.
-func New(config Config) (*Provider, error) {
-	if !config.IsConfigured() {
-		return nil, errors.New("wecombot provider is not configured or is disabled")
-	}
-
-	accounts := config.Accounts
-
-	// Use common initialization logic
-	enabledAccounts, _, err := utils.InitProvider(&config, accounts)
-	if err != nil {
-		return nil, errors.New("no enabled wecombot accounts found")
-	}
-
-	strategy := utils.GetStrategy(config.Strategy)
-
-	// Create generic provider
-	httpProvider := providers.NewHTTPProvider(
+func New(config *Config) (*Provider, error) {
+	httpProvider, err := providers.NewHTTPProvider(
 		string(core.ProviderTypeWecombot),
-		enabledAccounts,
 		newWecombotTransformer(),
-		strategy,
+		config,
 	)
-
-	return &Provider{
-		HTTPProvider: httpProvider,
-	}, nil
+	if err != nil {
+		return nil, err
+	}
+	return &Provider{HTTPProvider: httpProvider}, nil
 }
 
 func (p *Provider) Name() string {
@@ -102,9 +87,10 @@ func (p *Provider) uploadMediaType(
 	reader io.Reader,
 	httpClient *http.Client,
 ) (string, *Account, error) {
-	selectedAccount := p.SelectConfig(ctx)
-	if selectedAccount == nil {
-		return "", nil, errors.New("no available account")
+
+	selectedAccount, err := p.Select(ctx, nil)
+	if err != nil {
+		return "", nil, err
 	}
 
 	uploadURL := fmt.Sprintf(

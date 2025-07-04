@@ -60,7 +60,7 @@ func runTelegramDemo() {
 		return
 	}
 	cfg := telegram.Config{
-		Accounts: []*telegram.Account{{
+		Items: []*telegram.Account{{
 			BaseAccount: core.BaseAccount{
 				AccountMeta: core.AccountMeta{
 					Name: "default",
@@ -71,7 +71,7 @@ func runTelegramDemo() {
 			},
 		}},
 	}
-	prov, err := telegram.New(cfg)
+	prov, err := telegram.New(&cfg)
 	if err != nil {
 		log.Println("Init telegram provider failed:", err)
 		return
@@ -121,7 +121,7 @@ func runEmailDemo() {
 		return
 	}
 	cfg := email.Config{
-		Accounts: []*email.Account{{
+		Items: []*email.Account{{
 			BaseAccount: core.BaseAccount{
 				AccountMeta: core.AccountMeta{
 					Name: "default",
@@ -136,7 +136,7 @@ func runEmailDemo() {
 			From: user,
 		}},
 	}
-	prov, err := email.New(cfg)
+	prov, err := email.New(&cfg)
 	if err != nil {
 		log.Println("Init email provider failed:", err)
 		return
@@ -256,7 +256,7 @@ func runSMSDemo() {
 		return
 	}
 	cfg := sms.Config{
-		Accounts: []*sms.Account{{
+		Items: []*sms.Account{{
 			BaseAccount: core.BaseAccount{
 				AccountMeta: core.AccountMeta{
 					Name:    "default",
@@ -269,7 +269,7 @@ func runSMSDemo() {
 			},
 		}},
 	}
-	prov, err := sms.New(cfg)
+	prov, err := sms.New(&cfg)
 	if err != nil {
 		log.Println("Init sms provider failed:", err)
 		return

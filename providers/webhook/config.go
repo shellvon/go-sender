@@ -1,6 +1,8 @@
 package webhook
 
 import (
+	"errors"
+
 	"github.com/shellvon/go-sender/core"
 )
 
@@ -10,11 +12,7 @@ import (
 //   - Endpoint directly contains URL, Method, Headers and other webhook-specific configurations
 //   - This design better fits the webhook usage scenario
 //   - Endpoint implements core.Selectable interface to maintain architectural compatibility
-type Config struct {
-	core.ProviderMeta
-
-	Endpoints []*Endpoint `json:"endpoints"` // Multiple webhook endpoints configuration
-}
+type Config = core.BaseConfig[*Endpoint]
 
 // Endpoint represents a single webhook endpoint configuration.
 type Endpoint struct {
@@ -30,8 +28,9 @@ type Endpoint struct {
 	ResponseConfig *ResponseConfig `json:"response_config,omitempty"` // Response handling configuration
 }
 
-// Endpoint implements core.Selectable.
+// Endpoint implements core.Selectable and core.Validatable.
 var _ core.Selectable = (*Endpoint)(nil)
+var _ core.Validatable = (*Endpoint)(nil)
 
 // ResponseConfig defines how to handle webhook responses.
 type ResponseConfig struct {
@@ -55,11 +54,6 @@ type ResponseConfig struct {
 	ErrorPattern   string `json:"error_pattern,omitempty"`   // Regex pattern for error response
 }
 
-// IsConfigured checks if the Webhook configuration is valid.
-func (c Config) IsConfigured() bool {
-	return !c.IsDisabled() && len(c.Endpoints) > 0
-}
-
 // IsEnabled checks if the endpoint is enabled.
 func (e *Endpoint) IsEnabled() bool {
 	return !e.Disabled
@@ -81,4 +75,15 @@ func (e *Endpoint) GetWeight() int {
 // GetType returns the subprovider type of this endpoint.
 func (e *Endpoint) GetType() string {
 	return "" // Webhook endpoints don't have subprovider types
+}
+
+// Validate validates the endpoint configuration.
+func (e *Endpoint) Validate() error {
+	if e.Name == "" {
+		return errors.New("name is required")
+	}
+	if e.URL == "" {
+		return errors.New("url is required")
+	}
+	return nil
 }

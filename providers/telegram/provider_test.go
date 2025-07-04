@@ -42,7 +42,7 @@ func (rt rewriteRoundTripper) RoundTrip(req *http.Request) (*http.Response, erro
 
 func TestNewProvider(t *testing.T) {
 	config := telegram.Config{
-		Accounts: []*telegram.Account{
+		Items: []*telegram.Account{
 			{
 				Name:   "test",
 				APIKey: "bot123:token",
@@ -50,7 +50,7 @@ func TestNewProvider(t *testing.T) {
 		},
 	}
 
-	provider, err := telegram.New(config)
+	provider, err := telegram.New(&config)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -67,7 +67,7 @@ func TestNewProvider(t *testing.T) {
 func TestNewProvider_NotConfigured(t *testing.T) {
 	config := telegram.Config{}
 
-	_, err := telegram.New(config)
+	_, err := telegram.New(&config)
 	if err == nil {
 		t.Error("Expected error for not configured, got nil")
 	}
@@ -82,7 +82,7 @@ func TestNewProvider_NotConfigured(t *testing.T) {
 func TestNewProvider_Disabled(t *testing.T) {
 	config := telegram.Config{
 		ProviderMeta: core.ProviderMeta{Disabled: true},
-		Accounts: []*telegram.Account{
+		Items: []*telegram.Account{
 			{
 				Name:   "test",
 				APIKey: "bot123:token",
@@ -90,7 +90,7 @@ func TestNewProvider_Disabled(t *testing.T) {
 		},
 	}
 
-	_, err := telegram.New(config)
+	_, err := telegram.New(&config)
 	if err == nil {
 		t.Error("Expected error for disabled config, got nil")
 	}
@@ -104,7 +104,7 @@ func TestNewProvider_Disabled(t *testing.T) {
 
 func TestNewProvider_NoEnabledAccounts(t *testing.T) {
 	config := telegram.Config{
-		Accounts: []*telegram.Account{
+		Items: []*telegram.Account{
 			{
 				Name:     "test",
 				APIKey:   "bot123:token",
@@ -113,12 +113,9 @@ func TestNewProvider_NoEnabledAccounts(t *testing.T) {
 		},
 	}
 
-	_, err := telegram.New(config)
+	_, err := telegram.New(&config)
 	if err == nil {
 		t.Error("Expected error for no enabled accounts, got nil")
-	}
-	if !strings.Contains(err.Error(), "no enabled telegram accounts found") {
-		t.Errorf("Expected error to contain 'no enabled telegram accounts found', got '%s'", err.Error())
 	}
 }
 
@@ -132,7 +129,7 @@ func TestProvider_Send_Success(t *testing.T) {
 	defer ts.Close()
 
 	config := telegram.Config{
-		Accounts: []*telegram.Account{
+		Items: []*telegram.Account{
 			{
 				Name:   "test",
 				APIKey: "bot123:token",
@@ -140,7 +137,7 @@ func TestProvider_Send_Success(t *testing.T) {
 		},
 	}
 
-	provider, err := telegram.New(config)
+	provider, err := telegram.New(&config)
 	if err != nil {
 		t.Fatalf("Failed to create provider: %v", err)
 	}
@@ -177,7 +174,7 @@ func TestProvider_Send_WithOptions(t *testing.T) {
 	defer ts.Close()
 
 	config := telegram.Config{
-		Accounts: []*telegram.Account{
+		Items: []*telegram.Account{
 			{
 				Name:   "test",
 				APIKey: "bot123:token",
@@ -185,7 +182,7 @@ func TestProvider_Send_WithOptions(t *testing.T) {
 		},
 	}
 
-	provider, err := telegram.New(config)
+	provider, err := telegram.New(&config)
 	if err != nil {
 		t.Fatalf("Failed to create provider: %v", err)
 	}
@@ -220,7 +217,7 @@ func TestProvider_Send_HTTPFailure(t *testing.T) {
 	defer ts.Close()
 
 	config := telegram.Config{
-		Accounts: []*telegram.Account{
+		Items: []*telegram.Account{
 			{
 				Name:   "test",
 				APIKey: "bot123:token",
@@ -228,7 +225,7 @@ func TestProvider_Send_HTTPFailure(t *testing.T) {
 		},
 	}
 
-	provider, err := telegram.New(config)
+	provider, err := telegram.New(&config)
 	if err != nil {
 		t.Fatalf("Failed to create provider: %v", err)
 	}
@@ -250,7 +247,7 @@ func TestProvider_Send_HTTPFailure(t *testing.T) {
 
 func TestProvider_Send_InvalidMessageType(t *testing.T) {
 	config := telegram.Config{
-		Accounts: []*telegram.Account{
+		Items: []*telegram.Account{
 			{
 				Name:   "test",
 				APIKey: "bot123:token",
@@ -258,7 +255,7 @@ func TestProvider_Send_InvalidMessageType(t *testing.T) {
 		},
 	}
 
-	provider, err := telegram.New(config)
+	provider, err := telegram.New(&config)
 	if err != nil {
 		t.Fatalf("Failed to create provider: %v", err)
 	}
@@ -273,7 +270,7 @@ func TestProvider_Send_InvalidMessageType(t *testing.T) {
 
 func TestProvider_Send_InvalidMessage(t *testing.T) {
 	config := telegram.Config{
-		Accounts: []*telegram.Account{
+		Items: []*telegram.Account{
 			{
 				Name:   "test",
 				APIKey: "bot123:token",
@@ -281,7 +278,7 @@ func TestProvider_Send_InvalidMessage(t *testing.T) {
 		},
 	}
 
-	provider, err := telegram.New(config)
+	provider, err := telegram.New(&config)
 	if err != nil {
 		t.Fatalf("Failed to create provider: %v", err)
 	}

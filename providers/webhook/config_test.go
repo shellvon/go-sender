@@ -3,58 +3,8 @@ package webhook_test
 import (
 	"testing"
 
-	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/providers/webhook"
 )
-
-func TestConfig_IsConfigured(t *testing.T) {
-	tests := []struct {
-		name     string
-		config   webhook.Config
-		expected bool
-	}{
-		{
-			name: "valid config",
-			config: webhook.Config{
-				Endpoints: []*webhook.Endpoint{
-					{Name: "test", URL: "https://example.com/webhook"},
-				},
-			},
-			expected: true,
-		},
-		{
-			name:     "empty config",
-			config:   webhook.Config{},
-			expected: false,
-		},
-		{
-			name: "disabled config",
-			config: webhook.Config{
-				ProviderMeta: core.ProviderMeta{Disabled: true},
-				Endpoints: []*webhook.Endpoint{
-					{Name: "test", URL: "https://example.com/webhook"},
-				},
-			},
-			expected: false,
-		},
-		{
-			name: "no endpoints",
-			config: webhook.Config{
-				Endpoints: []*webhook.Endpoint{},
-			},
-			expected: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := tt.config.IsConfigured()
-			if result != tt.expected {
-				t.Errorf("Expected IsConfigured() to be %v, got %v", tt.expected, result)
-			}
-		})
-	}
-}
 
 func TestEndpoint_IsEnabled(t *testing.T) {
 	tests := []struct {

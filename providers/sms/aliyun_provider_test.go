@@ -10,7 +10,6 @@ import (
 	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/providers"
 	"github.com/shellvon/go-sender/providers/sms"
-	"github.com/shellvon/go-sender/utils"
 )
 
 func TestAliyunProvider_Send_Success(t *testing.T) {
@@ -23,9 +22,8 @@ func TestAliyunProvider_Send_Success(t *testing.T) {
 	defer ts.Close()
 
 	fakeTransformer := &fakeAliyunTransformer{url: ts.URL}
-	httpProvider := providers.NewHTTPProvider(
-		"aliyun",
-		[]*sms.Account{
+	config := &sms.Config{
+		Items: []*sms.Account{
 			{
 				BaseAccount: core.BaseAccount{
 					AccountMeta: core.AccountMeta{Name: "test", Disabled: false},
@@ -33,16 +31,22 @@ func TestAliyunProvider_Send_Success(t *testing.T) {
 				},
 			},
 		},
+	}
+	httpProvider, err := providers.NewHTTPProvider[*sms.Account](
+		"aliyun",
 		fakeTransformer,
-		utils.GetStrategy(core.StrategyRoundRobin),
+		config,
 	)
+	if err != nil {
+		t.Fatalf("failed to create HTTP provider: %v", err)
+	}
 	p := &sms.Provider{HTTPProvider: httpProvider}
 	msg := sms.Aliyun()
 	msg.To("13800138000")
 	msg.Content("hi")
 	msg.SignName("sign")
 	builtMsg := msg.Build()
-	err := p.Send(context.Background(), builtMsg, &core.ProviderSendOptions{})
+	err = p.Send(context.Background(), builtMsg, &core.ProviderSendOptions{})
 	if err != nil {
 		t.Errorf("Send should succeed: %v", err)
 	}
@@ -80,9 +84,8 @@ func TestAliyunProvider_Send_Error(t *testing.T) {
 	defer ts.Close()
 
 	fakeTransformer := &fakeAliyunTransformer{url: ts.URL}
-	httpProvider := providers.NewHTTPProvider(
-		"aliyun",
-		[]*sms.Account{
+	config := &sms.Config{
+		Items: []*sms.Account{
 			{
 				BaseAccount: core.BaseAccount{
 					AccountMeta: core.AccountMeta{Name: "test", Disabled: false},
@@ -90,16 +93,22 @@ func TestAliyunProvider_Send_Error(t *testing.T) {
 				},
 			},
 		},
+	}
+	httpProvider, err := providers.NewHTTPProvider[*sms.Account](
+		"aliyun",
 		fakeTransformer,
-		utils.GetStrategy(core.StrategyRoundRobin),
+		config,
 	)
+	if err != nil {
+		t.Fatalf("failed to create HTTP provider: %v", err)
+	}
 	p := &sms.Provider{HTTPProvider: httpProvider}
 	msg := sms.Aliyun()
 	msg.To("13800138000")
 	msg.Content("hi")
 	msg.SignName("sign")
 	builtMsg := msg.Build()
-	err := p.Send(context.Background(), builtMsg, &core.ProviderSendOptions{})
+	err = p.Send(context.Background(), builtMsg, &core.ProviderSendOptions{})
 	if err == nil {
 		t.Error("Send should fail when HTTPProvider returns error")
 	}

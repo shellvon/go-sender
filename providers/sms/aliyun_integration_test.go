@@ -11,7 +11,6 @@ import (
 	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/providers"
 	"github.com/shellvon/go-sender/providers/sms"
-	"github.com/shellvon/go-sender/utils"
 )
 
 func TestAliyun_Integration_SendTextSMS(t *testing.T) {
@@ -23,7 +22,7 @@ func TestAliyun_Integration_SendTextSMS(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	acc := &sms.Account{BaseAccount: core.BaseAccount{Credentials: core.Credentials{APIKey: "ak", APISecret: "sk"}}}
+	acc := &sms.Account{BaseAccount: core.BaseAccount{AccountMeta: core.AccountMeta{Name: "test"}, Credentials: core.Credentials{APIKey: "ak", APISecret: "sk"}}}
 	msg := sms.Aliyun()
 	msg.To("13800138000")
 	msg.Content("hi")
@@ -100,17 +99,24 @@ func TestSender_DispatchToAliyun_EndToEnd(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	acc := &sms.Account{BaseAccount: core.BaseAccount{Credentials: core.Credentials{APIKey: "ak", APISecret: "sk"}}}
+	acc := &sms.Account{BaseAccount: core.BaseAccount{AccountMeta: core.AccountMeta{Name: "test"}, Credentials: core.Credentials{APIKey: "ak", APISecret: "sk"}}}
 	tr, ok := sms.GetTransformer("aliyun")
 	if !ok {
 		t.Fatal("Aliyun transformer not registered")
 	}
-	httpProvider := providers.NewHTTPProvider(
+	httpProvider, err := providers.NewHTTPProvider(
 		"aliyun",
-		[]*sms.Account{acc},
 		tr,
-		utils.GetStrategy(core.StrategyRoundRobin),
+		&sms.Config{
+			Items: []*sms.Account{acc},
+			ProviderMeta: core.ProviderMeta{
+				Strategy: core.StrategyRoundRobin,
+			},
+		},
 	)
+	if err != nil {
+		t.Fatalf("failed to create HTTP provider: %v", err)
+	}
 	aliyunProvider := &sms.Provider{HTTPProvider: httpProvider}
 
 	sender := gosender.NewSender()
@@ -130,7 +136,7 @@ func TestSender_DispatchToAliyun_EndToEnd(t *testing.T) {
 		TemplateID("SMS_123456").
 		Build()
 
-	err := sender.Send(context.Background(), msg)
+	err = sender.Send(context.Background(), msg)
 	if err != nil {
 		t.Fatalf("Send failed: %v", err)
 	}

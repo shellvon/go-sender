@@ -1,12 +1,11 @@
 package lark
 
 import (
-	"errors"
-
 	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/providers"
-	"github.com/shellvon/go-sender/utils"
 )
+
+type Config = core.BaseConfig[*Account]
 
 // Provider implements the Lark provider using generic base.
 type Provider struct {
@@ -16,32 +15,16 @@ type Provider struct {
 var _ core.Provider = (*Provider)(nil)
 
 // New creates a new Lark provider instance.
-func New(config Config) (*Provider, error) {
-	if !config.IsConfigured() {
-		return nil, errors.New("lark provider is not configured or is disabled")
-	}
-
-	accounts := config.Accounts
-
-	enabledAccounts, _, err := utils.InitProvider(&config, accounts)
-	if err != nil {
-		return nil, errors.New("no enabled lark accounts found")
-	}
-
-	// Get strategy
-	strategy := utils.GetStrategy(config.GetStrategy())
-
-	// Create generic provider
-	httpProvider := providers.NewHTTPProvider(
+func New(config *Config) (*Provider, error) {
+	httpProvider, err := providers.NewHTTPProvider(
 		string(core.ProviderTypeLark),
-		enabledAccounts,
 		newLarkTransformer(),
-		strategy,
+		config,
 	)
-
-	return &Provider{
-		HTTPProvider: httpProvider,
-	}, nil
+	if err != nil {
+		return nil, err
+	}
+	return &Provider{HTTPProvider: httpProvider}, nil
 }
 
 // Name returns the provider name.
