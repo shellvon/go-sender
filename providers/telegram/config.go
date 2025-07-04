@@ -6,9 +6,9 @@ import (
 
 // Config holds configuration for the Telegram provider.
 type Config struct {
-	core.BaseConfig
+	core.ProviderMeta
 
-	Accounts []core.Account `json:"accounts"` // Multiple account configurations
+	Accounts []*Account `json:"accounts"` // Multiple account configurations
 }
 
 // IsConfigured checks if the Telegram configuration is valid.

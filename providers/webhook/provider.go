@@ -21,12 +21,7 @@ func New(config Config) (*Provider, error) {
 		return nil, errors.New("webhook provider is not configured or is disabled")
 	}
 
-	endpoints := make([]*Endpoint, len(config.Endpoints))
-	for i := range config.Endpoints {
-		endpoints[i] = &config.Endpoints[i]
-	}
-
-	enabledEndpoints, _, err := utils.InitProvider(&config, endpoints)
+	enabledEndpoints, _, err := utils.InitProvider(&config, config.Endpoints)
 	if err != nil {
 		return nil, errors.New("no enabled webhook endpoints found")
 	}

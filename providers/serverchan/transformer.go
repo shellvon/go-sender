@@ -12,14 +12,14 @@ import (
 	"github.com/shellvon/go-sender/utils"
 )
 
-// serverchanTransformer 实现 core.HTTPTransformer[*core.Account]，用于 ServerChan 消息
+// serverchanTransformer 实现 core.HTTPTransformer[*Account]，用于 ServerChan 消息
 // 详见API文档：https://sct.ftqq.com/sendkey
 
 type serverchanTransformer struct{}
 
 // newTransformer 创建 ServerChan 的 transformer 实例
-// 返回实现 core.HTTPTransformer[*core.Account] 的 serverchanTransformer.
-func newTransformer() core.HTTPTransformer[*core.Account] {
+// 返回实现 core.HTTPTransformer[*Account] 的 serverchanTransformer.
+func newTransformer() core.HTTPTransformer[*Account] {
 	return &serverchanTransformer{}
 }
 
@@ -41,7 +41,7 @@ func (t *serverchanTransformer) CanTransform(msg core.Message) bool {
 func (t *serverchanTransformer) Transform(
 	_ context.Context,
 	msg core.Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	scMsg, ok := msg.(*Message)
 	if !ok {

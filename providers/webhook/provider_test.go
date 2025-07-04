@@ -26,7 +26,7 @@ func (m *invalidMessage) Validate() error {
 
 func TestNewProvider(t *testing.T) {
 	config := webhook.Config{
-		Endpoints: []webhook.Endpoint{
+		Endpoints: []*webhook.Endpoint{
 			{
 				Name:   "test",
 				URL:    "https://example.com/webhook",
@@ -63,8 +63,8 @@ func TestNewProvider_NotConfigured(t *testing.T) {
 
 func TestNewProvider_Disabled(t *testing.T) {
 	config := webhook.Config{
-		BaseConfig: core.BaseConfig{Disabled: true},
-		Endpoints: []webhook.Endpoint{
+		ProviderMeta: core.ProviderMeta{Disabled: true},
+		Endpoints: []*webhook.Endpoint{
 			{
 				Name:   "test",
 				URL:    "https://example.com/webhook",
@@ -84,7 +84,7 @@ func TestNewProvider_Disabled(t *testing.T) {
 
 func TestNewProvider_NoEnabledEndpoints(t *testing.T) {
 	config := webhook.Config{
-		Endpoints: []webhook.Endpoint{
+		Endpoints: []*webhook.Endpoint{
 			{
 				Name:     "test",
 				URL:      "https://example.com/webhook",
@@ -113,7 +113,7 @@ func TestProvider_Send_Success(t *testing.T) {
 	defer ts.Close()
 
 	config := webhook.Config{
-		Endpoints: []webhook.Endpoint{
+		Endpoints: []*webhook.Endpoint{
 			{
 				Name:   "test",
 				URL:    ts.URL,
@@ -151,7 +151,7 @@ func TestProvider_Send_WithPathParams(t *testing.T) {
 	defer ts.Close()
 
 	config := webhook.Config{
-		Endpoints: []webhook.Endpoint{
+		Endpoints: []*webhook.Endpoint{
 			{
 				Name:   "test",
 				URL:    ts.URL + "/webhook/{type}/{id}",
@@ -187,7 +187,7 @@ func TestProvider_Send_WithQueryParams(t *testing.T) {
 	defer ts.Close()
 
 	config := webhook.Config{
-		Endpoints: []webhook.Endpoint{
+		Endpoints: []*webhook.Endpoint{
 			{
 				Name:   "test",
 				URL:    ts.URL,
@@ -222,7 +222,7 @@ func TestProvider_Send_WithMethodOverride(t *testing.T) {
 	defer ts.Close()
 
 	config := webhook.Config{
-		Endpoints: []webhook.Endpoint{
+		Endpoints: []*webhook.Endpoint{
 			{
 				Name:   "test",
 				URL:    ts.URL,
@@ -251,7 +251,7 @@ func TestProvider_Send_HTTPFailure(t *testing.T) {
 	defer ts.Close()
 
 	config := webhook.Config{
-		Endpoints: []webhook.Endpoint{
+		Endpoints: []*webhook.Endpoint{
 			{
 				Name:   "test",
 				URL:    ts.URL,
@@ -281,7 +281,7 @@ func TestProvider_Send_JSONResponseValidation(t *testing.T) {
 	defer ts.Close()
 
 	config := webhook.Config{
-		Endpoints: []webhook.Endpoint{
+		Endpoints: []*webhook.Endpoint{
 			{
 				Name:   "test",
 				URL:    ts.URL,
@@ -310,7 +310,7 @@ func TestProvider_Send_JSONResponseValidation(t *testing.T) {
 
 func TestProvider_Send_InvalidMessageType(t *testing.T) {
 	config := webhook.Config{
-		Endpoints: []webhook.Endpoint{
+		Endpoints: []*webhook.Endpoint{
 			{
 				Name:   "test",
 				URL:    "https://example.com/webhook",

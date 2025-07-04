@@ -42,7 +42,7 @@ func (rt rewriteRoundTripper) RoundTrip(req *http.Request) (*http.Response, erro
 
 func TestNewProvider(t *testing.T) {
 	config := telegram.Config{
-		Accounts: []core.Account{
+		Accounts: []*telegram.Account{
 			{
 				Name:   "test",
 				APIKey: "bot123:token",
@@ -81,8 +81,8 @@ func TestNewProvider_NotConfigured(t *testing.T) {
 
 func TestNewProvider_Disabled(t *testing.T) {
 	config := telegram.Config{
-		BaseConfig: core.BaseConfig{Disabled: true},
-		Accounts: []core.Account{
+		ProviderMeta: core.ProviderMeta{Disabled: true},
+		Accounts: []*telegram.Account{
 			{
 				Name:   "test",
 				APIKey: "bot123:token",
@@ -104,7 +104,7 @@ func TestNewProvider_Disabled(t *testing.T) {
 
 func TestNewProvider_NoEnabledAccounts(t *testing.T) {
 	config := telegram.Config{
-		Accounts: []core.Account{
+		Accounts: []*telegram.Account{
 			{
 				Name:     "test",
 				APIKey:   "bot123:token",
@@ -132,7 +132,7 @@ func TestProvider_Send_Success(t *testing.T) {
 	defer ts.Close()
 
 	config := telegram.Config{
-		Accounts: []core.Account{
+		Accounts: []*telegram.Account{
 			{
 				Name:   "test",
 				APIKey: "bot123:token",
@@ -177,7 +177,7 @@ func TestProvider_Send_WithOptions(t *testing.T) {
 	defer ts.Close()
 
 	config := telegram.Config{
-		Accounts: []core.Account{
+		Accounts: []*telegram.Account{
 			{
 				Name:   "test",
 				APIKey: "bot123:token",
@@ -220,7 +220,7 @@ func TestProvider_Send_HTTPFailure(t *testing.T) {
 	defer ts.Close()
 
 	config := telegram.Config{
-		Accounts: []core.Account{
+		Accounts: []*telegram.Account{
 			{
 				Name:   "test",
 				APIKey: "bot123:token",
@@ -250,7 +250,7 @@ func TestProvider_Send_HTTPFailure(t *testing.T) {
 
 func TestProvider_Send_InvalidMessageType(t *testing.T) {
 	config := telegram.Config{
-		Accounts: []core.Account{
+		Accounts: []*telegram.Account{
 			{
 				Name:   "test",
 				APIKey: "bot123:token",
@@ -273,7 +273,7 @@ func TestProvider_Send_InvalidMessageType(t *testing.T) {
 
 func TestProvider_Send_InvalidMessage(t *testing.T) {
 	config := telegram.Config{
-		Accounts: []core.Account{
+		Accounts: []*telegram.Account{
 			{
 				Name:   "test",
 				APIKey: "bot123:token",

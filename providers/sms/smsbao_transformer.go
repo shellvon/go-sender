@@ -52,7 +52,7 @@ func (t *smsbaoTransformer) CanTransform(msg core.Message) bool {
 func (t *smsbaoTransformer) Transform(
 	ctx context.Context,
 	msg core.Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
@@ -108,7 +108,7 @@ func (t *smsbaoTransformer) validateMessage(msg *Message) error {
 func (t *smsbaoTransformer) transformTextSMS(
 	_ context.Context,
 	msg *Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	if account == nil || account.APIKey == "" || account.APISecret == "" {
 		return nil, nil, errors.New("smsbao account Key(username) and Secret(password) are required")
@@ -147,7 +147,7 @@ func (t *smsbaoTransformer) transformTextSMS(
 func (t *smsbaoTransformer) transformVoiceSMS(
 	_ context.Context,
 	msg *Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	if account == nil || account.APIKey == "" || account.APISecret == "" {
 		return nil, nil, errors.New("smsbao account Key(username) and Secret(password) are required")

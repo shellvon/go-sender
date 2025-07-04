@@ -14,16 +14,22 @@ import (
 func TestEmailIntegration(t *testing.T) {
 	// 创建 email provider 配置
 	emailConfig := email.Config{
-		BaseConfig: core.BaseConfig{},
-		Accounts: []email.Account{
+		ProviderMeta: core.ProviderMeta{},
+		Accounts: []*email.Account{
 			{
-				Name:     "test",
-				Host:     "smtp.example.com",
-				Port:     587,
-				Username: "test@example.com",
-				Password: "password",
-				From:     "test@example.com",
-				Weight:   1,
+				BaseAccount: core.BaseAccount{
+					AccountMeta: core.AccountMeta{
+						Name:   "test",
+						Weight: 1,
+					},
+					Credentials: core.Credentials{
+						APIKey:    "test@example.com",
+						APISecret: "password",
+					},
+				},
+				Host: "smtp.example.com",
+				Port: 587,
+				From: "test@example.com",
 			},
 		},
 	}
@@ -85,27 +91,39 @@ func TestEmailIntegration(t *testing.T) {
 func TestEmailProviderSelection(t *testing.T) {
 	// 测试多个账号的选择逻辑
 	emailConfig := email.Config{
-		BaseConfig: core.BaseConfig{
+		ProviderMeta: core.ProviderMeta{
 			Strategy: core.StrategyRoundRobin,
 		},
-		Accounts: []email.Account{
+		Accounts: []*email.Account{
 			{
-				Name:     "account1",
-				Host:     "smtp1.example.com",
-				Port:     587,
-				Username: "user1@example.com",
-				Password: "pass1",
-				From:     "user1@example.com",
-				Weight:   1,
+				BaseAccount: core.BaseAccount{
+					AccountMeta: core.AccountMeta{
+						Name:   "account1",
+						Weight: 1,
+					},
+					Credentials: core.Credentials{
+						APIKey:    "user1@example.com",
+						APISecret: "pass1",
+					},
+				},
+				Host: "smtp1.example.com",
+				Port: 587,
+				From: "user1@example.com",
 			},
 			{
-				Name:     "account2",
-				Host:     "smtp2.example.com",
-				Port:     587,
-				Username: "user2@example.com",
-				Password: "pass2",
-				From:     "user2@example.com",
-				Weight:   2,
+				BaseAccount: core.BaseAccount{
+					AccountMeta: core.AccountMeta{
+						Name:   "account2",
+						Weight: 2,
+					},
+					Credentials: core.Credentials{
+						APIKey:    "user2@example.com",
+						APISecret: "pass2",
+					},
+				},
+				Host: "smtp2.example.com",
+				Port: 587,
+				From: "user2@example.com",
 			},
 		},
 	}
@@ -201,15 +219,21 @@ func TestEmailConfigValidation(t *testing.T) {
 		{
 			name: "valid config",
 			config: email.Config{
-				BaseConfig: core.BaseConfig{},
-				Accounts: []email.Account{
+				ProviderMeta: core.ProviderMeta{},
+				Accounts: []*email.Account{
 					{
-						Name:     "test",
-						Host:     "smtp.example.com",
-						Port:     587,
-						Username: "user@example.com",
-						Password: "password",
-						From:     "user@example.com",
+						BaseAccount: core.BaseAccount{
+							AccountMeta: core.AccountMeta{
+								Name: "test",
+							},
+							Credentials: core.Credentials{
+								APIKey:    "user@example.com",
+								APISecret: "password",
+							},
+						},
+						Host: "smtp.example.com",
+						Port: 587,
+						From: "user@example.com",
 					},
 				},
 			},
@@ -218,15 +242,21 @@ func TestEmailConfigValidation(t *testing.T) {
 		{
 			name: "disabled config",
 			config: email.Config{
-				BaseConfig: core.BaseConfig{Disabled: true},
-				Accounts: []email.Account{
+				ProviderMeta: core.ProviderMeta{Disabled: true},
+				Accounts: []*email.Account{
 					{
-						Name:     "test",
-						Host:     "smtp.example.com",
-						Port:     587,
-						Username: "user@example.com",
-						Password: "password",
-						From:     "user@example.com",
+						BaseAccount: core.BaseAccount{
+							AccountMeta: core.AccountMeta{
+								Name: "test",
+							},
+							Credentials: core.Credentials{
+								APIKey:    "user@example.com",
+								APISecret: "password",
+							},
+						},
+						Host: "smtp.example.com",
+						Port: 587,
+						From: "user@example.com",
 					},
 				},
 			},
@@ -235,8 +265,8 @@ func TestEmailConfigValidation(t *testing.T) {
 		{
 			name: "no accounts",
 			config: email.Config{
-				BaseConfig: core.BaseConfig{},
-				Accounts:   []email.Account{},
+				ProviderMeta: core.ProviderMeta{},
+				Accounts:     []*email.Account{},
 			},
 			wantErr: true,
 		},

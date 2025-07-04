@@ -10,7 +10,7 @@ import (
 
 // Provider implements the ServerChan provider using generic base.
 type Provider struct {
-	*providers.HTTPProvider[*core.Account]
+	*providers.HTTPProvider[*Account]
 }
 
 var _ core.Provider = (*Provider)(nil)
@@ -21,10 +21,7 @@ func New(config Config) (*Provider, error) {
 		return nil, errors.New("serverchan provider is not configured or is disabled")
 	}
 
-	accounts := make([]*core.Account, len(config.Accounts))
-	for i := range config.Accounts {
-		accounts[i] = &config.Accounts[i]
-	}
+	accounts := config.Accounts
 
 	enabledAccounts, _, err := utils.InitProvider(&config, accounts)
 	if err != nil {

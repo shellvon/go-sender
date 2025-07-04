@@ -16,7 +16,7 @@ func TestConfig_IsConfigured(t *testing.T) {
 		{
 			name: "valid config",
 			config: webhook.Config{
-				Endpoints: []webhook.Endpoint{
+				Endpoints: []*webhook.Endpoint{
 					{Name: "test", URL: "https://example.com/webhook"},
 				},
 			},
@@ -30,8 +30,8 @@ func TestConfig_IsConfigured(t *testing.T) {
 		{
 			name: "disabled config",
 			config: webhook.Config{
-				BaseConfig: core.BaseConfig{Disabled: true},
-				Endpoints: []webhook.Endpoint{
+				ProviderMeta: core.ProviderMeta{Disabled: true},
+				Endpoints: []*webhook.Endpoint{
 					{Name: "test", URL: "https://example.com/webhook"},
 				},
 			},
@@ -40,7 +40,7 @@ func TestConfig_IsConfigured(t *testing.T) {
 		{
 			name: "no endpoints",
 			config: webhook.Config{
-				Endpoints: []webhook.Endpoint{},
+				Endpoints: []*webhook.Endpoint{},
 			},
 			expected: false,
 		},

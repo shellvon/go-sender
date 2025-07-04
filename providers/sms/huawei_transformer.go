@@ -54,7 +54,7 @@ func (t *huaweiTransformer) CanTransform(msg core.Message) bool {
 func (t *huaweiTransformer) Transform(
 	_ context.Context,
 	msg core.Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
@@ -89,7 +89,7 @@ func (t *huaweiTransformer) validateMessage(msg *Message) error {
 // 每个号码最大长度为21位，最多允许携带500个号码。如果携带超过500个号码，则全部号码都会发送失败。
 func (t *huaweiTransformer) transformSMS(
 	msg *Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	// 格式化手机号
 	formattedMobiles := make([]string, len(msg.Mobiles))

@@ -48,7 +48,7 @@ func (t *tencentTransformer) CanTransform(msg core.Message) bool {
 func (t *tencentTransformer) Transform(
 	ctx context.Context,
 	msg core.Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
@@ -91,7 +91,7 @@ func (t *tencentTransformer) validateMessage(msg *Message) error {
 func (t *tencentTransformer) transformTextSMS(
 	_ context.Context,
 	msg *Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	// 格式化手机号
 	phoneNumbers := make([]string, len(msg.Mobiles))
@@ -158,7 +158,7 @@ func (t *tencentTransformer) transformTextSMS(
 func (t *tencentTransformer) transformVoiceSMS(
 	_ context.Context,
 	msg *Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	// 腾讯云语音只支持单发
 	calledNumber := t.formatTencentPhone(msg.Mobiles[0], msg.RegionCode)

@@ -18,15 +18,21 @@ func TestNewProvider(t *testing.T) {
 		{
 			name: "valid config",
 			config: email.Config{
-				BaseConfig: core.BaseConfig{},
-				Accounts: []email.Account{
+				ProviderMeta: core.ProviderMeta{},
+				Accounts: []*email.Account{
 					{
-						Name:     "test",
-						Host:     "smtp.example.com",
-						Port:     587,
-						Username: "user",
-						Password: "pass",
-						From:     "test@example.com",
+						BaseAccount: core.BaseAccount{
+							AccountMeta: core.AccountMeta{
+								Name: "test",
+							},
+							Credentials: core.Credentials{
+								APIKey:    "user",
+								APISecret: "pass",
+							},
+						},
+						Host: "smtp.example.com",
+						Port: 587,
+						From: "test@example.com",
 					},
 				},
 			},
@@ -35,15 +41,21 @@ func TestNewProvider(t *testing.T) {
 		{
 			name: "disabled config",
 			config: email.Config{
-				BaseConfig: core.BaseConfig{Disabled: true},
-				Accounts: []email.Account{
+				ProviderMeta: core.ProviderMeta{Disabled: true},
+				Accounts: []*email.Account{
 					{
-						Name:     "test",
-						Host:     "smtp.example.com",
-						Port:     587,
-						Username: "user",
-						Password: "pass",
-						From:     "test@example.com",
+						BaseAccount: core.BaseAccount{
+							AccountMeta: core.AccountMeta{
+								Name: "test",
+							},
+							Credentials: core.Credentials{
+								APIKey:    "user",
+								APISecret: "pass",
+							},
+						},
+						Host: "smtp.example.com",
+						Port: 587,
+						From: "test@example.com",
 					},
 				},
 			},
@@ -52,33 +64,45 @@ func TestNewProvider(t *testing.T) {
 		{
 			name: "no accounts",
 			config: email.Config{
-				BaseConfig: core.BaseConfig{},
-				Accounts:   []email.Account{},
+				ProviderMeta: core.ProviderMeta{},
+				Accounts:     []*email.Account{},
 			},
 			wantErr: true,
 		},
 		{
 			name: "all accounts disabled",
 			config: email.Config{
-				BaseConfig: core.BaseConfig{},
-				Accounts: []email.Account{
+				ProviderMeta: core.ProviderMeta{},
+				Accounts: []*email.Account{
 					{
-						Name:     "test1",
-						Host:     "smtp.example.com",
-						Port:     587,
-						Username: "user",
-						Password: "pass",
-						From:     "test@example.com",
-						Disabled: true,
+						BaseAccount: core.BaseAccount{
+							AccountMeta: core.AccountMeta{
+								Name:     "test1",
+								Disabled: true,
+							},
+							Credentials: core.Credentials{
+								APIKey:    "user",
+								APISecret: "pass",
+							},
+						},
+						Host: "smtp.example.com",
+						Port: 587,
+						From: "test@example.com",
 					},
 					{
-						Name:     "test2",
-						Host:     "smtp.example.com",
-						Port:     587,
-						Username: "user",
-						Password: "pass",
-						From:     "test@example.com",
-						Disabled: true,
+						BaseAccount: core.BaseAccount{
+							AccountMeta: core.AccountMeta{
+								Name:     "test2",
+								Disabled: true,
+							},
+							Credentials: core.Credentials{
+								APIKey:    "user",
+								APISecret: "pass",
+							},
+						},
+						Host: "smtp.example.com",
+						Port: 587,
+						From: "test@example.com",
 					},
 				},
 			},
@@ -102,15 +126,21 @@ func TestNewProvider(t *testing.T) {
 
 func TestProviderName(t *testing.T) {
 	config := email.Config{
-		BaseConfig: core.BaseConfig{},
-		Accounts: []email.Account{
+		ProviderMeta: core.ProviderMeta{},
+		Accounts: []*email.Account{
 			{
-				Name:     "test",
-				Host:     "smtp.example.com",
-				Port:     587,
-				Username: "user",
-				Password: "pass",
-				From:     "test@example.com",
+				BaseAccount: core.BaseAccount{
+					AccountMeta: core.AccountMeta{
+						Name: "test",
+					},
+					Credentials: core.Credentials{
+						APIKey:    "user",
+						APISecret: "pass",
+					},
+				},
+				Host: "smtp.example.com",
+				Port: 587,
+				From: "test@example.com",
 			},
 		},
 	}
@@ -128,15 +158,21 @@ func TestProviderName(t *testing.T) {
 
 func TestProviderSendInvalidMessageType(t *testing.T) {
 	config := email.Config{
-		BaseConfig: core.BaseConfig{},
-		Accounts: []email.Account{
+		ProviderMeta: core.ProviderMeta{},
+		Accounts: []*email.Account{
 			{
-				Name:     "test",
-				Host:     "smtp.example.com",
-				Port:     587,
-				Username: "user",
-				Password: "pass",
-				From:     "test@example.com",
+				BaseAccount: core.BaseAccount{
+					AccountMeta: core.AccountMeta{
+						Name: "test",
+					},
+					Credentials: core.Credentials{
+						APIKey:    "user",
+						APISecret: "pass",
+					},
+				},
+				Host: "smtp.example.com",
+				Port: 587,
+				From: "test@example.com",
 			},
 		},
 	}
@@ -158,15 +194,21 @@ func TestProviderSendInvalidMessageType(t *testing.T) {
 
 func TestProviderSendInvalidMessage(t *testing.T) {
 	config := email.Config{
-		BaseConfig: core.BaseConfig{},
-		Accounts: []email.Account{
+		ProviderMeta: core.ProviderMeta{},
+		Accounts: []*email.Account{
 			{
-				Name:     "test",
-				Host:     "smtp.example.com",
-				Port:     587,
-				Username: "user",
-				Password: "pass",
-				From:     "test@example.com",
+				BaseAccount: core.BaseAccount{
+					AccountMeta: core.AccountMeta{
+						Name: "test",
+					},
+					Credentials: core.Credentials{
+						APIKey:    "user",
+						APISecret: "pass",
+					},
+				},
+				Host: "smtp.example.com",
+				Port: 587,
+				From: "test@example.com",
 			},
 		},
 	}
@@ -187,15 +229,21 @@ func TestProviderSendInvalidMessage(t *testing.T) {
 
 func TestAccountMethods(t *testing.T) {
 	account := &email.Account{
-		Name:     "test",
-		Type:     "smtp",
-		Host:     "smtp.example.com",
-		Port:     587,
-		Username: "user",
-		Password: "pass",
-		From:     "test@example.com",
-		Weight:   10,
-		Disabled: false,
+		BaseAccount: core.BaseAccount{
+			AccountMeta: core.AccountMeta{
+				Name:     "test",
+				SubType:  "smtp",
+				Weight:   10,
+				Disabled: false,
+			},
+			Credentials: core.Credentials{
+				APIKey:    "user",
+				APISecret: "pass",
+			},
+		},
+		Host: "smtp.example.com",
+		Port: 587,
+		From: "test@example.com",
 	}
 
 	// Test GetName
@@ -219,13 +267,13 @@ func TestAccountMethods(t *testing.T) {
 	}
 
 	// Test default weight
-	account.Weight = 0
+	account.AccountMeta.Weight = 0
 	if weight := account.GetWeight(); weight != 1 {
 		t.Errorf("Expected GetWeight() to return 1 for zero weight, got %d", weight)
 	}
 
 	// Test disabled account
-	account.Disabled = true
+	account.AccountMeta.Disabled = true
 	if enabled := account.IsEnabled(); enabled {
 		t.Error("Expected IsEnabled() to return false for disabled account")
 	}
@@ -233,15 +281,21 @@ func TestAccountMethods(t *testing.T) {
 
 func TestConfigMethods(t *testing.T) {
 	config := email.Config{
-		BaseConfig: core.BaseConfig{},
-		Accounts: []email.Account{
+		ProviderMeta: core.ProviderMeta{},
+		Accounts: []*email.Account{
 			{
-				Name:     "test",
-				Host:     "smtp.example.com",
-				Port:     587,
-				Username: "user",
-				Password: "pass",
-				From:     "test@example.com",
+				BaseAccount: core.BaseAccount{
+					AccountMeta: core.AccountMeta{
+						Name: "test",
+					},
+					Credentials: core.Credentials{
+						APIKey:    "user",
+						APISecret: "pass",
+					},
+				},
+				Host: "smtp.example.com",
+				Port: 587,
+				From: "test@example.com",
 			},
 		},
 	}
@@ -259,7 +313,7 @@ func TestConfigMethods(t *testing.T) {
 
 	// Test empty accounts
 	config.Disabled = false
-	config.Accounts = []email.Account{}
+	config.Accounts = []*email.Account{}
 	if config.IsConfigured() {
 		t.Error("Expected IsConfigured() to return false for empty accounts")
 	}

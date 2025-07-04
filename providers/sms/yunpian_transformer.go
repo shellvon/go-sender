@@ -40,7 +40,7 @@ func (t *yunpianTransformer) CanTransform(msg core.Message) bool {
 func (t *yunpianTransformer) Transform(
 	ctx context.Context,
 	msg core.Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
@@ -80,7 +80,7 @@ func (t *yunpianTransformer) validateMessage(msg *Message) error {
 func (t *yunpianTransformer) transformTextSMS(
 	ctx context.Context,
 	msg *Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	// 国际短信
 	if msg.IsIntl() {
@@ -109,7 +109,7 @@ func (t *yunpianTransformer) transformTextSMS(
 func (t *yunpianTransformer) transformSingleSMS(
 	_ context.Context,
 	msg *Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	endpoint := t.yunpianEndpoint("sms", "/v2/sms/single_send.json")
 	params := map[string]string{
@@ -129,7 +129,7 @@ func (t *yunpianTransformer) transformSingleSMS(
 func (t *yunpianTransformer) transformBatchSMS(
 	_ context.Context,
 	msg *Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	endpoint := t.yunpianEndpoint("sms", "/v2/sms/batch_send.json")
 	params := map[string]string{
@@ -149,7 +149,7 @@ func (t *yunpianTransformer) transformBatchSMS(
 func (t *yunpianTransformer) transformTplSMS(
 	_ context.Context,
 	msg *Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	endpoint := t.yunpianEndpoint("sms", "/v2/sms/tpl_single_send.json")
 	params := map[string]string{
@@ -168,7 +168,7 @@ func (t *yunpianTransformer) transformTplSMS(
 func (t *yunpianTransformer) transformTplBatchSMS(
 	_ context.Context,
 	msg *Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	endpoint := t.yunpianEndpoint("sms", "/v2/sms/tpl_batch_send.json")
 	params := map[string]string{
@@ -187,7 +187,7 @@ func (t *yunpianTransformer) transformTplBatchSMS(
 func (t *yunpianTransformer) transformIntlSMS(
 	_ context.Context,
 	msg *Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	endpoint := t.yunpianEndpoint("sms", "/v2/sms/single_send.json")
 	params := map[string]string{
@@ -205,7 +205,7 @@ func (t *yunpianTransformer) transformIntlSMS(
 func (t *yunpianTransformer) transformVoiceSMS(
 	_ context.Context,
 	msg *Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	endpoint := t.yunpianEndpoint("voice", "/v2/voice/send.json")
 	params := map[string]string{
@@ -223,7 +223,7 @@ func (t *yunpianTransformer) transformVoiceSMS(
 func (t *yunpianTransformer) transformMMSSMS(
 	_ context.Context,
 	msg *Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	endpoint := t.yunpianEndpoint("vsms", "/v2/vsms/tpl_batch_send.json")
 	params := map[string]string{

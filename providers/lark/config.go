@@ -6,9 +6,9 @@ import (
 
 // Config holds configuration for the Lark provider.
 type Config struct {
-	core.BaseConfig
+	core.ProviderMeta
 
-	Accounts []core.Account `json:"accounts"` // Multiple accounts configuration
+	Accounts []*Account `json:"accounts"` // Multiple accounts configuration
 }
 
 // IsConfigured checks if the Lark configuration is valid.

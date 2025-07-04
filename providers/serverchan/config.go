@@ -6,9 +6,9 @@ import (
 
 // Config holds configuration for the ServerChan provider.
 type Config struct {
-	core.BaseConfig
+	core.ProviderMeta
 
-	Accounts []core.Account `json:"accounts"` // Multiple account configuration
+	Accounts []*Account `json:"accounts"` // Multiple account configuration
 }
 
 // IsConfigured checks if the ServerChan configuration is valid.

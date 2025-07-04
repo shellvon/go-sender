@@ -24,8 +24,7 @@ const (
 
 // Config holds configuration for the SMS provider.
 type Config struct {
-	core.BaseConfig
+	core.ProviderMeta
 
-	Accounts []*core.Account   `json:"providers"` // Multiple SMS providers configuration
-	Strategy core.StrategyType `json:"strategy"`  // Selection strategy
+	Accounts []*Account `json:"providers"` // Multiple SMS providers configuration
 }

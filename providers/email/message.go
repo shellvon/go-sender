@@ -163,27 +163,16 @@ func (b *EmailBuilder) AddAttach(files ...string) *EmailBuilder {
 
 // Build creates the Message instance from the builder.
 func (b *EmailBuilder) Build() *Message {
-	msg := NewMessage(b.recipients, b.body)
-	if b.subject != "" {
-		msg.Subject = b.subject
-	}
-	if b.from != "" {
-		msg.From = b.from
-	}
-	if len(b.cc) > 0 {
-		msg.Cc = b.cc
-	}
-	if len(b.bcc) > 0 {
-		msg.Bcc = b.bcc
-	}
-	if b.replyTo != "" {
-		msg.ReplyTo = b.replyTo
-	}
-	if b.html {
-		msg.IsHTML = true
-	}
-	if len(b.attachments) > 0 {
-		msg.Attachments = b.attachments
+	msg := &Message{
+		To:     b.recipients,
+		Body:   b.body,
+		Subject: b.subject,
+		From:   b.from,
+		Cc:     b.cc,
+		Bcc:    b.bcc,
+		ReplyTo: b.replyTo,
+		IsHTML: b.html,
+		Attachments: b.attachments,
 	}
 	return msg
 }

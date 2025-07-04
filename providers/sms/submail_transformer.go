@@ -72,7 +72,7 @@ func (t *submailTransformer) CanTransform(msg core.Message) bool {
 func (t *submailTransformer) Transform(
 	_ context.Context,
 	msg core.Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
@@ -131,7 +131,7 @@ func (t *submailTransformer) validateMessage(msg *Message) error {
 	return nil
 }
 
-func (t *submailTransformer) buildEndpoint(msg *Message, _ *core.Account) string {
+func (t *submailTransformer) buildEndpoint(msg *Message, _ *Account) string {
 	var apiPath string
 
 	switch msg.Type {
@@ -188,7 +188,7 @@ func (t *submailTransformer) getVoicePath(msg *Message) string {
 	return voiceTemplateSingle
 }
 
-func (t *submailTransformer) buildParams(msg *Message, account *core.Account) map[string]string {
+func (t *submailTransformer) buildParams(msg *Message, account *Account) map[string]string {
 	params := map[string]string{
 		"appid": account.APIKey,
 	}
@@ -246,7 +246,7 @@ func (t *submailTransformer) addContentOrTemplate(params map[string]string, msg 
 	}
 }
 
-func (t *submailTransformer) addCommonParams(params map[string]string, msg *Message, account *core.Account) {
+func (t *submailTransformer) addCommonParams(params map[string]string, msg *Message, account *Account) {
 	if tag := msg.GetExtraStringOrDefault(submailTagKey, ""); tag != "" {
 		params[submailTagKey] = tag
 	}
@@ -264,7 +264,7 @@ func (t *submailTransformer) addCommonParams(params map[string]string, msg *Mess
 
 // calculateSignature 计算签名.
 //   - https://www.mysubmail.com/documents/pdxzv1
-func (t *submailTransformer) calculateSignature(account *core.Account, params map[string]string) string {
+func (t *submailTransformer) calculateSignature(account *Account, params map[string]string) string {
 	// 获取签名类型，默认为md5
 	signType := submailDefaultSignType
 	// 或者从消息的extras中获取

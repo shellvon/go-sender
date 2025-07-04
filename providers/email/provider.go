@@ -24,14 +24,8 @@ func New(config Config) (*Provider, error) {
 		return nil, errors.New("email provider is not configured or is disabled")
 	}
 
-	// Convert to pointer slice
-	accounts := make([]*Account, len(config.Accounts))
-	for i := range config.Accounts {
-		accounts[i] = &config.Accounts[i]
-	}
-
 	// Use common initialization logic
-	enabledAccounts, strategy, err := utils.InitProvider(&config, accounts)
+	enabledAccounts, strategy, err := utils.InitProvider(&config, config.Accounts)
 	if err != nil {
 		return nil, errors.New("no enabled email accounts found")
 	}
@@ -80,8 +74,8 @@ func buildMailOptions(account *Account) []mail.Option {
 	opts := []mail.Option{
 		mail.WithPort(account.Port),
 		mail.WithSMTPAuth(mail.SMTPAuthPlain),
-		mail.WithUsername(account.Username),
-		mail.WithPassword(account.Password),
+		mail.WithUsername(account.Username()),
+		mail.WithPassword(account.Password()),
 		// mail.WithDebugLog(),
 	}
 
@@ -190,7 +184,4 @@ func (a *Account) IsEnabled() bool {
 	return !a.Disabled
 }
 
-// GetType returns the subprovider type of this account.
-func (a *Account) GetType() string {
-	return a.Type
-}
+// GetType is provided by the embedded core.BaseAccount (no override needed)

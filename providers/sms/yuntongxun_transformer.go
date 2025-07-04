@@ -38,7 +38,7 @@ func (t *yuntongxunTransformer) CanTransform(msg core.Message) bool {
 func (t *yuntongxunTransformer) Transform(
 	ctx context.Context,
 	msg core.Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
@@ -81,7 +81,7 @@ func (t *yuntongxunTransformer) validateMessage(msg *Message) error {
 func (t *yuntongxunTransformer) transformTextSMS(
 	ctx context.Context,
 	msg *Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	// 判断是否为国际短信
 	if msg.IsIntl() {
@@ -93,7 +93,7 @@ func (t *yuntongxunTransformer) transformTextSMS(
 func (t *yuntongxunTransformer) transformDomesticSMS(
 	_ context.Context,
 	msg *Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	datetime := time.Now().Format("20060102150405")
 	accountSid := account.APIKey
@@ -139,7 +139,7 @@ func (t *yuntongxunTransformer) transformDomesticSMS(
 func (t *yuntongxunTransformer) transformIntlSMS(
 	_ context.Context,
 	msg *Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	datetime := time.Now().Format("20060102150405")
 	accountSid := account.APIKey
@@ -184,7 +184,7 @@ func (t *yuntongxunTransformer) transformIntlSMS(
 func (t *yuntongxunTransformer) transformVoiceSMS(
 	_ context.Context,
 	msg *Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	// 只支持国内
 	if msg.IsIntl() {

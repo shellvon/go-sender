@@ -47,7 +47,7 @@ const (
 	aliyunDefaultVoiceEndpoint = "dyvmsapi.aliyuncs.com"
 )
 
-// aliyunTransformer implements HTTPTransformer[*core.Account] for Aliyun SMS.
+// aliyunTransformer implements HTTPTransformer[*Account] for Aliyun SMS.
 type aliyunTransformer struct{}
 
 // CanTransform checks if this transformer can handle the given message.
@@ -63,7 +63,7 @@ func (t *aliyunTransformer) CanTransform(msg core.Message) bool {
 func (t *aliyunTransformer) Transform(
 	_ context.Context,
 	msg core.Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
@@ -194,7 +194,7 @@ func (t *aliyunTransformer) validateMMSMessage(msg *Message) error {
 // transformTextMessage transforms text SMS message to HTTP request.
 func (t *aliyunTransformer) transformTextMessage(
 	msg *Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	return t.transformSMS(msg, account)
 }
@@ -202,7 +202,7 @@ func (t *aliyunTransformer) transformTextMessage(
 // transformVoiceMessage transforms voice message to HTTP request.
 func (t *aliyunTransformer) transformVoiceMessage(
 	msg *Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	return t.transformVoice(msg, account)
 }
@@ -210,7 +210,7 @@ func (t *aliyunTransformer) transformVoiceMessage(
 // transformMMSMessage transforms MMS message to HTTP request.
 func (t *aliyunTransformer) transformMMSMessage(
 	msg *Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	return t.transformCardSMS(msg, account)
 }
@@ -224,7 +224,7 @@ type aliyunSignParams struct {
 	Body    []byte
 	Action  string
 	Version string
-	Account *core.Account
+	Account *Account
 	Headers map[string]string
 }
 
@@ -289,7 +289,7 @@ func (t *aliyunTransformer) signAliyunRequest(params aliyunSignParams) map[strin
 // 短信模板即具体发送的短信内容，模板类型支持验证码、通知短信和推广短信。模板由模板变量和模板内容构成，您需要遵守模板内容规范和变量规范。
 func (t *aliyunTransformer) transformSMS(
 	msg *Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	phones := make([]string, len(msg.Mobiles))
 	for i, mobile := range msg.Mobiles {
@@ -358,7 +358,7 @@ func (t *aliyunTransformer) getEndpointByRegion(msgType MessageType, region stri
 //   - 文档地址: https://help.aliyun.com/zh/sms/developer-reference/api-dysmsapi-2017-05-25-sendcardsms
 func (t *aliyunTransformer) transformCardSMS(
 	_ *Message,
-	_ *core.Account,
+	_ *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	return nil, nil, errors.New("not implemented")
 }
@@ -368,7 +368,7 @@ func (t *aliyunTransformer) transformCardSMS(
 //   - 语音通知API: https://help.aliyun.com/zh/vms/developer-reference/api-dyvmsapi-2017-05-25-singlecallbyvoice
 func (t *aliyunTransformer) transformVoice(
 	msg *Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	// 只支持国内
 	if msg.IsIntl() {

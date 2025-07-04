@@ -10,7 +10,7 @@ import (
 
 // Provider implements the Telegram provider using generic base.
 type Provider struct {
-	*providers.HTTPProvider[*core.Account]
+	*providers.HTTPProvider[*Account]
 }
 
 var (
@@ -23,10 +23,7 @@ func New(config Config) (*Provider, error) {
 		return nil, errors.New("telegram provider is not configured or is disabled")
 	}
 
-	accounts := make([]*core.Account, len(config.Accounts))
-	for i := range config.Accounts {
-		accounts[i] = &config.Accounts[i]
-	}
+	accounts := config.Accounts
 
 	enabledAccounts, _, err := utils.InitProvider(&config, accounts)
 	if err != nil {

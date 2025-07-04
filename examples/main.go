@@ -60,9 +60,15 @@ func runTelegramDemo() {
 		return
 	}
 	cfg := telegram.Config{
-		Accounts: []core.Account{{
-			Name:   "default",
-			APIKey: botToken,
+		Accounts: []*telegram.Account{{
+			BaseAccount: core.BaseAccount{
+				AccountMeta: core.AccountMeta{
+					Name: "default",
+				},
+				Credentials: core.Credentials{
+					APIKey: botToken,
+				},
+			},
 		}},
 	}
 	prov, err := telegram.New(cfg)
@@ -115,13 +121,19 @@ func runEmailDemo() {
 		return
 	}
 	cfg := email.Config{
-		Accounts: []email.Account{{
-			Name:     "default",
-			Host:     host,
-			Port:     port,
-			Username: user,
-			Password: pass,
-			From:     user,
+		Accounts: []*email.Account{{
+			BaseAccount: core.BaseAccount{
+				AccountMeta: core.AccountMeta{
+					Name: "default",
+				},
+				Credentials: core.Credentials{
+					APIKey:    user,
+					APISecret: pass,
+				},
+			},
+			Host: host,
+			Port: port,
+			From: user,
 		}},
 	}
 	prov, err := email.New(cfg)
@@ -244,11 +256,17 @@ func runSMSDemo() {
 		return
 	}
 	cfg := sms.Config{
-		Accounts: []*core.Account{{
-			Name:      "default",
-			Type:      providerType,
-			APIKey:    key,
-			APISecret: secret,
+		Accounts: []*sms.Account{{
+			BaseAccount: core.BaseAccount{
+				AccountMeta: core.AccountMeta{
+					Name:    "default",
+					SubType: providerType,
+				},
+				Credentials: core.Credentials{
+					APIKey:    key,
+					APISecret: secret,
+				},
+			},
 		}},
 	}
 	prov, err := sms.New(cfg)

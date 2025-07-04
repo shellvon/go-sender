@@ -12,7 +12,7 @@ import (
 )
 
 type Provider struct {
-	*providers.HTTPProvider[*core.Account]
+	*providers.HTTPProvider[*Account]
 }
 
 var _ core.Provider = (*Provider)(nil)
@@ -20,7 +20,7 @@ var _ core.Provider = (*Provider)(nil)
 // transformerRegistry global transformer registry.
 //
 //nolint:gochecknoglobals // Reason: transformerRegistry is a global registry for sms transformers
-var transformerRegistry = make(map[string]core.HTTPTransformer[*core.Account])
+var transformerRegistry = make(map[string]core.HTTPTransformer[*Account])
 
 // registryMutex global mutex for transformerRegistry.
 //
@@ -28,21 +28,21 @@ var transformerRegistry = make(map[string]core.HTTPTransformer[*core.Account])
 var registryMutex sync.RWMutex
 
 // RegisterTransformer 注册transformer到全局注册表.
-func RegisterTransformer(subProvider string, transformer core.HTTPTransformer[*core.Account]) {
+func RegisterTransformer(subProvider string, transformer core.HTTPTransformer[*Account]) {
 	registryMutex.Lock()
 	defer registryMutex.Unlock()
 	transformerRegistry[subProvider] = transformer
 }
 
 // GetTransformer 从注册表获取transformer.
-func GetTransformer(subProvider string) (core.HTTPTransformer[*core.Account], bool) {
+func GetTransformer(subProvider string) (core.HTTPTransformer[*Account], bool) {
 	registryMutex.RLock()
 	defer registryMutex.RUnlock()
 	transformer, exists := transformerRegistry[subProvider]
 	return transformer, exists
 }
 
-// smsTransformer 实现 core.HTTPTransformer[*core.Account]，根据SubProvider选择具体的transformer.
+// smsTransformer 实现 core.HTTPTransformer[*Account]，根据SubProvider选择具体的transformer.
 type smsTransformer struct{}
 
 // CanTransform 判断是否为 SMS 消息.
@@ -54,7 +54,7 @@ func (t *smsTransformer) CanTransform(msg core.Message) bool {
 func (t *smsTransformer) Transform(
 	ctx context.Context,
 	msg core.Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {

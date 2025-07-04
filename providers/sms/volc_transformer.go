@@ -46,7 +46,7 @@ func (t *volcTransformer) CanTransform(msg core.Message) bool {
 func (t *volcTransformer) Transform(
 	ctx context.Context,
 	msg core.Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
@@ -77,7 +77,7 @@ func (t *volcTransformer) validateMessage(msg *Message) error {
 func (t *volcTransformer) transformTextSMS(
 	_ context.Context,
 	msg *Message,
-	account *core.Account,
+	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	body := map[string]interface{}{
 		"SmsAccount":   msg.GetExtraStringOrDefault(volcSmsAccountKey, ""),
@@ -114,7 +114,7 @@ func (t *volcTransformer) transformTextSMS(
 }
 
 // buildVolcHeaders constructs VolcEngine signature headers.
-func (t *volcTransformer) buildVolcHeaders(account *core.Account, body []byte, qs url.Values) map[string]string {
+func (t *volcTransformer) buildVolcHeaders(account *Account, body []byte, qs url.Values) map[string]string {
 	// 1. Basic parameters
 	xDate := time.Now().UTC().Format("20060102T150405Z")
 	authDate := xDate[:8]
