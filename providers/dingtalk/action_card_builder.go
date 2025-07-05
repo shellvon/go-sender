@@ -5,7 +5,7 @@ package dingtalk
 //
 // Example (single button):
 //
-//	msg := dingtalk.NewActionCardBuilder().
+//	msg := dingtalk.ActionCard().
 //	         Title("Deploy Finished").
 //	         Text("### deployment done").
 //	         SingleButton("View", "https://ci.example.com").
@@ -13,7 +13,7 @@ package dingtalk
 //
 // Example (multi buttons):
 //
-//	msg := dingtalk.NewActionCardBuilder().
+//	msg := dingtalk.ActionCard().
 //	         Title("Choose").
 //	         Text("select a link").
 //	         BtnOrientation("1").

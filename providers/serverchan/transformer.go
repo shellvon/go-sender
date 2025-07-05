@@ -17,9 +17,8 @@ import (
 
 type serverchanTransformer struct{}
 
-// newTransformer 创建 ServerChan 的 transformer 实例
-// 返回实现 core.HTTPTransformer[*Account] 的 serverchanTransformer.
-func newTransformer() core.HTTPTransformer[*Account] {
+// newServerChanTransformer creates a new serverchanTransformer instance.
+func newServerChanTransformer() core.HTTPTransformer[*Account] {
 	return &serverchanTransformer{}
 }
 

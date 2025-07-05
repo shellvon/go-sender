@@ -29,6 +29,11 @@ const (
 // telegramTransformer 实现 providers.HTTPTransformer[*Account].
 type telegramTransformer struct{}
 
+// newTelegramTransformer creates a new Telegram transformer instance.
+func newTelegramTransformer() core.HTTPTransformer[*Account] {
+	return &telegramTransformer{}
+}
+
 // CanTransform 判断是否为 Telegram 消息.
 func (t *telegramTransformer) CanTransform(msg core.Message) bool {
 	return msg.ProviderType() == core.ProviderTypeTelegram

@@ -4,7 +4,7 @@ package dingtalk
 //
 // Example:
 //
-//	msg := dingtalk.NewLinkBuilder().
+//	msg := dingtalk.Link().
 //	         Title("GitHub").
 //	         Text("Repository link").
 //	         MessageURL("https://github.com").

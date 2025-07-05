@@ -416,4 +416,3 @@ func TestAccount_ConfigurationExample(t *testing.T) {
 		t.Errorf("Expected 2 sms accounts, got %d", len(smsAccounts))
 	}
 }
- 

@@ -17,8 +17,8 @@ type Article struct {
 	Picurl string `json:"picurl"`
 }
 
-// News contains a list of articles for a news message.
-type News struct {
+// NewsContent wraps article list; renaming to avoid collision with News() builder factory.
+type NewsContent struct {
 	Articles []*Article `json:"articles"`
 }
 
@@ -27,7 +27,7 @@ type News struct {
 type NewsMessage struct {
 	BaseMessage
 
-	News News `json:"news"`
+	News NewsContent `json:"news"`
 }
 
 // NewNewsMessage creates a new NewsMessage.
@@ -35,7 +35,7 @@ type NewsMessage struct {
 // https://developer.work.weixin.qq.com/document/path/91770#%E6%96%B0%E9%97%BB%E7%B1%BB%E5%9E%8B
 //   - Only articles are required.
 func NewNewsMessage(articles []*Article) *NewsMessage {
-	return NewsMsg().Articles(articles).Build()
+	return News().Articles(articles).Build()
 }
 
 // Validate validates the NewsMessage to ensure it meets WeCom API requirements.

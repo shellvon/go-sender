@@ -4,7 +4,7 @@ package dingtalk
 //
 // Example:
 //
-//	msg := dingtalk.NewMarkdownBuilder().
+//	msg := dingtalk.Markdown().
 //	         Title("Alarm").
 //	         Text("**service** down").
 //	         AtAll().

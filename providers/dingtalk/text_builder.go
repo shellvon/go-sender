@@ -4,7 +4,7 @@ package dingtalk
 //
 // Example:
 //
-//	msg := dingtalk.NewTextBuilder().
+//	msg := dingtalk.Text().
 //	         Content("hello").
 //	         AtMobiles([]string{"13800138000"}).
 //	         Build()

@@ -13,10 +13,10 @@ type NewsBuilder struct {
 	articles []*Article
 }
 
-// NewsMsg creates a new NewsBuilder.
+// News creates a new NewsBuilder.
 // Based on SendNewsParams from WeCom Bot API
 // https://developer.work.weixin.qq.com/document/path/91770#%E6%96%B0%E9%97%BB%E7%B1%BB%E5%9E%8B
-func NewsMsg() *NewsBuilder {
+func News() *NewsBuilder {
 	return &NewsBuilder{}
 }
 
@@ -42,7 +42,7 @@ func (b *NewsBuilder) Articles(arts []*Article) *NewsBuilder {
 func (b *NewsBuilder) Build() *NewsMessage {
 	return &NewsMessage{
 		BaseMessage: BaseMessage{MsgType: TypeNews},
-		News: News{
+		News: NewsContent{
 			Articles: b.articles,
 		},
 	}

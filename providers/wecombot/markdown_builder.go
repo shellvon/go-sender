@@ -36,7 +36,7 @@ func (b *MarkdownBuilder) Version(v string) *MarkdownBuilder {
 
 // Build assembles a *MarkdownMessage ready to send.
 func (b *MarkdownBuilder) Build() *MarkdownMessage {
-	msgType := MessageType(TypeMarkdown)
+	msgType := TypeMarkdown
 	if b.version == MarkdownVersionV2 {
 		msgType = MessageType("markdown_v2")
 	}

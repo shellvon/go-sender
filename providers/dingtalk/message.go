@@ -1,6 +1,9 @@
 package dingtalk
 
-import "github.com/shellvon/go-sender/core"
+import (
+	"github.com/shellvon/go-sender/core"
+	"github.com/shellvon/go-sender/providers"
+)
 
 // DingTalk group robot message
 // Reference: https://open.dingtalk.com/document/robots/custom-robot-access
@@ -10,15 +13,15 @@ type MessageType string
 
 const (
 	// TypeText represents text message type.
-	TypeText = "text"
+	TypeText MessageType = providers.MsgTypeText
 	// TypeMarkdown represents markdown message type.
-	TypeMarkdown = "markdown"
+	TypeMarkdown MessageType = providers.MsgTypeMarkdown
 	// TypeLink represents link message type.
-	TypeLink = "link"
+	TypeLink MessageType = providers.MsgTypeLink
 	// TypeActionCard represents action card message type.
-	TypeActionCard = "actionCard"
+	TypeActionCard MessageType = providers.MsgTypeActionCard
 	// TypeFeedCard represents feed card message type.
-	TypeFeedCard = "feedCard"
+	TypeFeedCard MessageType = providers.MsgTypeFeedCard
 )
 
 // Message interface definition.
