@@ -139,6 +139,11 @@ func (s *Sender) SendVia(ctx context.Context, channel string, message core.Messa
 }
 
 // SetRateLimiter sets the rate limiter for the sender.
+//
+// NOTE: The change only applies to providers that are registered **after** this
+// method is called. Each `ProviderDecorator` receives a *copy* of
+// `Sender.middleware` at registration time; already-registered providers keep
+// their own copy and will NOT pick up the new rate-limiter.
 func (s *Sender) SetRateLimiter(rateLimiter core.RateLimiter) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -147,6 +152,9 @@ func (s *Sender) SetRateLimiter(rateLimiter core.RateLimiter) {
 }
 
 // SetRetryPolicy sets the retry policy for the sender.
+//
+// NOTE: The update only affects providers registered *after* the call. See the
+// comment on `SetRateLimiter` for rationale.
 func (s *Sender) SetRetryPolicy(retryPolicy *core.RetryPolicy) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -162,6 +170,10 @@ func (s *Sender) SetRetryPolicy(retryPolicy *core.RetryPolicy) error {
 }
 
 // SetQueue sets the queue for the sender.
+//
+// NOTE: This only influences providers registered **after** the setter is
+// invoked. If you need the queue for earlier providers, call `SetQueue` *before*
+// `RegisterProvider`, or re-register the provider.
 func (s *Sender) SetQueue(queue core.Queue) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -170,6 +182,8 @@ func (s *Sender) SetQueue(queue core.Queue) {
 }
 
 // SetCircuitBreaker sets the circuit breaker for the sender.
+//
+// NOTE: Only providers registered after this call will use the circuit breaker.
 func (s *Sender) SetCircuitBreaker(circuitBreaker core.CircuitBreaker) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -178,6 +192,8 @@ func (s *Sender) SetCircuitBreaker(circuitBreaker core.CircuitBreaker) {
 }
 
 // SetMetrics sets the metrics collector for the sender.
+//
+// NOTE: Like other middleware setters, this affects *future* providers only.
 func (s *Sender) SetMetrics(metrics core.MetricsCollector) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

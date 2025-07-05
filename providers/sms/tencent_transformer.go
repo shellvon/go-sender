@@ -107,7 +107,7 @@ func (t *tencentTransformer) transformSMS(
 
 	params := map[string]interface{}{
 		"PhoneNumberSet":   phoneNumbers,
-		"SmsSdkAppId":      msg.GetExtraStringOrDefault(tencentSmsSdkAppIDKey, account.APIKey),
+		"SmsSdkAppId":      msg.GetExtraStringOrDefaultEmpty(tencentSmsSdkAppIDKey),
 		"TemplateId":       msg.TemplateID,
 		"SignName":         msg.SignName,
 		"TemplateParamSet": msg.ParamsOrder,
@@ -166,7 +166,7 @@ func (t *tencentTransformer) transformVoice(
 
 	params := map[string]interface{}{
 		"CalledNumber":  calledNumber,
-		"VoiceSdkAppId": msg.GetExtraStringOrDefault(tencentVoiceSdkAppIDKey, ""),
+		"VoiceSdkAppId": msg.GetExtraStringOrDefaultEmpty(tencentVoiceSdkAppIDKey),
 	}
 
 	var action string
@@ -334,4 +334,11 @@ func (t *tencentTransformer) applyTencentDefaults(msg *Message, account *Account
 		aliyunDefaultRegion,
 	)
 	msg.Extras[aliyunRegionKey] = region
+
+	if msg.Extras[tencentSmsSdkAppIDKey] == "" {
+		msg.Extras[tencentSmsSdkAppIDKey] = account.AppID
+	}
+	if msg.Extras[tencentVoiceSdkAppIDKey] == "" {
+		msg.Extras[tencentVoiceSdkAppIDKey] = account.AppID
+	}
 }

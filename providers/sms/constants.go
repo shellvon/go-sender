@@ -113,9 +113,6 @@ const (
 const (
 	// volcTagKey is the key for Volc tag.
 	volcTagKey = "Tag"
-
-	// volcSmsAccountKey is the key for Volc SMS account.
-	volcSmsAccountKey = "SmsAccount"
 )
 
 // Yunpian specific constants.

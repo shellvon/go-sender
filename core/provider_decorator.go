@@ -11,6 +11,7 @@ import (
 const (
 	// DefaultSendTimeout is the default timeout for send operations.
 	DefaultSendTimeout = 30 * time.Second
+	queueBackoff       = 10 * time.Millisecond
 )
 
 // ProviderDecorator is a decorated Provider that includes middleware for various concerns.
@@ -296,6 +297,11 @@ func (pd *ProviderDecorator) queueProcessorLoop() {
 				if pd.handleDequeueError(err) {
 					return
 				}
+				continue
+			}
+			if item == nil {
+				// Queue is empty; back off briefly to avoid busy loop
+				time.Sleep(queueBackoff)
 				continue
 			}
 			pd.processQueueItem(pd.ctx, item)

@@ -85,14 +85,11 @@ func (t *volcTransformer) transformSMS(
 	if msg.SignName == "" {
 		return nil, nil, errors.New("sign name is required")
 	}
-	if msg.GetExtraStringOrDefault(volcSmsAccountKey, "") == "" {
-		return nil, nil, errors.New("sms account is required")
-	}
 	if msg.IsIntl() {
 		return nil, nil, NewUnsupportedInternationalError(string(SubProviderVolc), "sendSMS")
 	}
 	body := map[string]interface{}{
-		"SmsAccount":   msg.GetExtraStringOrDefault(volcSmsAccountKey, account.AppID),
+		"SmsAccount":   account.AppID,
 		"Sign":         msg.SignName,
 		"TemplateID":   msg.TemplateID,
 		"PhoneNumbers": strings.Join(msg.Mobiles, ","),
