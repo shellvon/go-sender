@@ -34,5 +34,10 @@ func (a *Account) Validate() error {
 	if a.SubType == "" {
 		return errors.New("subType is required for SMS provider")
 	}
+
+	if a.SubType == string(SubProviderVolc) && a.AppID == "" {
+		return errors.New("smsAccount(appID) is required for Volc SMS provider")
+	}
+
 	return a.BaseAccount.Validate()
 }

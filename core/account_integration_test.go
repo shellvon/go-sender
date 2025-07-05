@@ -1,8 +1,12 @@
 package core_test
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/providers/email"
@@ -415,4 +419,288 @@ func TestAccount_ConfigurationExample(t *testing.T) {
 	if len(smsAccounts) != 2 {
 		t.Errorf("Expected 2 sms accounts, got %d", len(smsAccounts))
 	}
+}
+
+//nolint:gocyclo // test function naturally complex with many subtests
+func TestAccountConfigDynamicUpdate(t *testing.T) {
+	t.Run("Basic CRUD Operations", func(t *testing.T) {
+		config := &core.BaseConfig[*core.BaseAccount]{}
+		// 创建初始账号
+		account1 := &core.BaseAccount{
+			AccountMeta: core.AccountMeta{
+				Provider: "test-provider",
+				Name:     "test1",
+				Weight:   100,
+			},
+			Credentials: core.Credentials{
+				APIKey:    "key1",
+				APISecret: "secret1",
+			},
+		}
+		account2 := &core.BaseAccount{
+			AccountMeta: core.AccountMeta{
+				Provider: "test-provider",
+				Name:     "test2",
+				Weight:   50,
+			},
+			Credentials: core.Credentials{
+				APIKey:    "key2",
+				APISecret: "secret2",
+			},
+		}
+
+		// 添加账号
+		if err := config.Add(account1); err != nil {
+			t.Errorf("Failed to add account1: %v", err)
+		}
+		if err := config.Add(account2); err != nil {
+			t.Errorf("Failed to add account2: %v", err)
+		}
+
+		// 验证账号数量
+		if len(config.GetItems()) != 2 {
+			t.Errorf("Expected 2 accounts, got %d", len(config.GetItems()))
+		}
+
+		// 更新账号
+		account1.Weight = 80
+		if err := config.Update(account1); err != nil {
+			t.Errorf("Failed to update account: %v", err)
+		}
+
+		// 验证更新结果
+		items := config.GetItems()
+		var found bool
+		for _, item := range items {
+			if item.Name == "test1" && item.Weight == 80 {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Error("Account update not reflected")
+		}
+
+		// 删除账号
+		config.Delete("test2")
+
+		// 验证删除结果
+		if len(config.GetItems()) != 1 {
+			t.Error("Account deletion not reflected")
+		}
+	})
+
+	t.Run("Concurrent Operations", func(_ *testing.T) {
+		config := &core.BaseConfig[*core.BaseAccount]{}
+		var wg sync.WaitGroup
+		accountCount := 10
+		wg.Add(accountCount * 2) // 一半goroutine添加，一半删除
+
+		// 并发添加账号
+		for i := range accountCount {
+			go func(idx int) {
+				defer wg.Done()
+				account := &core.BaseAccount{
+					AccountMeta: core.AccountMeta{
+						Provider: "test-provider",
+						Name:     fmt.Sprintf("concurrent-%d", idx),
+						Weight:   100,
+					},
+					Credentials: core.Credentials{
+						APIKey:    fmt.Sprintf("key-%d", idx),
+						APISecret: fmt.Sprintf("secret-%d", idx),
+					},
+				}
+				_ = config.Add(account)
+			}(i)
+		}
+
+		// 并发删除账号
+		for i := range accountCount {
+			go func(idx int) {
+				defer wg.Done()
+				time.Sleep(time.Millisecond * 10) // 稍微延迟删除操作
+				config.Delete(fmt.Sprintf("concurrent-%d", idx))
+			}(i)
+		}
+
+		wg.Wait()
+	})
+
+	t.Run("Weight Adjustment", func(t *testing.T) {
+		config := &core.BaseConfig[*core.BaseAccount]{}
+		// 添加多个账号
+		accounts := []*core.BaseAccount{
+			{
+				AccountMeta: core.AccountMeta{
+					Provider: "test-provider",
+					Name:     "high",
+					Weight:   100,
+				},
+				Credentials: core.Credentials{APIKey: "k"},
+			},
+			{
+				AccountMeta: core.AccountMeta{
+					Provider: "test-provider",
+					Name:     "medium",
+					Weight:   50,
+				},
+				Credentials: core.Credentials{APIKey: "k"},
+			},
+			{
+				AccountMeta: core.AccountMeta{
+					Provider: "test-provider",
+					Name:     "low",
+					Weight:   25,
+				},
+				Credentials: core.Credentials{APIKey: "k"},
+			},
+		}
+		for _, acc := range accounts {
+			if err := config.Add(acc); err != nil {
+				t.Errorf("Failed to add account %s: %v", acc.Name, err)
+			}
+		}
+
+		// 动态调整权重
+		accounts[1].Weight = 75
+		if err := config.Update(accounts[1]); err != nil {
+			t.Errorf("Failed to update account weight: %v", err)
+		}
+
+		// 验证选择策略是否反映新权重
+		strategy := core.NewWeightedStrategy()
+		ctx := core.WithCtxStrategy(context.Background(), strategy)
+
+		counts := make(map[string]int)
+		iterations := 1000
+
+		for range iterations {
+			selected, err := config.Select(ctx, nil)
+			if err != nil {
+				t.Errorf("Failed to select account: %v", err)
+				continue
+			}
+			counts[selected.Name]++
+		}
+
+		// 验证高权重账号被选择的次数更多
+		if counts["high"] <= counts["low"] {
+			t.Error("Weight-based selection not working as expected")
+		}
+	})
+
+	t.Run("Account Status Toggle", func(t *testing.T) {
+		config := &core.BaseConfig[*core.BaseAccount]{}
+		account := &core.BaseAccount{
+			AccountMeta: core.AccountMeta{
+				Provider: "test-provider",
+				Name:     "status-test",
+				Weight:   100,
+			},
+			Credentials: core.Credentials{
+				APIKey:    "key",
+				APISecret: "secret",
+			},
+		}
+
+		// 添加账号
+		if err := config.Add(account); err != nil {
+			t.Errorf("Failed to add account: %v", err)
+		}
+
+		// 禁用账号
+		account.Disabled = true
+		if err := config.Update(account); err != nil {
+			t.Errorf("Failed to disable account: %v", err)
+		}
+
+		// 验证禁用状态
+		items := config.GetItems()
+		var found bool
+		for _, item := range items {
+			if item.Name == "status-test" && item.Disabled {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Error("Account status update not reflected")
+		}
+
+		// 验证禁用账号不会被选择策略选中
+		strategy := core.NewWeightedStrategy()
+		ctx := core.WithCtxStrategy(context.Background(), strategy)
+		_, err := config.Select(ctx, nil)
+		if err == nil {
+			t.Error("Expected error when selecting disabled account")
+		}
+	})
+
+	t.Run("Atomic Configuration Update", func(t *testing.T) {
+		config := &core.BaseConfig[*core.BaseAccount]{}
+		// 创建一组初始账号
+		initialAccounts := []*core.BaseAccount{
+			{
+				AccountMeta: core.AccountMeta{
+					Provider: "test-provider",
+					Name:     "atomic1",
+					Weight:   100,
+				},
+				Credentials: core.Credentials{APIKey: "k"},
+			},
+			{
+				AccountMeta: core.AccountMeta{
+					Provider: "test-provider",
+					Name:     "atomic2",
+					Weight:   100,
+				},
+				Credentials: core.Credentials{APIKey: "k"},
+			},
+		}
+		for _, acc := range initialAccounts {
+			if err := config.Add(acc); err != nil {
+				t.Errorf("Failed to add account %s: %v", acc.Name, err)
+			}
+		}
+
+		// 并发更新和读取
+		var wg sync.WaitGroup
+		updateCount := 100
+		wg.Add(updateCount + 1) // +1 for the reader goroutine
+
+		// 启动一个持续读取的 goroutine
+		go func() {
+			defer wg.Done()
+			for range updateCount {
+				items := config.GetItems()
+				// 验证账号列表的一致性
+				for _, acc := range items {
+					if acc.Weight < 0 || acc.Weight > 200 {
+						t.Errorf("Invalid weight detected during concurrent update: %d", acc.Weight)
+					}
+				}
+				time.Sleep(time.Millisecond)
+			}
+		}()
+
+		// 并发更新权重
+		for i := range updateCount {
+			go func(idx int) {
+				defer wg.Done()
+				weight := 50 + idx%150 // 保持在合理范围内
+				acc := &core.BaseAccount{
+					AccountMeta: core.AccountMeta{
+						Provider: "test-provider",
+						Name:     "atomic1",
+						Weight:   weight,
+					},
+					Credentials: core.Credentials{APIKey: "k"},
+				}
+				_ = config.Update(acc)
+			}(i)
+		}
+
+		wg.Wait()
+	})
 }
