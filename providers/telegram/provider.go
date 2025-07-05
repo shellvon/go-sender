@@ -20,7 +20,7 @@ var (
 func New(config *Config) (*Provider, error) {
 	httpProvider, err := providers.NewHTTPProvider(
 		string(core.ProviderTypeTelegram),
-		&telegramTransformer{},
+		newTelegramTransformer(),
 		config,
 	)
 	if err != nil {

@@ -26,13 +26,13 @@ See our [Project Roadmap & Task Tracking](https://github.com/shellvon/go-sender/
 ```go
 import (
 	"context"
-	"github.com/yourpackage/gosender"
-	"github.com/yourpackage/sms"
+	gosender "github.com/shellvon/go-sender"
+	"github.com/shellvon/go-sender/providers/sms"
 )
 
 func main() {
 	// Initialize a new sender instance
-	sender := gosender.NewSender()
+	sender := gosender.NewSender(nil)
 
 	// Create an SMS message using Aliyun provider
 	msg := sms.Aliyun().
@@ -41,14 +41,8 @@ func main() {
 		TemplateID("SMS_xxx").
 		Build()
 
-	// Option 1: Send directly using provider
-	provider, _ := sms.New(&cfg)
-	provider.Send(context.Background(), msg, nil)
-
-	// Option 2: Send using GoSender with registered provider
-	sender.RegisterProvider(core.ProviderTypeSMS, provider, nil)
-	// Automatically applies middleware chain
-	sender.Send(context.Background(), msg)
+	// Send using GoSender (assumes provider registered elsewhere)
+	_ = sender.Send(context.Background(), msg)
 }
 ```
 

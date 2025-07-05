@@ -4,7 +4,7 @@ package dingtalk
 //
 // Example:
 //
-//	msg := dingtalk.NewFeedCardBuilder().
+//	msg := dingtalk.FeedCard().
 //	         AddLink("title", "text", "https://example.com", "https://example.com/logo.png").
 //	         Build()
 //

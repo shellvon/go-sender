@@ -88,7 +88,7 @@ msg := wecombot.Image().
 ### 4. News Message
 
 ```go
-msg := wecombot.NewsMsg().
+msg := wecombot.News().
     AddArticle("Important", "Description", "https://example.com", "https://example.com/image.jpg").
     Build()
 ```

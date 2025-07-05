@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
 
 	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/providers"
@@ -18,29 +17,20 @@ type Provider struct {
 
 var _ core.Provider = (*Provider)(nil)
 
-// transformerRegistry global transformer registry.
+// smsRegistry is a package-level registry leveraging the shared providers.TransformerRegistry
+// to avoid duplicated code.
 //
-//nolint:gochecknoglobals // Reason: transformerRegistry is a global registry for sms transformers
-var transformerRegistry = make(map[string]core.HTTPTransformer[*Account])
+//nolint:gochecknoglobals // Global registry is acceptable for package-wide look-ups.
+var smsRegistry = providers.NewTransformerRegistry[*Account]()
 
-// registryMutex global mutex for transformerRegistry.
-//
-//nolint:gochecknoglobals // Reason: registryMutex is a global mutex for transformerRegistry
-var registryMutex sync.RWMutex
-
-// RegisterTransformer 注册transformer到全局注册表.
+// RegisterTransformer registers a transformer for a given SMS sub-provider.
 func RegisterTransformer(subProvider string, transformer core.HTTPTransformer[*Account]) {
-	registryMutex.Lock()
-	defer registryMutex.Unlock()
-	transformerRegistry[subProvider] = transformer
+	smsRegistry.Register(subProvider, transformer)
 }
 
-// GetTransformer 从注册表获取transformer.
+// GetTransformer retrieves a transformer for a given SMS sub-provider.
 func GetTransformer(subProvider string) (core.HTTPTransformer[*Account], bool) {
-	registryMutex.RLock()
-	defer registryMutex.RUnlock()
-	transformer, exists := transformerRegistry[subProvider]
-	return transformer, exists
+	return smsRegistry.Get(subProvider)
 }
 
 // smsTransformer 实现 core.HTTPTransformer[*Account]，根据SubProvider选择具体的transformer.
@@ -75,11 +65,16 @@ func (t *smsTransformer) Transform(
 	return transformer.Transform(ctx, msg, account)
 }
 
+// newSMSTransformer returns a new instance of the package-local smsTransformer.
+func newSMSTransformer() core.HTTPTransformer[*Account] {
+	return &smsTransformer{}
+}
+
 // New creates a new SMS provider instance.
 func New(config *Config) (*Provider, error) {
 	httpProvider, err := providers.NewHTTPProvider(
 		string(core.ProviderTypeSMS),
-		&smsTransformer{},
+		newSMSTransformer(),
 		config,
 	)
 	if err != nil {

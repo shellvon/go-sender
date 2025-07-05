@@ -28,6 +28,11 @@ type webhookTransformer struct{}
 // 确保 webhookTransformer 实现了 core.HTTPTransformer[*Endpoint].
 var _ core.HTTPTransformer[*Endpoint] = (*webhookTransformer)(nil)
 
+// newWebhookTransformer constructs a new webhookTransformer.
+func newWebhookTransformer() core.HTTPTransformer[*Endpoint] {
+	return &webhookTransformer{}
+}
+
 // CanTransform 判断是否为 Webhook 消息.
 func (t *webhookTransformer) CanTransform(msg core.Message) bool {
 	return msg.ProviderType() == core.ProviderTypeWebhook

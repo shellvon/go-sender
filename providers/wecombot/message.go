@@ -1,6 +1,9 @@
 package wecombot
 
-import "github.com/shellvon/go-sender/core"
+import (
+	"github.com/shellvon/go-sender/core"
+	"github.com/shellvon/go-sender/providers"
+)
 
 // WeCom group robot message, distinct from app messages (https://developer.work.weixin.qq.com/document/path/90236)
 // The robot is based on group chats with simpler and more simple parameters:
@@ -11,19 +14,19 @@ type MessageType string
 
 const (
 	// TypeText represents text message type.
-	TypeText = "text"
+	TypeText MessageType = providers.MsgTypeText
 	// TypeMarkdown represents markdown message type.
-	TypeMarkdown = "markdown"
+	TypeMarkdown MessageType = providers.MsgTypeMarkdown
 	// TypeImage represents image message type.
-	TypeImage = "image"
+	TypeImage MessageType = providers.MsgTypeImage
 	// TypeNews represents news message type.
-	TypeNews = "news"
+	TypeNews MessageType = providers.MsgTypeNews
 	// TypeTemplateCard represents template card message type.
-	TypeTemplateCard = "template_card"
+	TypeTemplateCard MessageType = providers.MsgTypeTemplateCard
 	// TypeVoice represents voice message type.
-	TypeVoice = "voice"
+	TypeVoice MessageType = providers.MsgTypeVoice
 	// TypeFile represents file message type.
-	TypeFile = "file"
+	TypeFile MessageType = providers.MsgTypeFile
 )
 
 // Message interface definition.

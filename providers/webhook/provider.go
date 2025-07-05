@@ -16,7 +16,7 @@ var _ core.Provider = (*Provider)(nil)
 func New(config *Config) (*Provider, error) {
 	httpProvider, err := providers.NewHTTPProvider(
 		string(core.ProviderTypeWebhook),
-		&webhookTransformer{},
+		newWebhookTransformer(),
 		config,
 	)
 	if err != nil {

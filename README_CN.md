@@ -26,12 +26,12 @@
 ```go
 import (
     "context"
-    "github.com/shellvon/go-sender"
+    gosender "github.com/shellvon/go-sender"
     "github.com/shellvon/go-sender/providers/sms"
 )
 
 func main() {
-    sender := gosender.NewSender()
+    sender := gosender.NewSender(nil)
 	msg := sms.Aliyun().
 		To("***REMOVED***").
 		Content("Hello from go-sender!").

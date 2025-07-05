@@ -120,12 +120,6 @@ func (m *DefaultMessage) MsgID() string {
 	return m.msgID
 }
 
-// SubProviderType returns the sub-provider type, default implementation returns empty string
-// @deprecated: Use GetAccountName() instead.
-func (m *DefaultMessage) SubProviderType() string {
-	return ""
-}
-
 // ProviderSendOptions defines per-request parameters for Provider.Send.
 type ProviderSendOptions struct {
 	HTTPClient *http.Client

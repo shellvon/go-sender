@@ -18,7 +18,7 @@ var _ core.Provider = (*Provider)(nil)
 func New(config *Config) (*Provider, error) {
 	httpProvider, err := providers.NewHTTPProvider(
 		string(core.ProviderTypeServerChan),
-		newTransformer(),
+		newServerChanTransformer(),
 		config,
 	)
 	if err != nil {
