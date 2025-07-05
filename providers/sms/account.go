@@ -1,6 +1,10 @@
 package sms
 
-import "github.com/shellvon/go-sender/core"
+import (
+	"errors"
+
+	"github.com/shellvon/go-sender/core"
+)
 
 // Account represents a single SMS service account (any sub-provider).
 // It follows the three-tier design: AccountMeta + Credentials + extra
@@ -18,4 +22,13 @@ type Account struct {
 	Region string `json:"region,omitempty"   yaml:"region,omitempty"`
 	// Callback is the callback URL for delivery reports.
 	Callback string `json:"callback,omitempty" yaml:"callback,omitempty"`
+}
+
+// Validate checks if the account is valid.
+// It ensures that the subType is set for SMS providers.
+func (a *Account) Validate() error {
+	if a.SubType == "" {
+		return errors.New("subType is required for SMS provider")
+	}
+	return a.BaseAccount.Validate()
 }

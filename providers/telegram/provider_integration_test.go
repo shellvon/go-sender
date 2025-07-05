@@ -33,7 +33,7 @@ func TestProvider_Send_AllMessageTypes(t *testing.T) {
 		Items: []*telegram.Account{
 			{
 				BaseAccount: core.BaseAccount{
-					AccountMeta: core.AccountMeta{Name: "primary"},
+					AccountMeta: core.AccountMeta{Provider: "telegram", Name: "primary"},
 					Credentials: core.Credentials{APIKey: "bot123:token"},
 				},
 			},
