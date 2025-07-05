@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/shellvon/go-sender/core"
+	"github.com/shellvon/go-sender/utils"
 )
 
 // MessageType represents the type of SMS message.
@@ -184,6 +185,11 @@ func (m *Message) GetExtraStringOrDefault(key, defaultValue string) string {
 	return defaultValue
 }
 
+// GetExtraStringOrDefaultEmpty returns a string value from extras, or empty string if not found.
+func (m *Message) GetExtraStringOrDefaultEmpty(key string) string {
+	return m.GetExtraStringOrDefault(key, "")
+}
+
 // GetExtraInt returns an int value from extras.
 func (m *Message) GetExtraInt(key string) (int, bool) {
 	if m.Extras == nil {
@@ -241,4 +247,43 @@ func (m *Message) GetExtraBoolOrDefault(key string, defaultValue bool) bool {
 // GetSubProvider returns the sub-provider type.
 func (m *Message) GetSubProvider() string {
 	return m.SubProvider
+}
+
+// ApplyCommonDefaults applies common default values from account to message.
+// This method handles the common defaults that are shared across all SMS providers:
+// - SignName: use message's SignName if present, otherwise extract from content, otherwise use account's default
+// - CallbackURL: use message's callback if present, otherwise use account's default
+// - RegionCode: set to 86 (China) if not set
+// - Extras: initialize if nil.
+func (m *Message) ApplyCommonDefaults(account *Account) {
+	// Setup SignName: use message's SignName if present, otherwise extract from content, otherwise use account's default
+	if m.SignName == "" {
+		// Try to extract signature from content
+		extractedSignName := utils.GetSignatureFromContent(m.Content)
+		if extractedSignName != "" {
+			// Found signature in content, set it and remove from content
+			m.SignName = extractedSignName
+			// Remove the signature from content (【signName】)
+			m.Content = strings.TrimPrefix(m.Content, "【"+extractedSignName+"】")
+			m.Content = strings.TrimSpace(m.Content)
+		} else {
+			// No signature in content, use account's default
+			m.SignName = account.SignName
+		}
+	}
+
+	// Setup CallbackURL: use message's callback if present, otherwise use account's default
+	if m.CallbackURL == "" && account.Callback != "" {
+		m.CallbackURL = account.Callback
+	}
+
+	// Setup Extras for platform-specific fields
+	if m.Extras == nil {
+		m.Extras = make(map[string]interface{})
+	}
+
+	// Setup default region code
+	if m.RegionCode == 0 {
+		m.RegionCode = 86
+	}
 }

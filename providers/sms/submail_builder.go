@@ -1,5 +1,9 @@
 package sms
 
+import (
+	"github.com/shellvon/go-sender/utils"
+)
+
 // @ProviderName: Submail / 赛邮
 // @Website: https://www.mysubmail.com
 // @APIDoc: https://www.mysubmail.com/documents
@@ -60,17 +64,12 @@ func (b *SubmailSMSBuilder) SignType(signType string) *SubmailSMSBuilder {
 
 func (b *SubmailSMSBuilder) Build() *Message {
 	msg := b.BaseBuilder.Build()
-	extra := map[string]interface{}{}
-	if b.tag != "" {
-		extra[submailTagKey] = b.tag
+	fields := map[string]interface{}{
+		submailTagKey:      b.tag,
+		submailSenderKey:   b.sender,
+		submailSignTypeKey: b.signType,
 	}
-	if b.sender != "" {
-		extra[submailSenderKey] = b.sender
-	}
-	if b.signType != "" {
-		extra[submailSignTypeKey] = b.signType
-	}
-	if len(extra) > 0 {
+	if extra := utils.BuildExtras(fields); len(extra) > 0 {
 		msg.Extras = extra
 	}
 	return msg

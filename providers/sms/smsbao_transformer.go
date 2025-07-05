@@ -48,65 +48,42 @@ func (t *smsbaoTransformer) CanTransform(msg core.Message) bool {
 	return ok && smsMsg.SubProvider == string(SubProviderSmsbao)
 }
 
-// Transform 构造短信宝 HTTPRequestSpec.
+// Transform converts a Smsbao SMS message to HTTP request specification.
 func (t *smsbaoTransformer) Transform(
-	ctx context.Context,
+	_ context.Context,
 	msg core.Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
-		return nil, nil, errors.New("invalid message type for smsbaoTransformer")
+		return nil, nil, fmt.Errorf("unsupported message type for Smsbao: %T", msg)
 	}
-	if err := t.validateMessage(smsMsg); err != nil {
-		return nil, nil, err
-	}
+
+	// Apply Smsbao-specific defaults
+	t.applySmsbaoDefaults(smsMsg, account)
+
 	switch smsMsg.Type {
 	case SMSText:
-		return t.transformTextSMS(ctx, smsMsg, account)
+		return t.transformSMS(smsMsg, account)
 	case Voice:
-		return t.transformVoiceSMS(ctx, smsMsg, account)
+		return t.transformVoice(smsMsg, account)
 	case MMS:
-		fallthrough
+		return nil, nil, fmt.Errorf("unsupported message type: %v", smsMsg.Type)
 	default:
-		return nil, nil, fmt.Errorf("unsupported smsbao message type: %s", smsMsg.Type)
+		return nil, nil, fmt.Errorf("unsupported message type: %v", smsMsg.Type)
 	}
 }
 
-// validateMessage 校验参数
-//   - 国内短信: https://www.smsbao.com/openapi/213.html
-//   - 国际短信: https://www.smsbao.com/openapi/299.html
-//   - 语音验证码: https://www.smsbao.com/openapi/214.html
-func (t *smsbaoTransformer) validateMessage(msg *Message) error {
-	if len(msg.Mobiles) == 0 {
-		return errors.New("mobiles is required")
-	}
-	if msg.Content == "" {
-		return errors.New("content is required")
-	}
-	if len(msg.Mobiles) > maxMobilesPerRequest {
-		return errors.New("too many mobiles, max 99 allowed")
-	}
-	if msg.Type == Voice {
-		if msg.IsIntl() {
-			return errors.New("voice sms only supports domestic mobile")
-		}
-		if len(msg.Mobiles) != 1 {
-			return errors.New("voice sms only supports single domestic mobile")
-		}
-		if len(msg.Mobiles[0]) != 11 || msg.Mobiles[0][0] != '1' {
-			return errors.New("only support domestic mobile for voice sms")
-		}
-	}
-	return nil
+// applySmsbaoDefaults applies Smsbao-specific defaults to the message.
+func (t *smsbaoTransformer) applySmsbaoDefaults(msg *Message, account *Account) {
+	// Apply common defaults first
+	msg.ApplyCommonDefaults(account)
 }
 
-// transformTextSMS 构造文本短信 HTTP 请求
+// transformSMS transforms SMS message to HTTP request
 //   - 国内短信: https://www.smsbao.com/openapi/213.html
 //   - 国际短信: https://www.smsbao.com/openapi/299.html
-//   - 语音验证码: https://www.smsbao.com/openapi/214.html
-func (t *smsbaoTransformer) transformTextSMS(
-	_ context.Context,
+func (t *smsbaoTransformer) transformSMS(
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
@@ -139,16 +116,26 @@ func (t *smsbaoTransformer) transformTextSMS(
 	}, handleSMSBaoResponse, nil
 }
 
-// transformVoiceSMS 构造语音验证码 HTTP 请求
+// transformVoice transforms voice message to HTTP request
 //   - 语音验证码: https://www.smsbao.com/openapi/214.html
 //
 // 能力说明:
 //   - 语音验证码：仅支持国内、仅验证码类型、仅单号码。
-func (t *smsbaoTransformer) transformVoiceSMS(
-	_ context.Context,
+func (t *smsbaoTransformer) transformVoice(
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+	// 检查语音短信的限制
+	if msg.IsIntl() {
+		return nil, nil, errors.New("voice sms only supports domestic mobile")
+	}
+	if len(msg.Mobiles) != 1 {
+		return nil, nil, errors.New("voice sms only supports single domestic mobile")
+	}
+	if len(msg.Mobiles[0]) != 11 || msg.Mobiles[0][0] != '1' {
+		return nil, nil, errors.New("only support domestic mobile for voice sms")
+	}
+
 	if account == nil || account.APIKey == "" || account.APISecret == "" {
 		return nil, nil, errors.New("smsbao account Key(username) and Secret(password) are required")
 	}

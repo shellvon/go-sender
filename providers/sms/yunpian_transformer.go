@@ -38,50 +38,48 @@ func (t *yunpianTransformer) CanTransform(msg core.Message) bool {
 }
 
 func (t *yunpianTransformer) Transform(
-	ctx context.Context,
+	_ context.Context,
 	msg core.Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
-		return nil, nil, errors.New("invalid message type for yunpianTransformer")
+		return nil, nil, fmt.Errorf("unsupported message type for Yunpian: %T", msg)
 	}
-	if err := t.validateMessage(smsMsg); err != nil {
-		return nil, nil, err
-	}
+
+	// Apply Yunpian-specific defaults
+	t.applyYunpianDefaults(smsMsg, account)
+
 	switch smsMsg.Type {
 	case SMSText:
-		return t.transformTextSMS(ctx, smsMsg, account)
+		return t.transformSMS(smsMsg, account)
 	case Voice:
-		return t.transformVoiceSMS(ctx, smsMsg, account)
+		return t.transformVoice(smsMsg, account)
 	case MMS:
-		return t.transformMMSSMS(ctx, smsMsg, account)
+		return t.transformMMS(smsMsg, account)
 	default:
-		return nil, nil, fmt.Errorf("unsupported yunpian message type: %v", smsMsg.Type)
+		return nil, nil, fmt.Errorf("unsupported message type: %v", smsMsg.Type)
 	}
 }
 
-func (t *yunpianTransformer) validateMessage(msg *Message) error {
-	if len(msg.Mobiles) == 0 {
-		return errors.New("mobiles is required")
-	}
-	if msg.Type == SMSText && msg.Content == "" && msg.TemplateID == "" {
-		return errors.New("content or templateID is required")
-	}
-	if msg.Type == Voice && msg.Content == "" {
-		return errors.New("voice content is required")
-	}
-	if msg.Type == MMS && msg.TemplateID == "" {
-		return errors.New("mms requires templateID")
-	}
-	return nil
+// applyYunpianDefaults applies Yunpian-specific defaults to the message.
+func (t *yunpianTransformer) applyYunpianDefaults(msg *Message, account *Account) {
+	// Apply common defaults first
+	msg.ApplyCommonDefaults(account)
 }
 
-func (t *yunpianTransformer) transformTextSMS(
-	ctx context.Context,
+// transformSMS transforms SMS message to HTTP request.
+func (t *yunpianTransformer) transformSMS(
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+	// 验证参数
+	if len(msg.Mobiles) == 0 {
+		return nil, nil, errors.New("mobiles is required")
+	}
+	if msg.Content == "" && msg.TemplateID == "" {
+		return nil, nil, errors.New("content or templateID is required")
+	}
 	// 国际短信
 	if msg.IsIntl() {
 		if len(msg.Mobiles) > 1 {
@@ -90,24 +88,23 @@ func (t *yunpianTransformer) transformTextSMS(
 		if msg.TemplateID != "" {
 			return nil, nil, errors.New("yunpian international SMS does not support template")
 		}
-		return t.transformIntlSMS(ctx, msg, account)
+		return t.transformIntlSMS(msg, account)
 	}
 
 	// 国内短信
 	if msg.TemplateID != "" {
 		if len(msg.Mobiles) > 1 {
-			return t.transformTplBatchSMS(ctx, msg, account)
+			return t.transformTplBatchSMS(msg, account)
 		}
-		return t.transformTplSMS(ctx, msg, account)
+		return t.transformTplSMS(msg, account)
 	}
 	if len(msg.Mobiles) > 1 {
-		return t.transformBatchSMS(ctx, msg, account)
+		return t.transformBatchSMS(msg, account)
 	}
-	return t.transformSingleSMS(ctx, msg, account)
+	return t.transformSingleSMS(msg, account)
 }
 
 func (t *yunpianTransformer) transformSingleSMS(
-	_ context.Context,
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
@@ -127,7 +124,6 @@ func (t *yunpianTransformer) transformSingleSMS(
 }
 
 func (t *yunpianTransformer) transformBatchSMS(
-	_ context.Context,
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
@@ -147,7 +143,6 @@ func (t *yunpianTransformer) transformBatchSMS(
 }
 
 func (t *yunpianTransformer) transformTplSMS(
-	_ context.Context,
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
@@ -166,7 +161,6 @@ func (t *yunpianTransformer) transformTplSMS(
 }
 
 func (t *yunpianTransformer) transformTplBatchSMS(
-	_ context.Context,
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
@@ -185,7 +179,6 @@ func (t *yunpianTransformer) transformTplBatchSMS(
 }
 
 func (t *yunpianTransformer) transformIntlSMS(
-	_ context.Context,
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
@@ -202,11 +195,18 @@ func (t *yunpianTransformer) transformIntlSMS(
 	return t.buildRequest(endpoint, params)
 }
 
-func (t *yunpianTransformer) transformVoiceSMS(
-	_ context.Context,
+// transformVoice transforms voice message to HTTP request.
+func (t *yunpianTransformer) transformVoice(
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+	// 验证参数
+	if len(msg.Mobiles) == 0 {
+		return nil, nil, errors.New("mobiles is required")
+	}
+	if msg.Content == "" {
+		return nil, nil, errors.New("voice content is required")
+	}
 	endpoint := t.yunpianEndpoint("voice", "/v2/voice/send.json")
 	params := map[string]string{
 		"apikey":       account.APISecret,
@@ -220,11 +220,18 @@ func (t *yunpianTransformer) transformVoiceSMS(
 	return t.buildRequest(endpoint, params)
 }
 
-func (t *yunpianTransformer) transformMMSSMS(
-	_ context.Context,
+// transformMMS transforms MMS message to HTTP request.
+func (t *yunpianTransformer) transformMMS(
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+	// 验证参数
+	if len(msg.Mobiles) == 0 {
+		return nil, nil, errors.New("mobiles is required")
+	}
+	if msg.TemplateID == "" {
+		return nil, nil, errors.New("mms requires templateID")
+	}
 	endpoint := t.yunpianEndpoint("vsms", "/v2/vsms/tpl_batch_send.json")
 	params := map[string]string{
 		"apikey":       account.APISecret,

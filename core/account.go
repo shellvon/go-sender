@@ -99,9 +99,6 @@ func (a *BaseAccount) GetMeta() *AccountMeta { return &a.AccountMeta }
 func (a *BaseAccount) GetCredentials() *Credentials { return &a.Credentials }
 
 func (a *BaseAccount) Validate() error {
-	if a.AccountMeta.Provider == "" {
-		return errors.New("provider is required")
-	}
 	if a.AccountMeta.Name == "" {
 		return errors.New("name is required")
 	}

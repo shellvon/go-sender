@@ -41,66 +41,65 @@ func (t *yuntongxunTransformer) CanTransform(msg core.Message) bool {
 }
 
 func (t *yuntongxunTransformer) Transform(
-	ctx context.Context,
+	_ context.Context,
 	msg core.Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
-		return nil, nil, errors.New("invalid message type for yuntongxunTransformer")
+		return nil, nil, fmt.Errorf("unsupported message type for Yuntongxun: %T", msg)
 	}
-	if err := t.validateMessage(smsMsg); err != nil {
-		return nil, nil, err
-	}
+
+	// Apply Yuntongxun-specific defaults
+	t.applyYuntongxunDefaults(smsMsg, account)
+
 	switch smsMsg.Type {
 	case SMSText:
-		return t.transformTextSMS(ctx, smsMsg, account)
+		return t.transformSMS(smsMsg, account)
 	case Voice:
-		return t.transformVoiceSMS(ctx, smsMsg, account)
+		return t.transformVoice(smsMsg, account)
 	case MMS:
-		fallthrough
+		return nil, nil, errors.New("Yuntongxun does not support MMS messages")
 	default:
-		return nil, nil, fmt.Errorf("unsupported yuntongxun message type: %v", smsMsg.Type)
+		return nil, nil, fmt.Errorf("unsupported message type: %v", smsMsg.Type)
 	}
 }
 
-func (t *yuntongxunTransformer) validateMessage(msg *Message) error {
-	if len(msg.Mobiles) == 0 {
-		return errors.New("mobiles is required")
-	}
-	if msg.IsIntl() {
-		if msg.Content == "" {
-			return errors.New("international sms requires content")
-		}
-	} else {
-		if msg.TemplateID == "" {
-			return errors.New("domestic sms requires templateID")
-		}
-	}
-	if msg.Type == Voice && msg.IsIntl() {
-		return errors.New("voice sms only supports domestic mobile")
-	}
-	return nil
+// applyYuntongxunDefaults applies Yuntongxun-specific defaults to the message.
+func (t *yuntongxunTransformer) applyYuntongxunDefaults(msg *Message, account *Account) {
+	// Apply common defaults first
+	msg.ApplyCommonDefaults(account)
 }
 
-// 官方文档:
+// transformSMS transforms SMS message to HTTP request
 //   - 国内短信: https://doc.yuntongxun.com/pe/5a533de33b8496dd00dce07c
 //   - 国际短信: https://doc.yuntongxun.com/pe/604f29eda80948a1006e928d
-func (t *yuntongxunTransformer) transformTextSMS(
-	ctx context.Context,
+func (t *yuntongxunTransformer) transformSMS(
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+	// 验证参数
+	if len(msg.Mobiles) == 0 {
+		return nil, nil, errors.New("mobiles is required")
+	}
+	if msg.IsIntl() {
+		if msg.Content == "" {
+			return nil, nil, errors.New("international sms requires content")
+		}
+	} else {
+		if msg.TemplateID == "" {
+			return nil, nil, errors.New("domestic sms requires templateID")
+		}
+	}
 	// 判断是否为国际短信
 	if msg.IsIntl() {
-		return t.transformIntlSMS(ctx, msg, account)
+		return t.transformIntlSMS(msg, account)
 	}
-	return t.transformDomesticSMS(ctx, msg, account)
+	return t.transformDomesticSMS(msg, account)
 }
 
 // 国内短信: https://doc.yuntongxun.com/pe/5a533de33b8496dd00dce07c
 func (t *yuntongxunTransformer) transformDomesticSMS(
-	_ context.Context,
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
@@ -133,7 +132,6 @@ func (t *yuntongxunTransformer) transformDomesticSMS(
 
 // 国际短信: https://doc.yuntongxun.com/pe/604f29eda80948a1006e928d
 func (t *yuntongxunTransformer) transformIntlSMS(
-	_ context.Context,
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
@@ -172,18 +170,24 @@ func (t *yuntongxunTransformer) transformIntlSMS(
 	}, t.handleYuntongxunResponse, nil
 }
 
-// 官方文档:
+// transformVoice transforms voice message to HTTP request
 // 语音验证码:
 //   - 默认: https://doc.yuntongxun.com/pe/5a533de43b8496dd00dce07e
 //   - 自定义: https://doc.yuntongxun.com/pe/5a533de53b8496dd00dce080
 //
 // 外呼通知
 //   - 语音通知: https://doc.yuntongxun.com/pe/5a5342c73b8496dd00dce139
-func (t *yuntongxunTransformer) transformVoiceSMS(
-	_ context.Context,
+func (t *yuntongxunTransformer) transformVoice(
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+	// 验证参数
+	if len(msg.Mobiles) == 0 {
+		return nil, nil, errors.New("mobiles is required")
+	}
+	if msg.IsIntl() {
+		return nil, nil, errors.New("voice sms only supports domestic mobile")
+	}
 	// 只支持国内
 	if msg.IsIntl() {
 		return nil, nil, NewUnsupportedInternationalError(string(SubProviderYuntongxun), "voice call")

@@ -89,7 +89,7 @@ func TestBaseAccount_Validate(t *testing.T) {
 					APIKey: "test-key",
 				},
 			},
-			wantErr: true,
+			wantErr: false,
 		},
 		{
 			name: "empty name",

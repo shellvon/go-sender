@@ -47,37 +47,48 @@ func (t *ucpTransformer) CanTransform(msg core.Message) bool {
 }
 
 func (t *ucpTransformer) Transform(
-	ctx context.Context,
+	_ context.Context,
 	msg core.Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
-		return nil, nil, errors.New("invalid message type for ucpTransformer")
+		return nil, nil, fmt.Errorf("unsupported message type for UCP: %T", msg)
 	}
-	if err := t.validateMessage(smsMsg); err != nil {
-		return nil, nil, err
+
+	// Apply UCP-specific defaults
+	t.applyUcpDefaults(smsMsg, account)
+
+	switch smsMsg.Type {
+	case SMSText:
+		return t.transformSMS(smsMsg, account)
+	case Voice, MMS:
+		return nil, nil, fmt.Errorf("unsupported message type: %v", smsMsg.Type)
+	default:
+		return nil, nil, fmt.Errorf("unsupported message type: %v", smsMsg.Type)
 	}
-	return t.transformTextSMS(ctx, smsMsg, account)
 }
 
-func (t *ucpTransformer) validateMessage(msg *Message) error {
-	if len(msg.Mobiles) == 0 {
-		return errors.New("mobiles is required")
-	}
-	if msg.TemplateID == "" {
-		return errors.New("templateID is required")
-	}
-	return nil
+// applyUcpDefaults applies UCP-specific defaults to the message.
+func (t *ucpTransformer) applyUcpDefaults(msg *Message, account *Account) {
+	// Apply common defaults first
+	msg.ApplyCommonDefaults(account)
 }
 
-// transformTextSMS 构造 UCP 短信 HTTP 请求
+// transformSMS transforms SMS message to HTTP request
 //   - 短信API: http://docs.ucpaas.com/doku.php?id=%E7%9F%AD%E4%BF%A1:about_sms
-func (t *ucpTransformer) transformTextSMS(
-	_ context.Context,
+func (t *ucpTransformer) transformSMS(
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+	// 验证参数
+	if len(msg.Mobiles) == 0 {
+		return nil, nil, errors.New("mobiles is required")
+	}
+	if msg.TemplateID == "" {
+		return nil, nil, errors.New("templateID is required")
+	}
+
 	// 根据手机号数量选择API
 	var apiPath string
 	if len(msg.Mobiles) > 1 {

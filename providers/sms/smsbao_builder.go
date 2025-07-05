@@ -1,5 +1,9 @@
 package sms
 
+import (
+	"github.com/shellvon/go-sender/utils"
+)
+
 // @ProviderName: Smsbao / 短信宝
 // @Website: https://www.smsbao.com
 // @APIDoc: https://www.smsbao.com/openapi
@@ -33,11 +37,10 @@ func (b *SmsbaoSMSBuilder) ProductID(pid string) *SmsbaoSMSBuilder {
 
 func (b *SmsbaoSMSBuilder) Build() *Message {
 	msg := b.BaseBuilder.Build()
-	extra := map[string]interface{}{}
-	if b.productID != "" {
-		extra[smsbaoProductIDKey] = b.productID
+	fields := map[string]interface{}{
+		smsbaoProductIDKey: b.productID,
 	}
-	if len(extra) > 0 {
+	if extra := utils.BuildExtras(fields); len(extra) > 0 {
 		msg.Extras = extra
 	}
 	return msg

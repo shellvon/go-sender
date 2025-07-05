@@ -3,8 +3,8 @@ package sms
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -62,34 +62,34 @@ func (t *luosimaoTransformer) CanTransform(msg core.Message) bool {
 //   - ResponseHandler: 响应处理器
 //   - error: 错误信息
 func (t *luosimaoTransformer) Transform(
-	ctx context.Context,
+	_ context.Context,
 	msg core.Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
-		return nil, nil, errors.New("invalid message type for luosimaoTransformer")
+		return nil, nil, fmt.Errorf("unsupported message type for Luosimao: %T", msg)
 	}
-	if err := t.validateMessage(smsMsg); err != nil {
-		return nil, nil, fmt.Errorf("message validation failed: %w", err)
+
+	// Apply Luosimao-specific defaults
+	t.applyLuosimaoDefaults(smsMsg, account)
+
+	switch smsMsg.Type {
+	case SMSText:
+		return t.transformSMS(smsMsg, account)
+	case Voice:
+		return t.transformVoice(smsMsg, account)
+	case MMS:
+		return nil, nil, fmt.Errorf("unsupported message type: %v", smsMsg.Type)
+	default:
+		return nil, nil, fmt.Errorf("unsupported message type: %v", smsMsg.Type)
 	}
-	if smsMsg.Type == Voice && smsMsg.Category == CategoryVerification {
-		return t.transformVoiceSMS(ctx, smsMsg, account)
-	}
-	if len(smsMsg.Mobiles) > 1 {
-		return t.transformBatchSMS(ctx, smsMsg, account)
-	}
-	return t.transformSingleSMS(ctx, smsMsg, account)
 }
 
-func (t *luosimaoTransformer) validateMessage(msg *Message) error {
-	if len(msg.Mobiles) == 0 {
-		return errors.New("at least one mobile number is required")
-	}
-	if msg.Content == "" {
-		return errors.New("content is required for Luosimao SMS")
-	}
-	return nil
+// applyLuosimaoDefaults applies Luosimao-specific defaults to the message.
+func (t *luosimaoTransformer) applyLuosimaoDefaults(msg *Message, account *Account) {
+	// Apply common defaults first
+	msg.ApplyCommonDefaults(account)
 }
 
 // buildLuosimaoRequestSpec 构造 Luosimao HTTPRequestSpec
@@ -97,7 +97,6 @@ func (t *luosimaoTransformer) validateMessage(msg *Message) error {
 //   - 由 transformSingleSMS/transformBatchSMS/transformVoiceSMS 统一调用
 //
 // 参数:
-//   - ctx: 上下文
 //   - params: url.Values 请求参数
 //   - requestURL: 完整请求 URL
 //   - account: 账号配置
@@ -107,7 +106,6 @@ func (t *luosimaoTransformer) validateMessage(msg *Message) error {
 //   - ResponseHandler: 响应处理器
 //   - error: 错误信息
 func (t *luosimaoTransformer) buildLuosimaoRequestSpec(
-	_ context.Context,
 	params url.Values,
 	requestURL string,
 	account *Account,
@@ -115,65 +113,63 @@ func (t *luosimaoTransformer) buildLuosimaoRequestSpec(
 	body := []byte(params.Encode())
 	authHeader := "Basic " + utils.Base64EncodeBytes([]byte("api:key-"+account.APISecret))
 	reqSpec := &core.HTTPRequestSpec{
-		Method:   "POST",
+		Method:   http.MethodPost,
 		URL:      requestURL,
 		Headers:  map[string]string{"Content-Type": "application/x-www-form-urlencoded", "Authorization": authHeader},
 		Body:     body,
-		BodyType: "form",
+		BodyType: core.BodyTypeRaw,
 	}
 	return reqSpec, t.handleLuosimaoResponse, nil
 }
 
-// transformSingleSMS 构造单发短信 HTTP 请求
-//   - API: https://luosimao.com/docs/api#send
-func (t *luosimaoTransformer) transformSingleSMS(
-	ctx context.Context,
+// transformSMS transforms SMS message to HTTP request
+//   - 根据手机号数量决定走单发还是批量
+//   - 单发API: https://luosimao.com/docs/api#send
+//   - 批量API: https://luosimao.com/docs/api#send_batch
+//
+// 对于批量多发或者只有一个手机号但指定了定时发送的任务的，都采用批量发送，否则使用单个发送API.
+func (t *luosimaoTransformer) transformSMS(
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	params := url.Values{}
+	// 对于手机号多余1个的或者只有一个手机号却有定时任务时，则采用批量发送API
+	// 因为单个手机号的不支持定时任务
+	isBatch := len(msg.Mobiles) > 1 || msg.ScheduledAt != nil
+	if isBatch {
+		// 批量发送
+		params.Set("mobile_list", strings.Join(msg.Mobiles, ","))
+		params.Set("message", utils.AddSignature(msg.Content, msg.SignName))
+		if msg.ScheduledAt != nil {
+			// 定时发送的时间，定时的发送任务可以在发送前10分钟在发送历史界面进行取消（仅限提交当天）, 格式为 YYYY-MM-DD HH:MM:SS
+			params.Set(luosimaoScheduledAtKey, msg.ScheduledAt.Format(time.DateTime))
+		}
+		return t.buildLuosimaoRequestSpec(
+			params,
+			fmt.Sprintf("%s/v1/send_batch.json", luosimaoSmsDefaultBaseURI),
+			account,
+		)
+	}
+	// 单发
 	params.Set("mobile", msg.Mobiles[0])
 	params.Set("message", utils.AddSignature(msg.Content, msg.SignName))
-	return t.buildLuosimaoRequestSpec(ctx, params, fmt.Sprintf("%s/v1/send.json", luosimaoSmsDefaultBaseURI), account)
+	return t.buildLuosimaoRequestSpec(params, fmt.Sprintf("%s/v1/send.json", luosimaoSmsDefaultBaseURI), account)
 }
 
-// transformBatchSMS 构造批量短信 HTTP 请求
-//   - API: https://luosimao.com/docs/api#send_batch
-//
-// 对于批量短信，额外多一个定时发送的能力，可通过 ScheduledAt 字段设置
-// 定时的发送任务可以在发送前10分钟在发送历史界面进行取消（仅限提交当天）.
-func (t *luosimaoTransformer) transformBatchSMS(
-	ctx context.Context,
-	msg *Message,
-	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
-	params := url.Values{}
-	params.Set("mobile_list", strings.Join(msg.Mobiles, ","))
-	params.Set("message", utils.AddSignature(msg.Content, msg.SignName))
-	if msg.ScheduledAt != nil {
-		// 定时发送的时间，定时的发送任务可以在发送前10分钟在发送历史界面进行取消（仅限提交当天）, 格式为 YYYY-MM-DD HH:MM:SS
-		params.Set(luosimaoScheduledAtKey, msg.ScheduledAt.Format(time.DateTime))
-	}
-	return t.buildLuosimaoRequestSpec(
-		ctx,
-		params,
-		fmt.Sprintf("%s/v1/send_batch.json", luosimaoSmsDefaultBaseURI),
-		account,
-	)
-}
-
-// transformVoiceSMS 构造语音验证码 HTTP 请求
+// transformVoice transforms voice message to HTTP request
+// 目前语音短信仅支持验证码，即检查category是否为CategoryVerification
 //   - API: https://luosimao.com/docs/api/51
-func (t *luosimaoTransformer) transformVoiceSMS(
-	ctx context.Context,
+func (t *luosimaoTransformer) transformVoice(
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+	if msg.Category != CategoryVerification {
+		return nil, nil, fmt.Errorf("unsupported voice category: %v", msg.Category)
+	}
 	params := url.Values{}
 	params.Set("mobile", msg.Mobiles[0])
 	params.Set("code", msg.Content)
 	return t.buildLuosimaoRequestSpec(
-		ctx,
 		params,
 		fmt.Sprintf("%s/v1/verify.json", luosimaoVoiceDefaultBaseURI),
 		account,

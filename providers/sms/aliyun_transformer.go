@@ -43,9 +43,13 @@ func init() {
 }
 
 const (
-	aliyunDefaultSmsEndpoint   = "dysmsapi.aliyuncs.com"
-	aliyunDefaultVoiceEndpoint = "dyvmsapi.aliyuncs.com"
-	aliyunDefaultRegion        = "cn-hangzhou"
+	aliyunDefaultSmsEndpoint      = "dysmsapi.aliyuncs.com"
+	aliyunDefaultVoiceEndpoint    = "dyvmsapi.aliyuncs.com"
+	aliyunDefaultRegion           = "cn-hangzhou"
+	aliyunActionSendSms           = "SendSms"
+	aliyunActionSingleCallByVoice = "SingleCallByVoice"
+	aliyunActionSingleCallByTts   = "SingleCallByTts"
+	aliyunDefaultAPIVersion       = "2017-05-25"
 )
 
 // aliyunTransformer implements HTTPTransformer[*Account] for Aliyun SMS.
@@ -71,149 +75,19 @@ func (t *aliyunTransformer) Transform(
 		return nil, nil, fmt.Errorf("unsupported message type for Aliyun: %T", msg)
 	}
 
-	// Validate message before processing
-	if err := t.validateMessage(smsMsg); err != nil {
-		return nil, nil, fmt.Errorf("message validation failed: %w", err)
-	}
+	// Apply Aliyun-specific defaults
+	t.applyAliyunDefaults(smsMsg, account)
 
 	switch smsMsg.Type {
 	case SMSText:
-		return t.transformTextMessage(smsMsg, account)
+		return t.transformSMS(smsMsg, account)
 	case Voice:
-		return t.transformVoiceMessage(smsMsg, account)
+		return t.transformVoice(smsMsg, account)
 	case MMS:
-		return t.transformMMSMessage(smsMsg, account)
+		return t.transformCardSMS(smsMsg, account)
 	default:
 		return nil, nil, fmt.Errorf("unsupported message type: %v", smsMsg.Type)
 	}
-}
-
-// validateMessage validates the message based on its type.
-func (t *aliyunTransformer) validateMessage(msg *Message) error {
-	switch msg.Type {
-	case SMSText:
-		return t.validateTextMessage(msg)
-	case Voice:
-		return t.validateVoiceMessage(msg)
-	case MMS:
-		return t.validateMMSMessage(msg)
-	default:
-		return fmt.Errorf("unsupported message type: %s", msg.Type)
-	}
-}
-
-// validateTextMessage validates text message options.
-func (t *aliyunTransformer) validateTextMessage(msg *Message) error {
-	// Check for voice-only options
-	voiceOnlyOptions := []string{"Volume", "PlayTimes", "CalledShowNumber", "Speed", "OutId"}
-	for _, opt := range voiceOnlyOptions {
-		if msg.Extras != nil && msg.Extras[opt] != nil {
-			return fmt.Errorf("option %s is only applicable to voice messages", opt)
-		}
-	}
-
-	// Validate template code format if provided
-	if msg.TemplateID != "" && !strings.HasPrefix(msg.TemplateID, "SMS_") {
-		return errors.New("aliyun template code must start with 'SMS_'")
-	}
-
-	// Check required fields for domestic SMS
-	if msg.SignName == "" && msg.IsDomestic() {
-		return errors.New("aliyun sign name is required for domestic SMS")
-	}
-
-	return nil
-}
-
-// validateVoiceMessage validates voice message options.
-func (t *aliyunTransformer) validateVoiceMessage(msg *Message) error {
-	// Check for text-only options
-	textOnlyOptions := []string{"SignName"}
-	for _, opt := range textOnlyOptions {
-		if msg.Extras != nil && msg.Extras[opt] != nil {
-			return fmt.Errorf("option %s is not applicable to voice messages", opt)
-		}
-	}
-
-	// Validate template code format if provided
-	if msg.TemplateID != "" && !strings.HasPrefix(msg.TemplateID, "TTS_") {
-		return errors.New("Aliyun voice template code must start with 'TTS_'")
-	}
-
-	return nil
-}
-
-// validateMMSMessage validates MMS message options.
-func (t *aliyunTransformer) validateMMSMessage(msg *Message) error {
-	// Check for voice-only options
-	voiceOnlyOptions := []string{"Volume", "PlayTimes", "CalledShowNumber", "Speed"}
-	for _, opt := range voiceOnlyOptions {
-		if msg.Extras != nil && msg.Extras[opt] != nil {
-			return fmt.Errorf("option %s is only applicable to voice messages", opt)
-		}
-	}
-
-	// Check for text-only options
-	textOnlyOptions := []string{"SignName"}
-	for _, opt := range textOnlyOptions {
-		if msg.Extras != nil && msg.Extras[opt] != nil {
-			return fmt.Errorf("option %s is not applicable to MMS messages", opt)
-		}
-	}
-
-	// Validate template code format if provided
-	if msg.TemplateID != "" && !strings.HasPrefix(msg.TemplateID, "CARD_") {
-		return errors.New("Aliyun MMS template code must start with 'CARD_'")
-	}
-
-	// Check required fields for MMS
-	if msg.SignName == "" {
-		return errors.New("sign name is required for Aliyun MMS messages")
-	}
-
-	// Validate fallback type if provided
-	if fallbackType := msg.GetExtraStringOrDefault(aliyunFallbackTypeKey, ""); fallbackType != "" {
-		//   - SMS：不支持卡片短信的号码，回落文本短信。
-		//   - DIGITALSMS：不支持卡片短信的号码，回落数字短信。
-		//   - NONE：不需要回落。
-		validFallbackTypes := []string{"SMS", "DIGITALSMS", "NONE"}
-		isValid := false
-		for _, validType := range validFallbackTypes {
-			if fallbackType == validType {
-				isValid = true
-				break
-			}
-		}
-		if !isValid {
-			return fmt.Errorf("invalid fallback type: %s, must be one of %v", fallbackType, validFallbackTypes)
-		}
-	}
-
-	return nil
-}
-
-// transformTextMessage transforms text SMS message to HTTP request.
-func (t *aliyunTransformer) transformTextMessage(
-	msg *Message,
-	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
-	return t.transformSMS(msg, account)
-}
-
-// transformVoiceMessage transforms voice message to HTTP request.
-func (t *aliyunTransformer) transformVoiceMessage(
-	msg *Message,
-	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
-	return t.transformVoice(msg, account)
-}
-
-// transformMMSMessage transforms MMS message to HTTP request.
-func (t *aliyunTransformer) transformMMSMessage(
-	msg *Message,
-	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
-	return t.transformCardSMS(msg, account)
 }
 
 // https://help.aliyun.com/zh/sdk/product-overview/v3-request-structure-and-signature
@@ -230,7 +104,7 @@ type aliyunSignParams struct {
 }
 
 // signAliyunRequest signs the Aliyun request
-// https://help.aliyun.com/zh/sdk/product-overview/v3-request-structure-and-signature
+//   - https://help.aliyun.com/zh/sdk/product-overview/v3-request-structure-and-signature
 func (t *aliyunTransformer) signAliyunRequest(params aliyunSignParams) map[string]string {
 	const algorithm = "ACS3-HMAC-SHA256"
 	//nolint:gosec // Reason: not used for security, only for client nonce generation
@@ -259,6 +133,7 @@ func (t *aliyunTransformer) signAliyunRequest(params aliyunSignParams) map[strin
 	if _, ok := headers["content-type"]; !ok {
 		headers["content-type"] = "application/json"
 	}
+
 	flatQuery := make(map[string]string)
 	for k, v := range params.Query {
 		t.flattenParams(k, v, flatQuery)
@@ -286,7 +161,8 @@ func (t *aliyunTransformer) signAliyunRequest(params aliyunSignParams) map[strin
 }
 
 // transformSMS transforms SMS message to HTTP request
-// SMS API(国内/国外/单发/群发): https://help.aliyun.com/zh/sms/developer-reference/api-dysmsapi-2017-05-25-sendsms
+//   - SMS API(国内/国外/单发/群发): https://help.aliyun.com/zh/sms/developer-reference/api-dysmsapi-2017-05-25-sendsms
+//
 // 短信模板即具体发送的短信内容，模板类型支持验证码、通知短信和推广短信。模板由模板变量和模板内容构成，您需要遵守模板内容规范和变量规范。
 func (t *aliyunTransformer) transformSMS(
 	msg *Message,
@@ -298,34 +174,15 @@ func (t *aliyunTransformer) transformSMS(
 	}
 
 	params := map[string]string{
-		"PhoneNumbers":  strings.Join(phones, ","),
-		"SignName":      msg.SignName,
-		"TemplateCode":  msg.TemplateID,
-		"TemplateParam": utils.ToJSONString(msg.TemplateParams),
+		"PhoneNumbers":    strings.Join(phones, ","),
+		"SignName":        msg.SignName,
+		"TemplateCode":    msg.TemplateID,
+		"TemplateParam":   utils.ToJSONString(msg.TemplateParams),
+		"SmsUpExtendCode": msg.Extend,
+		"OutId":           msg.GetExtraStringOrDefaultEmpty(aliyunOutIDKey),
 	}
 
-	// 使用新的Message结构体字段
-	if msg.Extend != "" {
-		params["SmsUpExtendCode"] = msg.Extend
-	}
-	if msg.UID != "" {
-		params["OutId"] = msg.UID
-	}
-
-	if v := msg.GetExtraStringOrDefault(aliyunSmsUpExtendCodeKey, ""); v != "" {
-		params["SmsUpExtendCode"] = v
-	}
-	if v := msg.GetExtraStringOrDefault(aliyunOutIDKey, ""); v != "" {
-		params["OutId"] = v
-	}
-
-	region := utils.FirstNonEmpty(
-		// 优先使用消息中的 region，其次使用 account 中的 region，最后使用默认值
-		msg.GetExtraStringOrDefault(aliyunRegionKey, ""),
-		account.Region,
-		aliyunDefaultRegion,
-	)
-	endpoint := t.getEndpointByRegion(msg.Type, region)
+	endpoint := t.getEndpointByRegion(msg.Type, msg.GetExtraStringOrDefaultEmpty(aliyunRegionKey))
 
 	reqSpec := &core.HTTPRequestSpec{
 		Method: http.MethodPost,
@@ -335,8 +192,8 @@ func (t *aliyunTransformer) transformSMS(
 			Method:  http.MethodPost,
 			Path:    "/",
 			Query:   params,
-			Action:  "SendSms",
-			Version: "2017-05-25",
+			Action:  aliyunActionSendSms,
+			Version: aliyunDefaultAPIVersion,
 			Account: account,
 		}),
 		QueryParams: params,
@@ -361,7 +218,7 @@ func (t *aliyunTransformer) getEndpointByRegion(msgType MessageType, region stri
 }
 
 // transformCardSMS transforms card SMS message to HTTP request
-//
+// TODO: API documentation not understood, temporarily not implemented
 //   - 文档地址: https://help.aliyun.com/zh/sms/developer-reference/api-dysmsapi-2017-05-25-sendcardsms
 func (t *aliyunTransformer) transformCardSMS(
 	_ *Message,
@@ -388,11 +245,11 @@ func (t *aliyunTransformer) transformVoice(
 
 	params := map[string]string{
 		"CalledNumber":     msg.Mobiles[0],
-		"CalledShowNumber": msg.GetExtraStringOrDefault(aliyunCalledShowNumberKey, ""),
+		"CalledShowNumber": msg.GetExtraStringOrDefaultEmpty(aliyunCalledShowNumberKey),
 		"PlayTimes":        strconv.Itoa(msg.GetExtraIntOrDefault(aliyunPlayTimesKey, 1)),
 		"Volume":           strconv.Itoa(msg.GetExtraIntOrDefault(aliyunVolumeKey, aliyunDefaultVolume)),
 		"Speed":            strconv.Itoa(msg.GetExtraIntOrDefault(aliyunSpeedKey, 0)),
-		"OutId":            msg.GetExtraStringOrDefault(aliyunOutIDKey, ""),
+		"OutId":            msg.GetExtraStringOrDefaultEmpty(aliyunOutIDKey),
 	}
 
 	// 根据消息类型选择API和参数
@@ -409,20 +266,15 @@ func (t *aliyunTransformer) transformVoice(
 	}
 
 	// 根据消息类型设置不同的action
-	action := "SingleCallByVoice"
+	action := aliyunActionSingleCallByVoice
 	if isVerification {
-		action = "SingleCallByTts"
+		action = aliyunActionSingleCallByTts
 	}
 
-	region := utils.FirstNonEmpty(
-		msg.GetExtraStringOrDefault(aliyunRegionKey, ""),
-		account.Region,
-		aliyunDefaultRegion,
-	)
-	endpoint := t.getEndpointByRegion(msg.Type, region)
+	endpoint := t.getEndpointByRegion(msg.Type, msg.GetExtraStringOrDefaultEmpty(aliyunRegionKey))
 
 	reqSpec := &core.HTTPRequestSpec{
-		Method: "POST",
+		Method: http.MethodPost,
 		URL:    "https://" + endpoint + "/",
 		Headers: t.signAliyunRequest(aliyunSignParams{
 			Host:    endpoint,
@@ -431,7 +283,7 @@ func (t *aliyunTransformer) transformVoice(
 			Query:   params,
 			Body:    nil,
 			Action:  action,
-			Version: "2017-05-25",
+			Version: aliyunDefaultAPIVersion,
 			Account: account,
 		}),
 		QueryParams: params,
@@ -554,4 +406,19 @@ func (t *aliyunTransformer) regionSmsEndpoints() map[string]string {
 		"cn-beijing":     "dysmsapi.aliyuncs.com",
 		"cn-hongkong":    "dysmsapi.aliyuncs.com",
 	}
+}
+
+// applyAliyunDefaults applies Aliyun-specific defaults to the message.
+func (t *aliyunTransformer) applyAliyunDefaults(msg *Message, account *Account) {
+	// Apply common defaults first
+	msg.ApplyCommonDefaults(account)
+
+	// Apply Aliyun-specific defaults
+	region := utils.FirstNonEmpty(
+		// 优先使用消息中的 region，其次使用 account 中的 region，最后使用默认值
+		msg.GetExtraStringOrDefault(aliyunRegionKey, ""),
+		account.Region,
+		aliyunDefaultRegion,
+	)
+	msg.Extras[aliyunRegionKey] = region
 }

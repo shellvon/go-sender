@@ -29,6 +29,11 @@ import (
 
 const (
 	juheDefaultBaseURI = "https//v.juhe.cn"
+
+	// API路径常量.
+	juheDomesticAPIPath = "/sms/send"
+	juheIntlAPIPath     = "/smsInternational/send"
+	juheMMSAPIPath      = "/caixinv2/send"
 )
 
 type juheTransformer struct{}
@@ -60,13 +65,13 @@ func (t *juheTransformer) Transform(
 
 	switch smsMsg.Type {
 	case SMSText:
-		return t.transformDomesticSMS(context.Background(), smsMsg, account)
+		return t.transformSMS(smsMsg, account)
 	case Voice:
-		return t.transformIntlSMS(context.Background(), smsMsg, account)
+		return nil, nil, errors.New("Juhe does not support voice messages")
 	case MMS:
-		return t.transformMMSSMS(context.Background(), smsMsg, account)
+		return t.transformMMS(smsMsg, account)
 	default:
-		return nil, nil, fmt.Errorf("unsupported juhe message type: %v", smsMsg.Type)
+		return nil, nil, fmt.Errorf("unsupported message type: %v", smsMsg.Type)
 	}
 }
 
@@ -77,10 +82,10 @@ func (t *juheTransformer) validateMessage(msg *Message) error {
 	return nil
 }
 
-// transformDomesticSMS 处理国内短信
-//   - API: https://www.juhe.cn/docs/api/id/54
-func (t *juheTransformer) transformDomesticSMS(
-	_ context.Context,
+// transformSMS 处理短信（国内/国际）
+//   - 国内短信 API: https://www.juhe.cn/docs/api/id/54
+//   - 国际短信 API: https://www.juhe.cn/docs/api/id/357
+func (t *juheTransformer) transformSMS(
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
@@ -89,48 +94,33 @@ func (t *juheTransformer) transformDomesticSMS(
 	params.Set("tpl_id", msg.TemplateID)
 	params.Set("tpl_value", t.buildTemplateValue(msg.TemplateParams))
 	params.Set("key", account.APIKey)
-	params.Set("ext", msg.Extend)
-	body := []byte(params.Encode())
 
+	// 根据是否为国际短信设置不同的参数和URL
+	var apiPath string
+	if msg.IsIntl() {
+		// 国际短信特有参数
+		params.Set("areaNum", strconv.Itoa(msg.RegionCode))
+		apiPath = juheIntlAPIPath
+	} else {
+		// 国内短信特有参数
+		params.Set("ext", msg.Extend)
+		apiPath = juheDomesticAPIPath
+	}
+
+	body := []byte(params.Encode())
 	reqSpec := &core.HTTPRequestSpec{
 		Method:   http.MethodPost,
-		URL:      juheDefaultBaseURI + "/sms/send",
+		URL:      juheDefaultBaseURI + apiPath,
 		Headers:  map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
 		Body:     body,
-		BodyType: core.BodyTypeForm,
+		BodyType: core.BodyTypeRaw,
 	}
 	return reqSpec, t.handleJuheResponse, nil
 }
 
-// transformIntlSMS 处理国际短信
-//   - API: https://www.juhe.cn/docs/api/id/357
-func (t *juheTransformer) transformIntlSMS(
-	_ context.Context,
-	msg *Message,
-	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
-	params := url.Values{}
-	params.Set("mobile", msg.Mobiles[0])
-	params.Set("areaNum", strconv.Itoa(msg.RegionCode))
-	params.Set("tpl_id", msg.TemplateID)
-	params.Set("tpl_value", t.buildTemplateValue(msg.TemplateParams))
-	params.Set("key", account.APIKey)
-	body := []byte(params.Encode())
-
-	reqSpec := &core.HTTPRequestSpec{
-		Method:   http.MethodPost,
-		URL:      juheDefaultBaseURI + "/smsInternational/send",
-		Headers:  map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
-		Body:     body,
-		BodyType: core.BodyTypeForm,
-	}
-	return reqSpec, t.handleJuheResponse, nil
-}
-
-// transformMMSSMS 处理彩信/视频短信
+// transformMMS 处理彩信/视频短信
 //   - API: https://www.juhe.cn/docs/api/id/363
-func (t *juheTransformer) transformMMSSMS(
-	_ context.Context,
+func (t *juheTransformer) transformMMS(
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
@@ -142,7 +132,7 @@ func (t *juheTransformer) transformMMSSMS(
 	body := []byte(params.Encode())
 	reqSpec := &core.HTTPRequestSpec{
 		Method:   http.MethodPost,
-		URL:      juheDefaultBaseURI + "/caixinv2/send",
+		URL:      juheDefaultBaseURI + juheMMSAPIPath,
 		Headers:  map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
 		Body:     body,
 		BodyType: core.BodyTypeForm,

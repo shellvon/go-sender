@@ -61,10 +61,24 @@ func (t *huaweiTransformer) Transform(
 	if !ok {
 		return nil, nil, fmt.Errorf("unsupported message type for Huawei: %T", msg)
 	}
+
+	// Apply Huawei-specific defaults
+	t.applyHuaweiDefaults(smsMsg, account)
+
 	if err := t.validateMessage(smsMsg); err != nil {
 		return nil, nil, fmt.Errorf("message validation failed: %w", err)
 	}
-	return t.transformSMS(smsMsg, account)
+
+	switch smsMsg.Type {
+	case SMSText:
+		return t.transformSMS(smsMsg, account)
+	case Voice:
+		return nil, nil, errors.New("Huawei does not support voice messages")
+	case MMS:
+		return nil, nil, errors.New("Huawei does not support MMS messages")
+	default:
+		return nil, nil, fmt.Errorf("unsupported message type: %v", smsMsg.Type)
+	}
 }
 
 // validateMessage validates the message for Huawei.
@@ -108,6 +122,7 @@ func (t *huaweiTransformer) transformSMS(
 	params.Set("to", strings.Join(formattedMobiles, ","))
 	params.Set("templateId", msg.TemplateID)
 	params.Set("templateParas", paras)
+
 	// 签名名称，必须是已审核通过的，与模板类型一致的签名名称。
 	// 仅中国大陆短信可携带此参数。
 	// 仅在templateId指定的模板类型为通用模板时生效且必填，用于指定在通用模板短信内容前面补充的签名
@@ -118,7 +133,7 @@ func (t *huaweiTransformer) transformSMS(
 	// 如果设置了该字段，则该消息的状态报告将通过"接收状态报告"接口直接通知客户。
 	// 如果未设置该字段，则短信平台收到运营商短信中心返回的状态报告不会推送给客户，该状态报告将在短信平台中保存1个小时，超时后系统会自动删除。
 	// 回调地址推荐使用域名。
-	params.Set("statusCallback", utils.FirstNonEmpty(msg.CallbackURL, account.Callback))
+	params.Set("statusCallback", msg.CallbackURL)
 	// 扩展参数，在状态报告中会原样返回。
 	// 不允许赋空值，不允许携带以下字符："{","}"（即大括号）。
 	params.Set("extend", msg.Extend)
@@ -190,4 +205,10 @@ func (t *huaweiTransformer) handleHuaweiResponse(statusCode int, body []byte) er
 		}
 	}
 	return nil
+}
+
+// applyHuaweiDefaults applies Huawei-specific defaults to the message.
+func (t *huaweiTransformer) applyHuaweiDefaults(msg *Message, account *Account) {
+	// Apply common defaults first
+	msg.ApplyCommonDefaults(account)
 }

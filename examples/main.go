@@ -267,6 +267,7 @@ func runSMSDemo() {
 					APISecret: secret,
 				},
 			},
+			SignName: from, // 使用环境变量中的签名作为默认签名
 		}},
 	}
 	prov, err := sms.New(&cfg)

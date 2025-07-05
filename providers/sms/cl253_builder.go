@@ -1,5 +1,9 @@
 package sms
 
+import (
+	"github.com/shellvon/go-sender/utils"
+)
+
 // @ProviderName: Cl253 (Chuanglan) / 创蓝253
 // @Website: https://www.253.com
 // @APIDoc: https://www.253.com/api
@@ -61,15 +65,12 @@ func (b *Cl253SMSBuilder) Report(report string) *Cl253SMSBuilder {
 
 func (b *Cl253SMSBuilder) Build() *Message {
 	msg := b.BaseBuilder.Build()
-	extra := map[string]interface{}{}
-	if b.senderID != "" {
-		extra[cl253SenderIDKey] = b.senderID
+	fields := map[string]interface{}{
+		cl253SenderIDKey: b.senderID,
+		cl253TDFlagKey:   b.tdFlag,
+		cl253ReportKey:   b.report,
 	}
-	extra[cl253TDFlagKey] = b.tdFlag
-	if b.report != "" {
-		extra[cl253ReportKey] = b.report
-	}
-	if len(extra) > 0 {
+	if extra := utils.BuildExtras(fields); len(extra) > 0 {
 		msg.Extras = extra
 	}
 	return msg

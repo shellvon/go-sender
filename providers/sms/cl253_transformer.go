@@ -37,6 +37,10 @@ const (
 	cl253IntlSingaporeEndpoint = "sgap.253.com"
 	cl253IntlShanghaiEndpoint  = "intapi.253.com"
 	cl253DefaultRegion         = "sh" // 默认使用上海节点
+
+	// API路径常量.
+	cl253DomesticAPIPath = "/msg/v1/send/json"
+	cl253IntlAPIPath     = "/send/sms"
 )
 
 // cl253Transformer implements HTTPRequestTransformer for CL253 SMS.
@@ -63,13 +67,24 @@ func (t *cl253Transformer) Transform(
 	if !ok {
 		return nil, nil, fmt.Errorf("unsupported message type for CL253: %T", msg)
 	}
+
+	// Apply CL253-specific defaults
+	t.applyCl253Defaults(smsMsg, account)
+
 	if err := t.validateMessage(smsMsg); err != nil {
 		return nil, nil, fmt.Errorf("message validation failed: %w", err)
 	}
-	if smsMsg.IsIntl() {
-		return t.transformIntlSMS(context.Background(), smsMsg, account)
+
+	switch smsMsg.Type {
+	case SMSText:
+		return t.transformSMS(smsMsg, account)
+	case Voice:
+		return nil, nil, errors.New("CL253 does not support voice messages")
+	case MMS:
+		return nil, nil, errors.New("CL253 does not support MMS messages")
+	default:
+		return nil, nil, fmt.Errorf("unsupported message type: %v", smsMsg.Type)
 	}
-	return t.transformDomesticSMS(context.Background(), smsMsg, account)
 }
 
 // validateMessage validates the message for CL253.
@@ -90,24 +105,32 @@ func (t *cl253Transformer) validateMessage(msg *Message) error {
 	return nil
 }
 
-// transformDomesticSMS transforms domestic SMS message to HTTP request
-//
+// transformSMS transforms SMS message to HTTP request
 //   - 国内短信 API: https://doc.chuanglan.com/document/HAQYSZKH9HT5Z50L
-func (t *cl253Transformer) transformDomesticSMS(
-	_ context.Context,
+//   - 国际短信 API: https://doc.chuanglan.com/document/O58743GF76M7754H
+func (t *cl253Transformer) transformSMS(
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
-	url := "https://" + cl253DomesticEndpoint + "/msg/v1/send/json"
+	// 构建基础参数
 	params := map[string]interface{}{
 		"account":     account.APIKey,
 		"password":    account.APISecret,
 		"msg":         utils.AddSignature(msg.Content, msg.SignName),
-		"phone":       strings.Join(msg.Mobiles, ","),
 		"report":      msg.GetExtraStringOrDefault(cl253ReportKey, ""),
 		"callbackUrl": utils.FirstNonEmpty(msg.CallbackURL, account.Callback),
 		"uid":         msg.UID,
 		"extend":      msg.Extend,
+	}
+
+	// 添加国际短信特有参数
+	if msg.IsIntl() {
+		params["tdFlag"] = msg.GetExtraIntOrDefault(cl253TDFlagKey, 0)
+		params["templateId"] = msg.TemplateID
+		params["senderId"] = msg.GetExtraStringOrDefault(cl253SenderIDKey, "")
+		params["mobile"] = fmt.Sprintf("%d%s", msg.RegionCode, msg.Mobiles[0])
+	} else {
+		params["phone"] = strings.Join(msg.Mobiles, ",")
 	}
 
 	// 处理发送时间 - CL253使用 sendtime 字段
@@ -118,55 +141,27 @@ func (t *cl253Transformer) transformDomesticSMS(
 
 	body, _ := json.Marshal(params)
 	reqSpec := &core.HTTPRequestSpec{
-		Method:   "POST",
-		URL:      url,
+		Method:   http.MethodPost,
+		URL:      t.buildRequestURI(msg, account),
 		Headers:  t.buildHeaders(nil),
 		Body:     body,
-		BodyType: "json",
+		BodyType: core.BodyTypeRaw,
 	}
 	return reqSpec, t.handleCl253Response, nil
 }
 
-// transformIntlSMS transforms international SMS message to HTTP request
-//
-//   - 国际短信 API: https://doc.chuanglan.com/document/O58743GF76M7754H
-//
-// 国际短信包含多个节点，默认使用上海节点，如果需要使用新加坡节点，请在 account 中配置 region 为 sg。
-func (t *cl253Transformer) transformIntlSMS(
-	_ context.Context,
-	msg *Message,
-	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
-	var ep string
-	if account.Region == cl253DefaultRegion {
-		ep = cl253IntlShanghaiEndpoint
-	} else {
-		ep = cl253IntlSingaporeEndpoint
+// buildRequestURI 根据区域和是否国际获取最终的短信请求API.
+func (t *cl253Transformer) buildRequestURI(msg *Message, account *Account) string {
+	if msg.IsIntl() {
+		// 国际短信
+		ep := cl253IntlShanghaiEndpoint
+		if account.Region != cl253DefaultRegion {
+			ep = cl253IntlSingaporeEndpoint
+		}
+		return fmt.Sprintf("https://%s%s", ep, cl253IntlAPIPath)
 	}
-	// 手机号码，格式(区号+手机号码)，例如：8615800000000，其中 86 为中国的区号， 区号前不使用 00 开头,15800000000 为接收短信的真实手机号码。5-20 位
-	params := map[string]interface{}{
-		"account":     account.APIKey,
-		"password":    account.APISecret,
-		"mobile":      fmt.Sprintf("%d%s", msg.RegionCode, msg.Mobiles[0]),
-		"msg":         utils.AddSignature(msg.Content, msg.SignName),
-		"tdFlag":      msg.GetExtraIntOrDefault(cl253TDFlagKey, 0),
-		"report":      msg.GetExtraStringOrDefault(cl253ReportKey, ""),
-		"callbackUrl": utils.FirstNonEmpty(msg.CallbackURL, account.Callback),
-		"uid":         msg.UID,
-		"extend":      msg.Extend,
-		"templateId":  msg.TemplateID,
-		"senderId":    msg.GetExtraStringOrDefault(cl253SenderIDKey, ""),
-	}
-
-	body, _ := json.Marshal(params)
-	reqSpec := &core.HTTPRequestSpec{
-		Method:   http.MethodPost,
-		URL:      fmt.Sprintf("https://%s/send/sms", ep),
-		Headers:  t.buildHeaders(nil),
-		Body:     body,
-		BodyType: core.BodyTypeJSON,
-	}
-	return reqSpec, t.handleCl253Response, nil
+	// 国内短信
+	return fmt.Sprintf("https://%s%s", cl253DomesticEndpoint, cl253DomesticAPIPath)
 }
 
 // buildHeaders 构建请求头，支持用户自定义 header 合并，默认加 content-type.
@@ -203,4 +198,9 @@ func (t *cl253Transformer) handleCl253Response(statusCode int, body []byte) erro
 		}
 	}
 	return nil
+}
+
+// applyCl253Defaults applies CL253-specific defaults to the message.
+func (t *cl253Transformer) applyCl253Defaults(msg *Message, account *Account) {
+	msg.ApplyCommonDefaults(account)
 }

@@ -28,8 +28,8 @@ import (
 
 const (
 	tencentAPIDomain         = "tencentcloudapi.com"
-	tencentVersion           = "2021-01-11"
-	tencentVoiceVersion      = "2020-09-02"
+	tencentSMSAPIVersion     = "2021-01-11"
+	tencentVoiceAPIVersion   = "2020-09-02"
 	tencentSmsAction         = "SendSms"
 	tencentVoiceAction       = "SendCodeVoice"
 	tencentVoiceNotifyAction = "SendVoice"
@@ -47,7 +47,7 @@ func (t *tencentTransformer) CanTransform(msg core.Message) bool {
 }
 
 func (t *tencentTransformer) Transform(
-	ctx context.Context,
+	_ context.Context,
 	msg core.Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
@@ -55,18 +55,23 @@ func (t *tencentTransformer) Transform(
 	if !ok {
 		return nil, nil, errors.New("invalid message type for tencentTransformer")
 	}
+
+	// Apply Tencent-specific defaults
+	t.applyTencentDefaults(smsMsg, account)
+
 	if err := t.validateMessage(smsMsg); err != nil {
 		return nil, nil, err
 	}
+
 	switch smsMsg.Type {
 	case SMSText:
-		return t.transformTextSMS(ctx, smsMsg, account)
+		return t.transformSMS(smsMsg, account)
 	case Voice:
-		return t.transformVoiceSMS(ctx, smsMsg, account)
+		return t.transformVoice(smsMsg, account)
 	case MMS:
-		fallthrough
+		return nil, nil, fmt.Errorf("unsupported message type: %v", smsMsg.Type)
 	default:
-		return nil, nil, fmt.Errorf("unsupported tencent message type: %s", smsMsg.Type)
+		return nil, nil, fmt.Errorf("unsupported message type: %v", smsMsg.Type)
 	}
 }
 
@@ -86,11 +91,11 @@ func (t *tencentTransformer) validateMessage(msg *Message) error {
 	return nil
 }
 
-// 短信API文档: https://cloud.tencent.com/document/product/382/55981
+// transformSMS transforms SMS message to HTTP request
 //   - 国内短信: 支持验证码、通知类短信和营销短信
 //   - 国际/港澳台短信: 支持验证码、通知类短信和营销短信
-func (t *tencentTransformer) transformTextSMS(
-	_ context.Context,
+//   - API文档: https://cloud.tencent.com/document/product/382/55981
+func (t *tencentTransformer) transformSMS(
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
@@ -106,23 +111,14 @@ func (t *tencentTransformer) transformTextSMS(
 		"TemplateId":       msg.TemplateID,
 		"SignName":         msg.SignName,
 		"TemplateParamSet": msg.ParamsOrder,
+		"ExtendCode":       msg.Extend,
+		"SenderId":         msg.GetExtraStringOrDefaultEmpty(tencentSenderIDKey),
 	}
 
-	if extendCode := msg.GetExtraStringOrDefault(tencentExtendCodeKey, msg.Extend); extendCode != "" {
-		params[tencentExtendCodeKey] = extendCode
-	}
-	if senderID := msg.GetExtraStringOrDefault(tencentSenderIDKey, ""); senderID != "" {
-		params["SenderId"] = senderID
-	}
-
-	region := utils.FirstNonEmpty(
-		msg.GetExtraStringOrDefault(tencentRegionKey, ""),
-		account.Region,
-		tencentDefaultRegion,
-	)
+	region := msg.GetExtraStringOrDefault(tencentRegionKey, tencentDefaultRegion)
 	requestBody := map[string]interface{}{
 		"Action":  tencentSmsAction,
-		"Version": "2021-01-11",
+		"Version": tencentSMSAPIVersion,
 		"Region":  region,
 		"Request": params,
 	}
@@ -139,7 +135,7 @@ func (t *tencentTransformer) transformTextSMS(
 	headers := t.buildTencentHeaders(tencentHeaderParams{
 		Endpoint:  endpoint,
 		Action:    tencentSmsAction,
-		Version:   "2021-01-11",
+		Version:   tencentSMSAPIVersion,
 		Region:    region,
 		AppSecret: account.APISecret,
 		BodyData:  bodyData,
@@ -156,13 +152,12 @@ func (t *tencentTransformer) transformTextSMS(
 	}, t.handleTencentResponse, nil
 }
 
-// sendVoice sends voice message via Tencent Cloud API
+// transformVoice transforms voice message to HTTP request
 //   - 语音验证码API: https://cloud.tencent.com/document/product/1128/51559
 //   - 语音通知API: https://cloud.tencent.com/document/product/1128/51558
 //
 // 当短信为验证码类型时，使用语音验证码API，否则使用语音通知API.
-func (t *tencentTransformer) transformVoiceSMS(
-	_ context.Context,
+func (t *tencentTransformer) transformVoice(
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
@@ -195,7 +190,7 @@ func (t *tencentTransformer) transformVoiceSMS(
 	)
 	requestBody := map[string]interface{}{
 		"Action":  action,
-		"Version": tencentVoiceVersion,
+		"Version": tencentVoiceAPIVersion,
 		"Region":  voiceRegion,
 		"Request": params,
 	}
@@ -212,7 +207,7 @@ func (t *tencentTransformer) transformVoiceSMS(
 	headers := t.buildTencentHeaders(tencentHeaderParams{
 		Endpoint:  endpoint,
 		Action:    action,
-		Version:   tencentVoiceVersion,
+		Version:   tencentVoiceAPIVersion,
 		Region:    voiceRegion,
 		AppSecret: account.APISecret,
 		BodyData:  bodyData,
@@ -325,4 +320,18 @@ func (t *tencentTransformer) handleTencentResponse(_ int, body []byte) error {
 	}
 
 	return nil
+}
+
+func (t *tencentTransformer) applyTencentDefaults(msg *Message, account *Account) {
+	// Apply common defaults first
+	msg.ApplyCommonDefaults(account)
+
+	// Apply Aliyun-specific defaults
+	region := utils.FirstNonEmpty(
+		// 优先使用消息中的 region，其次使用 account 中的 region，最后使用默认值
+		msg.GetExtraStringOrDefaultEmpty(tencentRegionKey),
+		account.Region,
+		aliyunDefaultRegion,
+	)
+	msg.Extras[aliyunRegionKey] = region
 }

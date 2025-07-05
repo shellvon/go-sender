@@ -1,5 +1,9 @@
 package sms
 
+import (
+	"github.com/shellvon/go-sender/utils"
+)
+
 // @ProviderName: Tencent / 腾讯云
 // @Website: https://cloud.tencent.com
 // @APIDoc: https://cloud.tencent.com/document/product/382/55981
@@ -77,23 +81,14 @@ func (b *TencentSMSBuilder) VoiceSdkAppID(appID string) *TencentSMSBuilder {
 
 func (b *TencentSMSBuilder) Build() *Message {
 	msg := b.BaseBuilder.Build()
-	extra := map[string]interface{}{}
-	if b.senderID != "" {
-		extra[tencentSenderIDKey] = b.senderID
+	fields := map[string]interface{}{
+		tencentSenderIDKey:      b.senderID,
+		tencentRegionKey:        b.region,
+		tencentPlayTimesKey:     b.playTimes,
+		tencentSmsSdkAppIDKey:   b.smsSdkAppID,
+		tencentVoiceSdkAppIDKey: b.voiceSdkAppID,
 	}
-	if b.region != "" {
-		extra[tencentRegionKey] = b.region
-	}
-	if b.playTimes != 0 {
-		extra[tencentPlayTimesKey] = b.playTimes
-	}
-	if b.smsSdkAppID != "" {
-		extra[tencentSmsSdkAppIDKey] = b.smsSdkAppID
-	}
-	if b.voiceSdkAppID != "" {
-		extra[tencentVoiceSdkAppIDKey] = b.voiceSdkAppID
-	}
-	if len(extra) > 0 {
+	if extra := utils.BuildExtras(fields); len(extra) > 0 {
 		msg.Extras = extra
 	}
 	return msg

@@ -48,12 +48,16 @@ func TestAliyunSMSBuilder_AllFields_Text(t *testing.T) {
 		t.Fatal("Extras should not be nil")
 	}
 	textKeys := []string{
-		"OutId", "FallbackType", "SmsTemplateCode", "DigitalTemplateCode", "SmsTemplateParam", "DigitalTemplateParam", "SmsUpExtendCode", "CardObjects",
+		"OutId", "FallbackType", "SmsTemplateCode", "DigitalTemplateCode", "SmsTemplateParam", "DigitalTemplateParam", "CardObjects",
 	}
 	for _, k := range textKeys {
 		if _, ok := extra[k]; !ok {
 			t.Errorf("Extras missing key: %s", k)
 		}
+	}
+	// 检查 Extend 字段
+	if got, want := msg.Extend, "up-ext"; got != want {
+		t.Errorf("Extend = %q, want %q", got, want)
 	}
 }
 
@@ -143,12 +147,16 @@ func TestAliyunSMSBuilder_AllFields_Extras(t *testing.T) {
 		t.Fatal("Extras should not be nil")
 	}
 	allKeys := []string{
-		"CalledShowNumber", "PlayTimes", "Volume", "Speed", "OutId", "FallbackType", "SmsTemplateCode", "DigitalTemplateCode", "SmsTemplateParam", "DigitalTemplateParam", "SmsUpExtendCode", "CardObjects",
+		"CalledShowNumber", "PlayTimes", "Volume", "Speed", "OutId", "FallbackType", "SmsTemplateCode", "DigitalTemplateCode", "SmsTemplateParam", "DigitalTemplateParam", "CardObjects",
 	}
 	for _, k := range allKeys {
 		if _, ok := extra[k]; !ok {
 			t.Errorf("Extras missing key: %s", k)
 		}
+	}
+	// 检查 Extend 字段
+	if got, want := msg.Extend, "up-ext"; got != want {
+		t.Errorf("Extend = %q, want %q", got, want)
 	}
 }
 

@@ -23,9 +23,6 @@ const (
 	// aliyunSpeedKey is the key for Aliyun speed.
 	aliyunSpeedKey = "Speed"
 
-	// aliyunSmsUpExtendCodeKey is the key for Aliyun SMS up extend code.
-	aliyunSmsUpExtendCodeKey = "SmsUpExtendCode"
-
 	// aliyunFallbackTypeKey is the key for Aliyun fallback type.
 	aliyunFallbackTypeKey = "FallbackType"
 
@@ -52,9 +49,6 @@ const (
 const (
 	// tencentSmsSdkAppIDKey is the key for Tencent SMS SDK app ID.
 	tencentSmsSdkAppIDKey = "SmsSdkAppId"
-
-	// tencentExtendCodeKey is the key for Tencent extend code.
-	tencentExtendCodeKey = "ExtendCode"
 
 	// tencentSenderIDKey is the key for Tencent sender ID.
 	tencentSenderIDKey = "SenderId"

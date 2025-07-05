@@ -58,6 +58,7 @@ func (p *HTTPProvider[T]) Send(ctx context.Context, msg core.Message, opts *core
 	if err != nil {
 		return err
 	}
+
 	// Transform request
 	reqSpec, handler, err := p.transformer.Transform(ctx, msg, selectedConfig)
 	if err != nil {
