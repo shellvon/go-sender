@@ -1,5 +1,10 @@
+//nolint:dupl // builder pattern files share similar boilerplate; acceptable duplication
 package sms
 
+import "github.com/shellvon/go-sender/utils"
+
+// YunpianSMSBuilder provides Yunpian-specific SMS message creation.
+//
 // @ProviderName: Yunpian / 云片
 // @Website: https://www.yunpian.com
 // @APIDoc: https://www.yunpian.com/dev-doc
@@ -10,8 +15,6 @@ package sms
 //   - 超级短信API: https://www.yunpian.com/official/document/sms/zh_CN/super_sms_send
 //
 // builder 仅支持 text（普通短信）类型。
-
-// YunpianSMSBuilder provides Yunpian-specific SMS message creation.
 type YunpianSMSBuilder struct {
 	*BaseBuilder[*YunpianSMSBuilder]
 
@@ -45,9 +48,12 @@ func (b *YunpianSMSBuilder) MobileStat(stat bool) *YunpianSMSBuilder {
 
 func (b *YunpianSMSBuilder) Build() *Message {
 	msg := b.BaseBuilder.Build()
-	extra := map[string]interface{}{}
-	extra[yunpianRegisterKey] = b.register
-	extra[yunpianMobileStatKey] = b.mobileStat
-	msg.Extras = extra
+	fields := map[string]interface{}{
+		yunpianRegisterKey:   b.register,
+		yunpianMobileStatKey: b.mobileStat,
+	}
+	if extra := utils.BuildExtras(fields); len(extra) > 0 {
+		msg.Extras = extra
+	}
 	return msg
 }

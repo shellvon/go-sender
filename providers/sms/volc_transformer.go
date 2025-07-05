@@ -44,41 +44,53 @@ func (t *volcTransformer) CanTransform(msg core.Message) bool {
 }
 
 func (t *volcTransformer) Transform(
-	ctx context.Context,
+	_ context.Context,
 	msg core.Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
-		return nil, nil, errors.New("invalid message type for volcTransformer")
+		return nil, nil, fmt.Errorf("unsupported message type for Volc: %T", msg)
 	}
-	if err := t.validateMessage(smsMsg); err != nil {
-		return nil, nil, err
+
+	// Apply Volc-specific defaults
+	t.applyVolcDefaults(smsMsg, account)
+
+	switch smsMsg.Type {
+	case SMSText:
+		return t.transformSMS(smsMsg, account)
+	case Voice, MMS:
+		return nil, nil, fmt.Errorf("unsupported message type: %v", smsMsg.Type)
+	default:
+		return nil, nil, fmt.Errorf("unsupported message type: %v", smsMsg.Type)
 	}
-	return t.transformTextSMS(ctx, smsMsg, account)
 }
 
-func (t *volcTransformer) validateMessage(msg *Message) error {
-	if len(msg.Mobiles) == 0 {
-		return errors.New("mobiles is required")
-	}
-	if msg.SignName == "" {
-		return errors.New("sign name is required")
-	}
-	if msg.GetExtraStringOrDefault(volcSmsAccountKey, "") == "" {
-		return errors.New("sms account is required")
-	}
-	if msg.IsIntl() {
-		return NewUnsupportedInternationalError(string(SubProviderVolc), "sendSMS")
-	}
-	return nil
+// applyVolcDefaults applies Volc-specific defaults to the message.
+func (t *volcTransformer) applyVolcDefaults(msg *Message, account *Account) {
+	// Apply common defaults first
+	msg.ApplyCommonDefaults(account)
 }
 
-func (t *volcTransformer) transformTextSMS(
-	_ context.Context,
+// transformSMS transforms SMS message to HTTP request
+//   - 短信API: https://www.volcengine.com/docs/6361/67380
+func (t *volcTransformer) transformSMS(
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+	// 验证参数
+	if len(msg.Mobiles) == 0 {
+		return nil, nil, errors.New("mobiles is required")
+	}
+	if msg.SignName == "" {
+		return nil, nil, errors.New("sign name is required")
+	}
+	if msg.GetExtraStringOrDefault(volcSmsAccountKey, "") == "" {
+		return nil, nil, errors.New("sms account is required")
+	}
+	if msg.IsIntl() {
+		return nil, nil, NewUnsupportedInternationalError(string(SubProviderVolc), "sendSMS")
+	}
 	body := map[string]interface{}{
 		"SmsAccount":   msg.GetExtraStringOrDefault(volcSmsAccountKey, account.AppID),
 		"Sign":         msg.SignName,

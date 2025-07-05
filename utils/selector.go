@@ -1,3 +1,6 @@
+// TODO: API documentation not understood, temporarily not implemented
+//
+//revive:disable:var-naming
 package utils
 
 // DefaultStringIfEmpty returns def if s is empty, otherwise returns s.

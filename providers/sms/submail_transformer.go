@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"sort"
 	"strconv"
@@ -76,75 +77,72 @@ func (t *submailTransformer) Transform(
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
-		return nil, nil, fmt.Errorf("unsupported message type for submail: %T", msg)
-	}
-	if err := t.validateMessage(smsMsg); err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("unsupported message type for Submail: %T", msg)
 	}
 
-	endpoint := t.buildEndpoint(smsMsg, account)
-	params := t.buildParams(smsMsg, account)
+	// Apply Submail-specific defaults
+	t.applySubmailDefaults(smsMsg, account)
+
+	switch smsMsg.Type {
+	case SMSText:
+		return t.transformSMS(smsMsg, account)
+	case Voice:
+		return t.transformVoice(smsMsg, account)
+	case MMS:
+		return t.transformMMS(smsMsg, account)
+	default:
+		return nil, nil, fmt.Errorf("unsupported message type: %v", smsMsg.Type)
+	}
+}
+
+// applySubmailDefaults applies Submail-specific defaults to the message.
+func (t *submailTransformer) applySubmailDefaults(msg *Message, account *Account) {
+	// Apply common defaults first
+	msg.ApplyCommonDefaults(account)
+}
+
+// 通用的submail请求构造方法.
+func (t *submailTransformer) buildSubmailRequest(
+	msg *Message,
+	account *Account,
+	apiPath string,
+	buildParams func(*Message, *Account) map[string]string,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+	params := buildParams(msg, account)
 	body := t.encodeParams(params)
-
+	endpoint := fmt.Sprintf("%s%s", submailDefaultDomain, apiPath)
 	return &core.HTTPRequestSpec{
-		Method:   "POST",
+		Method:   http.MethodPost,
 		URL:      endpoint,
 		Headers:  map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
 		Body:     body,
-		BodyType: "form",
+		BodyType: core.BodyTypeForm,
 	}, t.handleSubmailResponse, nil
 }
 
-func (t *submailTransformer) validateMessage(msg *Message) error {
+// transformSMS transforms SMS message to HTTP request
+//   - 国内短信: https://www.mysubmail.com/documents/FppOR3
+//   - 国际短信: https://www.mysubmail.com/documents/3UQA3
+//   - 模板短信: https://www.mysubmail.com/documents/OOVyh
+//   - 群发: https://www.mysubmail.com/documents/AzD4Z4
+func (t *submailTransformer) transformSMS(
+	msg *Message,
+	account *Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	if len(msg.Mobiles) == 0 {
-		return errors.New("mobiles is required")
+		return nil, nil, errors.New("mobiles is required")
 	}
-
-	switch msg.Type {
-	case SMSText:
-		if msg.Content == "" && msg.TemplateID == "" {
-			return errors.New("content or templateID is required")
-		}
-		if msg.IsIntl() && len(msg.Mobiles) > 1000 {
-			return errors.New("international sms: at most 1000 mobiles per request")
-		}
-		if !msg.IsIntl() && len(msg.Mobiles) > 10000 {
-			return errors.New("domestic sms: at most 10000 mobiles per request")
-		}
-	case Voice:
-		if msg.Content == "" && msg.TemplateID == "" {
-			return errors.New("voice content or templateID is required")
-		}
-		if len(msg.Mobiles) > 1 {
-			return errors.New("voice only supports single send")
-		}
-	case MMS:
-		if msg.TemplateID == "" {
-			return errors.New("mms requires templateID")
-		}
-		if len(msg.Mobiles) > 1 {
-			return errors.New("mms only supports single send")
-		}
-	default:
-		return fmt.Errorf("unsupported submail message type: %s", msg.Type)
+	if msg.Content == "" && msg.TemplateID == "" {
+		return nil, nil, errors.New("content or templateID is required")
 	}
-	return nil
-}
-
-func (t *submailTransformer) buildEndpoint(msg *Message, _ *Account) string {
-	var apiPath string
-
-	switch msg.Type {
-	case SMSText:
-		apiPath = t.getSMSPath(msg)
-	case Voice:
-		apiPath = t.getVoicePath(msg)
-	case MMS:
-		apiPath = mmsSingle
-	default:
-		apiPath = "" // 或 panic/return error
+	if msg.IsIntl() && len(msg.Mobiles) > 1000 {
+		return nil, nil, errors.New("international sms: at most 1000 mobiles per request")
 	}
-	return fmt.Sprintf("%s%s", smsbaoDefaultBaseURI, apiPath)
+	if !msg.IsIntl() && len(msg.Mobiles) > 10000 {
+		return nil, nil, errors.New("domestic sms: at most 10000 mobiles per request")
+	}
+	apiPath := t.getSMSPath(msg)
+	return t.buildSubmailRequest(msg, account, apiPath, t.buildSMSParams)
 }
 
 func (t *submailTransformer) getSMSPath(msg *Message) string {
@@ -178,6 +176,26 @@ func (t *submailTransformer) getSMSPath(msg *Message) string {
 	return domesticSingle
 }
 
+// transformVoice transforms voice message to HTTP request
+//   - 语音: https://www.mysubmail.com/documents/meE3C1
+//   - 语音模板: https://www.mysubmail.com/documents/KbG03
+func (t *submailTransformer) transformVoice(
+	msg *Message,
+	account *Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+	if len(msg.Mobiles) == 0 {
+		return nil, nil, errors.New("mobiles is required")
+	}
+	if msg.Content == "" && msg.TemplateID == "" {
+		return nil, nil, errors.New("voice content or templateID is required")
+	}
+	if len(msg.Mobiles) > 1 {
+		return nil, nil, errors.New("voice only supports single send")
+	}
+	apiPath := t.getVoicePath(msg)
+	return t.buildSubmailRequest(msg, account, apiPath, t.buildVoiceParams)
+}
+
 func (t *submailTransformer) getVoicePath(msg *Message) string {
 	if msg.TemplateID == "" {
 		return voiceSingle
@@ -188,7 +206,60 @@ func (t *submailTransformer) getVoicePath(msg *Message) string {
 	return voiceTemplateSingle
 }
 
-func (t *submailTransformer) buildParams(msg *Message, account *Account) map[string]string {
+// transformMMS transforms MMS message to HTTP request
+//   - 彩信: https://www.mysubmail.com/documents/N6ktR
+func (t *submailTransformer) transformMMS(
+	msg *Message,
+	account *Account,
+) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+	if len(msg.Mobiles) == 0 {
+		return nil, nil, errors.New("mobiles is required")
+	}
+	if msg.TemplateID == "" {
+		return nil, nil, errors.New("mms requires templateID")
+	}
+	if len(msg.Mobiles) > 1 {
+		return nil, nil, errors.New("mms only supports single send")
+	}
+	apiPath := mmsSingle
+	return t.buildSubmailRequest(msg, account, apiPath, t.buildMMSParams)
+}
+
+func (t *submailTransformer) buildSMSParams(msg *Message, account *Account) map[string]string {
+	params := map[string]string{
+		"appid": account.APIKey,
+	}
+
+	// 添加接收者
+	t.addRecipients(params, msg)
+
+	// 添加内容或模板
+	t.addContentOrTemplate(params, msg)
+
+	// 添加通用参数
+	t.addCommonParams(params, msg, account)
+
+	return params
+}
+
+func (t *submailTransformer) buildVoiceParams(msg *Message, account *Account) map[string]string {
+	params := map[string]string{
+		"appid": account.APIKey,
+	}
+
+	// 添加接收者
+	t.addRecipients(params, msg)
+
+	// 添加内容或模板
+	t.addContentOrTemplate(params, msg)
+
+	// 添加通用参数
+	t.addCommonParams(params, msg, account)
+
+	return params
+}
+
+func (t *submailTransformer) buildMMSParams(msg *Message, account *Account) map[string]string {
 	params := map[string]string{
 		"appid": account.APIKey,
 	}

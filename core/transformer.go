@@ -19,7 +19,7 @@ type HTTPRequestSpec struct {
 	Headers     map[string]string `json:"headers"`
 	QueryParams map[string]string `json:"query_params"`
 	Body        []byte            `json:"body"`
-	BodyType    BodyType          `json:"body_type"` // "raw", "form", "json"
+	BodyType    BodyType          `json:"body_type"` // "raw", "form", "json",
 	Timeout     time.Duration     `json:"timeout"`
 }
 

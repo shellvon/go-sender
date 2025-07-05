@@ -59,9 +59,16 @@ func TestAliyunTransformer_Transform_TextWithVoiceParam(t *testing.T) {
 	msg := aliyunBuilder.Volume(80).Build()
 	tr := mustGetAliyunTransformer(t)
 	acc := &sms.Account{BaseAccount: core.BaseAccount{Credentials: core.Credentials{APIKey: "ak", APISecret: "sk"}}}
-	_, _, err := tr.Transform(context.Background(), msg, acc)
-	if err == nil {
-		t.Error("Transform should fail: Volume is only applicable to voice messages")
+	spec, handler, err := tr.Transform(context.Background(), msg, acc)
+	if err != nil {
+		t.Fatalf("Transform should succeed even with voice params in text message: %v", err)
+	}
+	if spec == nil || handler == nil {
+		t.Fatal("Transform should return spec and handler")
+	}
+	// 验证语音参数被忽略（不包含在请求中）
+	if spec.QueryParams["Volume"] != "" {
+		t.Error("Volume parameter should be ignored for text messages")
 	}
 }
 
