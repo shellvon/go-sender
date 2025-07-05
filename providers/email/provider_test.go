@@ -23,7 +23,8 @@ func TestNewProvider(t *testing.T) {
 					{
 						BaseAccount: core.BaseAccount{
 							AccountMeta: core.AccountMeta{
-								Name: "test",
+								Provider: "email",
+								Name:     "test",
 							},
 							Credentials: core.Credentials{
 								APIKey:    "user",
@@ -46,7 +47,8 @@ func TestNewProvider(t *testing.T) {
 					{
 						BaseAccount: core.BaseAccount{
 							AccountMeta: core.AccountMeta{
-								Name: "test",
+								Provider: "email",
+								Name:     "test",
 							},
 							Credentials: core.Credentials{
 								APIKey:    "user",
@@ -77,6 +79,7 @@ func TestNewProvider(t *testing.T) {
 					{
 						BaseAccount: core.BaseAccount{
 							AccountMeta: core.AccountMeta{
+								Provider: "email",
 								Name:     "test1",
 								Disabled: true,
 							},
@@ -92,6 +95,7 @@ func TestNewProvider(t *testing.T) {
 					{
 						BaseAccount: core.BaseAccount{
 							AccountMeta: core.AccountMeta{
+								Provider: "email",
 								Name:     "test2",
 								Disabled: true,
 							},
@@ -131,7 +135,8 @@ func TestProviderName(t *testing.T) {
 			{
 				BaseAccount: core.BaseAccount{
 					AccountMeta: core.AccountMeta{
-						Name: "test",
+						Provider: "email",
+						Name:     "test",
 					},
 					Credentials: core.Credentials{
 						APIKey:    "user",
@@ -163,7 +168,8 @@ func TestProviderSendInvalidMessageType(t *testing.T) {
 			{
 				BaseAccount: core.BaseAccount{
 					AccountMeta: core.AccountMeta{
-						Name: "test",
+						Provider: "email",
+						Name:     "test",
 					},
 					Credentials: core.Credentials{
 						APIKey:    "user",
@@ -199,7 +205,8 @@ func TestProviderSendInvalidMessage(t *testing.T) {
 			{
 				BaseAccount: core.BaseAccount{
 					AccountMeta: core.AccountMeta{
-						Name: "test",
+						Provider: "email",
+						Name:     "test",
 					},
 					Credentials: core.Credentials{
 						APIKey:    "user",
@@ -231,6 +238,7 @@ func TestAccountMethods(t *testing.T) {
 	account := &email.Account{
 		BaseAccount: core.BaseAccount{
 			AccountMeta: core.AccountMeta{
+				Provider: "email",
 				Name:     "test",
 				SubType:  "smtp",
 				Weight:   10,
@@ -286,7 +294,8 @@ func TestConfigMethods(t *testing.T) {
 			{
 				BaseAccount: core.BaseAccount{
 					AccountMeta: core.AccountMeta{
-						Name: "test",
+						Provider: "email",
+						Name:     "test",
 					},
 					Credentials: core.Credentials{
 						APIKey:    "user",

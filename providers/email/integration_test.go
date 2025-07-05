@@ -19,8 +19,9 @@ func TestEmailIntegration(t *testing.T) {
 			{
 				BaseAccount: core.BaseAccount{
 					AccountMeta: core.AccountMeta{
-						Name:   "test",
-						Weight: 1,
+						Provider: "email",
+						Name:     "test",
+						Weight:   1,
 					},
 					Credentials: core.Credentials{
 						APIKey:    "test@example.com",
@@ -98,8 +99,9 @@ func TestEmailProviderSelection(t *testing.T) {
 			{
 				BaseAccount: core.BaseAccount{
 					AccountMeta: core.AccountMeta{
-						Name:   "account1",
-						Weight: 1,
+						Provider: "email",
+						Name:     "account1",
+						Weight:   1,
 					},
 					Credentials: core.Credentials{
 						APIKey:    "user1@example.com",
@@ -113,8 +115,9 @@ func TestEmailProviderSelection(t *testing.T) {
 			{
 				BaseAccount: core.BaseAccount{
 					AccountMeta: core.AccountMeta{
-						Name:   "account2",
-						Weight: 2,
+						Provider: "email",
+						Name:     "account2",
+						Weight:   2,
 					},
 					Credentials: core.Credentials{
 						APIKey:    "user2@example.com",
@@ -224,7 +227,8 @@ func TestEmailConfigValidation(t *testing.T) {
 					{
 						BaseAccount: core.BaseAccount{
 							AccountMeta: core.AccountMeta{
-								Name: "test",
+								Provider: "email",
+								Name:     "test",
 							},
 							Credentials: core.Credentials{
 								APIKey:    "user@example.com",
@@ -247,7 +251,8 @@ func TestEmailConfigValidation(t *testing.T) {
 					{
 						BaseAccount: core.BaseAccount{
 							AccountMeta: core.AccountMeta{
-								Name: "test",
+								Provider: "email",
+								Name:     "test",
 							},
 							Credentials: core.Credentials{
 								APIKey:    "user@example.com",

@@ -24,7 +24,7 @@ func TestAliyun_Integration_SendTextSMS(t *testing.T) {
 
 	acc := &sms.Account{
 		BaseAccount: core.BaseAccount{
-			AccountMeta: core.AccountMeta{Name: "test"},
+			AccountMeta: core.AccountMeta{Provider: "sms", Name: "test"},
 			Credentials: core.Credentials{APIKey: "ak", APISecret: "sk"},
 		},
 	}
@@ -106,7 +106,7 @@ func TestSender_DispatchToAliyun_EndToEnd(t *testing.T) {
 
 	acc := &sms.Account{
 		BaseAccount: core.BaseAccount{
-			AccountMeta: core.AccountMeta{Name: "test"},
+			AccountMeta: core.AccountMeta{Provider: "sms", SubType: "aliyun", Name: "test"},
 			Credentials: core.Credentials{APIKey: "ak", APISecret: "sk"},
 		},
 	}

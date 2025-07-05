@@ -1,6 +1,10 @@
 package emailapi
 
-import "github.com/shellvon/go-sender/core"
+import (
+	"errors"
+
+	"github.com/shellvon/go-sender/core"
+)
 
 // Account represents a single Email API service account (Mailgun, Resend, EmailJS etc.).
 // It follows the three-tier design: AccountMeta + Credentials + extra
@@ -17,4 +21,13 @@ type Account struct {
 	Region string `json:"region,omitempty"   yaml:"region,omitempty"`
 	// Callback is the callback URL for webhooks.
 	Callback string `json:"callback,omitempty" yaml:"callback,omitempty"`
+}
+
+// Validate checks if the account is valid.
+// It ensures that the subType is set for Email API providers.
+func (a *Account) Validate() error {
+	if a.SubType == "" {
+		return errors.New("subType is required for Email API provider")
+	}
+	return a.BaseAccount.Validate()
 }

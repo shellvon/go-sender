@@ -26,13 +26,13 @@ func TestAliyunProvider_Send_Success(t *testing.T) {
 		Items: []*sms.Account{
 			{
 				BaseAccount: core.BaseAccount{
-					AccountMeta: core.AccountMeta{Name: "test", Disabled: false},
+					AccountMeta: core.AccountMeta{Provider: "sms", Name: "test", Disabled: false, SubType: "aliyun"},
 					Credentials: core.Credentials{APIKey: "ak", APISecret: "sk"},
 				},
 			},
 		},
 	}
-	httpProvider, err := providers.NewHTTPProvider[*sms.Account](
+	httpProvider, err := providers.NewHTTPProvider(
 		"aliyun",
 		fakeTransformer,
 		config,
@@ -41,12 +41,8 @@ func TestAliyunProvider_Send_Success(t *testing.T) {
 		t.Fatalf("failed to create HTTP provider: %v", err)
 	}
 	p := &sms.Provider{HTTPProvider: httpProvider}
-	msg := sms.Aliyun()
-	msg.To("13800138000")
-	msg.Content("hi")
-	msg.SignName("sign")
-	builtMsg := msg.Build()
-	err = p.Send(context.Background(), builtMsg, &core.ProviderSendOptions{})
+	msg := sms.Aliyun().To("13800138000").Content("hi").SignName("sign").Build()
+	err = p.Send(context.Background(), msg, &core.ProviderSendOptions{})
 	if err != nil {
 		t.Errorf("Send should succeed: %v", err)
 	}
@@ -88,13 +84,13 @@ func TestAliyunProvider_Send_Error(t *testing.T) {
 		Items: []*sms.Account{
 			{
 				BaseAccount: core.BaseAccount{
-					AccountMeta: core.AccountMeta{Name: "test", Disabled: false},
+					AccountMeta: core.AccountMeta{Provider: "sms", SubType: "aliyun", Name: "test", Disabled: false},
 					Credentials: core.Credentials{APIKey: "ak", APISecret: "sk"},
 				},
 			},
 		},
 	}
-	httpProvider, err := providers.NewHTTPProvider[*sms.Account](
+	httpProvider, err := providers.NewHTTPProvider(
 		"aliyun",
 		fakeTransformer,
 		config,
@@ -103,12 +99,8 @@ func TestAliyunProvider_Send_Error(t *testing.T) {
 		t.Fatalf("failed to create HTTP provider: %v", err)
 	}
 	p := &sms.Provider{HTTPProvider: httpProvider}
-	msg := sms.Aliyun()
-	msg.To("13800138000")
-	msg.Content("hi")
-	msg.SignName("sign")
-	builtMsg := msg.Build()
-	err = p.Send(context.Background(), builtMsg, &core.ProviderSendOptions{})
+	msg := sms.Aliyun().To("13800138000").Content("hi").SignName("sign").Build()
+	err = p.Send(context.Background(), msg, &core.ProviderSendOptions{})
 	if err == nil {
 		t.Error("Send should fail when HTTPProvider returns error")
 	}

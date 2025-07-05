@@ -56,8 +56,8 @@ func TestNewProvider_NotConfigured(t *testing.T) {
 	if err == nil {
 		t.Error("Expected error for not configured, got nil")
 	}
-	if !strings.Contains(err.Error(), "webhook provider is not configured or is disabled") {
-		t.Errorf("Expected error to contain 'webhook provider is not configured or is disabled', got '%s'", err.Error())
+	if !strings.Contains(err.Error(), "no items found") {
+		t.Errorf("Expected error to contain 'no items found', got '%s'", err.Error())
 	}
 }
 
@@ -77,8 +77,8 @@ func TestNewProvider_Disabled(t *testing.T) {
 	if err == nil {
 		t.Error("Expected error for disabled config, got nil")
 	}
-	if !strings.Contains(err.Error(), "webhook provider is not configured or is disabled") {
-		t.Errorf("Expected error to contain 'webhook provider is not configured or is disabled', got '%s'", err.Error())
+	if !strings.Contains(err.Error(), "provider is disabled") {
+		t.Errorf("Expected error to contain 'provider is disabled', got '%s'", err.Error())
 	}
 }
 
