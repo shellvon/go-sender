@@ -247,88 +247,55 @@ func Aliyun() *AliyunSMSBuilder {
 
 // Tencent creates a new Tencent SMS message builder.
 func Tencent() *TencentSMSBuilder {
-	builder := &TencentSMSBuilder{}
-	builder.self = builder
-	builder.subProvider = SubProviderTencent
-	return builder
+	return newTencentSMSBuilder()
 }
 
 // Cl253 creates a new CL253 SMS message builder.
 func Cl253() *Cl253SMSBuilder {
-	builder := &Cl253SMSBuilder{}
-	builder.self = builder
-	builder.subProvider = SubProviderCl253
-	return builder
+	return newCl253SMSBuilder()
 }
 
 // Huawei creates a new Huawei SMS message builder.
 func Huawei() *HuaweiSMSBuilder {
-	builder := &HuaweiSMSBuilder{}
-	builder.self = builder
-	builder.subProvider = SubProviderHuawei
-	return builder
+	return newHuaweiSMSBuilder()
 }
 
 // Juhe creates a new Juhe SMS message builder.
 func Juhe() *JuheSMSBuilder {
-	builder := &JuheSMSBuilder{}
-	builder.self = builder
-	builder.subProvider = SubProviderJuhe
-	return builder
+	return newJuheSMSBuilder()
 }
 
 // Luosimao creates a new Luosimao SMS message builder.
 func Luosimao() *LuosimaoSMSBuilder {
-	builder := &LuosimaoSMSBuilder{}
-	builder.self = builder
-	builder.subProvider = SubProviderLuosimao
-	return builder
+	return newLuosimaoSMSBuilder()
 }
 
 // Smsbao creates a new Smsbao SMS message builder.
 func Smsbao() *SmsbaoSMSBuilder {
-	builder := &SmsbaoSMSBuilder{}
-	builder.self = builder
-	builder.subProvider = SubProviderSmsbao
-	return builder
+	return newSmsbaoSMSBuilder()
 }
 
 // Submail creates a new Submail SMS message builder.
 func Submail() *SubmailSMSBuilder {
-	builder := &SubmailSMSBuilder{}
-	builder.self = builder
-	builder.subProvider = SubProviderSubmail
-	return builder
+	return newSubmailSMSBuilder()
 }
 
 // Ucp creates a new UCP SMS message builder.
 func Ucp() *UcpSMSBuilder {
-	builder := &UcpSMSBuilder{}
-	builder.self = builder
-	builder.subProvider = SubProviderUcp
-	return builder
+	return newUcpSMSBuilder()
 }
 
 // Volc creates a new Volc SMS message builder.
 func Volc() *VolcSMSBuilder {
-	builder := &VolcSMSBuilder{}
-	builder.self = builder
-	builder.subProvider = SubProviderVolc
-	return builder
+	return newVolcSMSBuilder()
 }
 
 // Yuntongxun creates a new Yuntongxun SMS message builder.
 func Yuntongxun() *YuntongxunSMSBuilder {
-	builder := &YuntongxunSMSBuilder{}
-	builder.self = builder
-	builder.subProvider = SubProviderYuntongxun
-	return builder
+	return newYuntongxunSMSBuilder()
 }
 
 // Yunpian creates a new Yunpian SMS message builder.
 func Yunpian() *YunpianSMSBuilder {
-	builder := &YunpianSMSBuilder{}
-	builder.self = builder
-	builder.subProvider = SubProviderYunpian
-	return builder
+	return newYunpianSMSBuilder()
 }
