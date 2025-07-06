@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/shellvon/go-sender/core"
@@ -94,12 +95,14 @@ func (t *smsbaoTransformer) transformSMS(
 	content := utils.AddSignature(msg.Content, msg.SignName)
 
 	// 构建查询参数
-	queryParams := map[string]string{
-		"u": account.APIKey,
-		"p": utils.MD5Hex(account.APISecret),
-		"m": mobiles,
-		"c": content,
-		"g": msg.GetExtraStringOrDefault(smsbaoProductIDKey, ""),
+	queryParams := url.Values{
+		"u": {account.APIKey},
+		"p": {utils.MD5Hex(account.APISecret)},
+		"m": {mobiles},
+		"c": {content},
+	}
+	if prod := msg.GetExtraStringOrDefault(smsbaoProductIDKey, ""); prod != "" {
+		queryParams.Set("g", prod)
 	}
 
 	var apiPath string
@@ -141,11 +144,11 @@ func (t *smsbaoTransformer) transformVoice(
 	}
 
 	// 构建查询参数
-	queryParams := map[string]string{
-		"u": account.APIKey,
-		"p": utils.MD5Hex(account.APISecret),
-		"m": msg.Mobiles[0],
-		"c": msg.Content,
+	queryParams := url.Values{
+		"u": {account.APIKey},
+		"p": {utils.MD5Hex(account.APISecret)},
+		"m": {msg.Mobiles[0]},
+		"c": {msg.Content},
 	}
 
 	return &core.HTTPRequestSpec{

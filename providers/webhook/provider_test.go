@@ -301,7 +301,7 @@ func TestProvider_Send_JSONResponseValidation(t *testing.T) {
 				Method: "POST",
 				ResponseConfig: &webhook.ResponseConfig{
 					ValidateResponse: true,
-					ResponseType:     "json",
+					ResponseType:     core.BodyTypeJSON,
 					SuccessField:     "success",
 					SuccessValue:     "true",
 					ErrorField:       "error",

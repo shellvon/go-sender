@@ -108,16 +108,9 @@ func (t *emailJSTransformer) transformEmail(
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to marshal EmailJS request body: %w", err)
 	}
-
-	// Build headers
-	headers := map[string]string{
-		"Content-Type": "application/json",
-	}
-
 	return &core.HTTPRequestSpec{
 		Method:   http.MethodPost,
 		URL:      defaultEmailjsAPIPath,
-		Headers:  headers,
 		Body:     bodyData,
 		BodyType: core.BodyTypeJSON,
 	}, t.handleEmailJSResponse, nil

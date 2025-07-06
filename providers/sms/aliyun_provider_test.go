@@ -62,7 +62,7 @@ func (f *fakeAliyunTransformer) Transform(
 			URL:      f.url,
 			Headers:  map[string]string{},
 			Body:     []byte("{}"),
-			BodyType: "json",
+			BodyType: core.BodyTypeJSON,
 		}, func(status int, body []byte) error {
 			if status < 200 || status >= 300 {
 				return fmt.Errorf("HTTP request failed with status %d: %s", status, string(body))

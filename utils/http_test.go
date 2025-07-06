@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -218,7 +219,7 @@ func TestDoRequest_MethodsAndParams(t *testing.T) {
 	defer ts.Close()
 
 	t.Run("GET with query", func(t *testing.T) {
-		params := map[string]interface{}{"foo": "bar", "baz": "qux"}
+		params := url.Values{"foo": {"bar"}, "baz": {"qux"}}
 		opt := utils.HTTPRequestOptions{Method: "GET", Query: params}
 		testMethodAndParamsCase(t, ts.URL, "/get", "GET", opt, "")
 	})
@@ -260,7 +261,7 @@ func TestDoRequest_MethodsAndParams(t *testing.T) {
 	})
 
 	t.Run("query+body", func(t *testing.T) {
-		opt := utils.HTTPRequestOptions{Method: "POST", Query: map[string]interface{}{"q": "1"}, Raw: []byte("body")}
+		opt := utils.HTTPRequestOptions{Method: "POST", Query: url.Values{"q": {"1"}}, Raw: []byte("body")}
 		testMethodAndParamsCase(t, ts.URL, "/qbody", "POST", opt, "body")
 	})
 }

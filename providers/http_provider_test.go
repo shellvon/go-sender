@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -97,7 +98,7 @@ func TestHTTPProvider_Send_SingleConfig(t *testing.T) {
 	reqSpec := &core.HTTPRequestSpec{
 		URL:      ts.URL,
 		Method:   "POST",
-		BodyType: "json",
+		BodyType: core.BodyTypeJSON,
 		Body:     []byte(`{"test": "data"}`),
 	}
 
@@ -176,12 +177,10 @@ func TestHTTPProvider_ExecuteHTTPRequest_WithQueryParams(t *testing.T) {
 	defer ts.Close()
 
 	reqSpec := &core.HTTPRequestSpec{
-		URL: ts.URL,
-		QueryParams: map[string]string{
-			"param1": "value1",
-		},
-		Method:   "GET",
-		BodyType: "json",
+		URL:         ts.URL,
+		QueryParams: url.Values{"param1": {"value1"}},
+		Method:      "GET",
+		BodyType:    core.BodyTypeJSON,
 	}
 
 	transformer := &mockTransformer{reqSpec: reqSpec}
@@ -202,8 +201,8 @@ func TestHTTPProvider_ExecuteHTTPRequest_InvalidURL(t *testing.T) {
 	reqSpec := &core.HTTPRequestSpec{
 		URL:         "://invalid-url",
 		Method:      "GET",
-		BodyType:    "json",
-		QueryParams: map[string]string{"param": "value"},
+		BodyType:    core.BodyTypeJSON,
+		QueryParams: url.Values{"param": {"value"}},
 	}
 
 	transformer := &mockTransformer{reqSpec: reqSpec}
@@ -231,7 +230,7 @@ func TestHTTPProvider_ExecuteHTTPRequest_HTTPFailure(t *testing.T) {
 	reqSpec := &core.HTTPRequestSpec{
 		URL:      ts.URL,
 		Method:   "POST",
-		BodyType: "json",
+		BodyType: core.BodyTypeJSON,
 		Body:     []byte(`{"test": "data"}`),
 	}
 
@@ -273,7 +272,7 @@ func TestHTTPProvider_ExecuteHTTPRequest_CustomHandler(t *testing.T) {
 	reqSpec := &core.HTTPRequestSpec{
 		URL:      ts.URL,
 		Method:   "POST",
-		BodyType: "json",
+		BodyType: core.BodyTypeJSON,
 		Body:     []byte(`{"test": "data"}`),
 	}
 

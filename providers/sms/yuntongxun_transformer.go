@@ -122,11 +122,10 @@ func (t *yuntongxunTransformer) transformDomesticSMS(
 	}
 
 	return &core.HTTPRequestSpec{
-		Method:   http.MethodPost,
-		URL:      url,
-		Headers:  t.buildHeaders(account),
-		Body:     bodyData,
-		BodyType: core.BodyTypeRaw,
+		Method:  http.MethodPost,
+		URL:     url,
+		Headers: t.buildHeaders(account),
+		Body:    bodyData,
 	}, t.handleYuntongxunResponse, nil
 }
 
@@ -162,11 +161,10 @@ func (t *yuntongxunTransformer) transformIntlSMS(
 	}
 
 	return &core.HTTPRequestSpec{
-		Method:   http.MethodPost,
-		URL:      url,
-		Headers:  t.buildHeaders(account),
-		Body:     bodyData,
-		BodyType: core.BodyTypeRaw,
+		Method:  http.MethodPost,
+		URL:     url,
+		Headers: t.buildHeaders(account),
+		Body:    bodyData,
 	}, t.handleYuntongxunResponse, nil
 }
 
@@ -250,11 +248,10 @@ func (t *yuntongxunTransformer) transformVoice(
 	}
 
 	return &core.HTTPRequestSpec{
-		Method:   http.MethodPost,
-		URL:      url,
-		Headers:  t.buildHeaders(account),
-		Body:     bodyData,
-		BodyType: core.BodyTypeRaw,
+		Method:  http.MethodPost,
+		URL:     url,
+		Headers: t.buildHeaders(account),
+		Body:    bodyData,
 	}, t.handleYuntongxunResponse, nil
 }
 

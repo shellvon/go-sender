@@ -119,7 +119,6 @@ func (t *ucpTransformer) transformSMS(
 	return &core.HTTPRequestSpec{
 		Method:   http.MethodPost,
 		URL:      fmt.Sprintf("%s/%s", ucpDefaultBaseURI, apiPath),
-		Headers:  map[string]string{"Content-Type": "application/json"},
 		Body:     bodyData,
 		BodyType: core.BodyTypeJSON,
 	}, t.handleUcpResponse, nil

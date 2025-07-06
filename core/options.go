@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"sync"
@@ -23,16 +24,89 @@ const (
 	idleConnTimeout      = 90 * time.Second
 )
 
-type BodyType string
+type BodyType int
 
 const (
-	BodyTypeJSON BodyType = "json"
-	BodyTypeForm BodyType = "form"
-	BodyTypeText BodyType = "text"
-	BodyTypeXML  BodyType = "xml"
-	BodyTypeRaw  BodyType = "raw"
-	BodyTypeNone BodyType = "none"
+	BodyTypeNone BodyType = iota
+	BodyTypeJSON
+	BodyTypeForm
+	BodyTypeText
+	BodyTypeXML
+	BodyTypeRaw
 )
+
+//nolint:gochecknoglobals // constant mapping table, safe as global
+var bodyTypeToString = map[BodyType]string{
+	BodyTypeNone: "none",
+	BodyTypeJSON: "json",
+	BodyTypeForm: "form",
+	BodyTypeText: "text",
+	BodyTypeXML:  "xml",
+	BodyTypeRaw:  "raw",
+}
+
+//nolint:gochecknoglobals // reverse lookup table, safe as global
+var stringToBodyType = map[string]BodyType{
+	"none": BodyTypeNone,
+	"json": BodyTypeJSON,
+	"form": BodyTypeForm,
+	"text": BodyTypeText,
+	"xml":  BodyTypeXML,
+	"raw":  BodyTypeRaw,
+}
+
+// String implements fmt.Stringer for human-readable output.
+func (b *BodyType) String() string {
+	if b == nil {
+		return "unknown"
+	}
+	if s, ok := bodyTypeToString[*b]; ok {
+		return s
+	}
+	return "unknown"
+}
+
+// ContentType returns the corresponding HTTP Content-Type header value.
+func (b *BodyType) ContentType() string {
+	if b == nil {
+		return ""
+	}
+	switch *b {
+	case BodyTypeNone:
+		return ""
+	case BodyTypeJSON:
+		return "application/json; charset=utf-8"
+	case BodyTypeForm:
+		return "application/x-www-form-urlencoded; charset=utf-8"
+	case BodyTypeText:
+		return "text/plain; charset=utf-8"
+	case BodyTypeXML:
+		return "application/xml; charset=utf-8"
+	case BodyTypeRaw:
+		return "application/octet-stream"
+	default:
+		return ""
+	}
+}
+
+// MarshalJSON encodes the BodyType as a quoted string (e.g., "json").
+func (b *BodyType) MarshalJSON() ([]byte, error) {
+	return json.Marshal(b.String())
+}
+
+// UnmarshalJSON decodes a quoted string (e.g., "json") into BodyType.
+func (b *BodyType) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+	if val, ok := stringToBodyType[s]; ok {
+		*b = val
+		return nil
+	}
+	*b = BodyTypeNone
+	return nil
+}
 
 // DefaultHTTPClient returns a default HTTP client with proper settings.
 func DefaultHTTPClient() *http.Client {

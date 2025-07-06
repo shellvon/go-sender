@@ -143,9 +143,8 @@ func (t *cl253Transformer) transformSMS(
 	reqSpec := &core.HTTPRequestSpec{
 		Method:   http.MethodPost,
 		URL:      t.buildRequestURI(msg, account),
-		Headers:  t.buildHeaders(nil),
 		Body:     body,
-		BodyType: core.BodyTypeRaw,
+		BodyType: core.BodyTypeJSON,
 	}
 	return reqSpec, t.handleCl253Response, nil
 }
@@ -162,17 +161,6 @@ func (t *cl253Transformer) buildRequestURI(msg *Message, account *Account) strin
 	}
 	// 国内短信
 	return fmt.Sprintf("https://%s%s", cl253DomesticEndpoint, cl253DomesticAPIPath)
-}
-
-// buildHeaders 构建请求头，支持用户自定义 header 合并，默认加 content-type.
-func (t *cl253Transformer) buildHeaders(userHeaders map[string]string) map[string]string {
-	headers := map[string]string{
-		"content-type": "application/json",
-	}
-	for k, v := range userHeaders {
-		headers[strings.ToLower(k)] = v
-	}
-	return headers
 }
 
 // handleCl253Response 处理 CL253 API 响应.

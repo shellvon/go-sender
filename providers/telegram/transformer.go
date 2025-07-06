@@ -94,7 +94,6 @@ func (t *telegramTransformer) Transform(
 	reqSpec := &core.HTTPRequestSpec{
 		Method:   http.MethodPost,
 		URL:      apiURL,
-		Headers:  map[string]string{"Content-Type": "application/json"},
 		Body:     body,
 		BodyType: core.BodyTypeJSON,
 	}

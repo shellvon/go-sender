@@ -147,11 +147,10 @@ func (t *huaweiTransformer) transformSMS(
 
 	region := utils.FirstNonEmpty(msg.GetExtraStringOrDefault(huaweiRegionKey, ""), account.Region, huaweiDefaultRegion)
 	reqSpec := &core.HTTPRequestSpec{
-		Method:   http.MethodPost,
-		URL:      fmt.Sprintf("https://%s.myhuaweicloud.com/sms/batchSendSms/v1", region),
-		Headers:  headers,
-		Body:     body,
-		BodyType: core.BodyTypeForm,
+		Method:  http.MethodPost,
+		URL:     fmt.Sprintf("https://%s.myhuaweicloud.com/sms/batchSendSms/v1", region),
+		Headers: headers,
+		Body:    body,
 	}
 	return reqSpec, t.handleHuaweiResponse, nil
 }

@@ -114,11 +114,10 @@ func (t *volcTransformer) transformSMS(
 	headers := t.buildVolcHeaders(account, bodyJSON, qs)
 
 	return &core.HTTPRequestSpec{
-		Method:   http.MethodPost,
-		URL:      url,
-		Headers:  headers,
-		Body:     bodyJSON,
-		BodyType: core.BodyTypeRaw,
+		Method:  http.MethodPost,
+		URL:     url,
+		Headers: headers,
+		Body:    bodyJSON,
 	}, t.handleVolcResponse, nil
 }
 
