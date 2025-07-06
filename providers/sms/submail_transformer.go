@@ -114,7 +114,6 @@ func (t *submailTransformer) buildSubmailRequest(
 	return &core.HTTPRequestSpec{
 		Method:   http.MethodPost,
 		URL:      endpoint,
-		Headers:  map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
 		Body:     body,
 		BodyType: core.BodyTypeForm,
 	}, t.handleSubmailResponse, nil

@@ -50,7 +50,6 @@ func (t *wecombotTransformer) Transform(
 	reqSpec := &core.HTTPRequestSpec{
 		Method:   http.MethodPost,
 		URL:      webhookURL,
-		Headers:  map[string]string{"Content-Type": "application/json"},
 		Body:     body,
 		BodyType: core.BodyTypeJSON,
 	}

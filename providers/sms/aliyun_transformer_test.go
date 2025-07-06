@@ -67,7 +67,7 @@ func TestAliyunTransformer_Transform_TextWithVoiceParam(t *testing.T) {
 		t.Fatal("Transform should return spec and handler")
 	}
 	// 验证语音参数被忽略（不包含在请求中）
-	if spec.QueryParams["Volume"] != "" {
+	if spec.QueryParams.Get("Volume") != "" {
 		t.Error("Volume parameter should be ignored for text messages")
 	}
 }

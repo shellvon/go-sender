@@ -3,7 +3,6 @@ package providers
 import (
 	"context"
 	"fmt"
-	"net/url"
 
 	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/utils"
@@ -85,54 +84,28 @@ func (p *HTTPProvider[T]) executeHTTPRequest(
 	handler core.ResponseHandler,
 	opts *core.ProviderSendOptions,
 ) error {
-	// Build URL (including query parameters)
-	requestURL := reqSpec.URL
-	if len(reqSpec.QueryParams) > 0 {
-		parsedURL, err := url.Parse(reqSpec.URL)
-		if err != nil {
-			return fmt.Errorf("invalid URL: %w", err)
-		}
-
-		query := parsedURL.Query()
-		for k, v := range reqSpec.QueryParams {
-			query.Set(k, v)
-		}
-		parsedURL.RawQuery = query.Encode()
-		requestURL = parsedURL.String()
+	// Prepare headers map (ensure non-nil so we can mutate)
+	headers := make(map[string]string)
+	for k, v := range reqSpec.Headers {
+		headers[k] = v
 	}
 
-	// Prepare HTTP request options
+	// Prepare HTTP request options (query handled by utils.DoRequest)
 	httpOpts := utils.HTTPRequestOptions{
 		Method:  reqSpec.Method,
-		Headers: reqSpec.Headers,
+		Headers: headers,
 		Client:  opts.HTTPClient,
 		Timeout: reqSpec.Timeout,
+		Query:   reqSpec.QueryParams,
 	}
 
-	// Set request body based on body type
-	switch reqSpec.BodyType {
-	case core.BodyTypeJSON:
-		httpOpts.JSON = reqSpec.Body
-	case core.BodyTypeForm:
-		httpOpts.Raw = reqSpec.Body
-		httpOpts.Headers["Content-Type"] = "application/x-www-form-urlencoded; charset=utf-8"
-	case core.BodyTypeRaw:
-		httpOpts.Raw = reqSpec.Body
-	case core.BodyTypeNone:
-		httpOpts.Raw = nil
-	case core.BodyTypeText:
-		httpOpts.Raw = reqSpec.Body
-		httpOpts.Headers["Content-Type"] = "text/plain; charset=utf-8"
-	case core.BodyTypeXML:
-		httpOpts.Raw = reqSpec.Body
-		httpOpts.Headers["Content-Type"] = "application/xml; charset=utf-8"
-	default:
-		// Auto-detect, default to JSON
-		httpOpts.JSON = reqSpec.Body
+	httpOpts.Raw = reqSpec.Body
+	if ct := reqSpec.BodyType.ContentType(); ct != "" {
+		httpOpts.Headers["Content-Type"] = ct
 	}
 
 	// Execute request
-	body, statusCode, err := utils.DoRequest(ctx, requestURL, httpOpts)
+	body, statusCode, err := utils.DoRequest(ctx, reqSpec.URL, httpOpts)
 	if err != nil {
 		return fmt.Errorf("HTTP request failed: %w", err)
 	}

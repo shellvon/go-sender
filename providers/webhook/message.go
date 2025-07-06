@@ -16,7 +16,7 @@ type Message struct {
 	Headers     map[string]string `json:"headers,omitempty"`      // Additional headers to send with the request
 	Method      string            `json:"method,omitempty"`       // HTTP method (overrides endpoint method)
 	PathParams  map[string]string `json:"path_params,omitempty"`  // Path variables to replace in URL
-	QueryParams map[string]string `json:"query_params,omitempty"` // Query parameters to add to URL
+	QueryParams url.Values        `json:"query_params,omitempty"` // Query parameters to add to URL
 }
 
 // buildURL constructs the final URL by replacing path variables and adding query parameters.
@@ -39,8 +39,10 @@ func (m *Message) buildURL(baseURL string) (string, error) {
 
 	// Add query parameters
 	query := parsedURL.Query()
-	for key, value := range m.QueryParams {
-		query.Set(key, value)
+	for key, values := range m.QueryParams {
+		for _, v := range values {
+			query.Add(key, v)
+		}
 	}
 	parsedURL.RawQuery = query.Encode()
 
@@ -66,7 +68,7 @@ type Builder struct {
 	headers     map[string]string
 	method      string
 	pathParams  map[string]string
-	queryParams map[string]string
+	queryParams url.Values
 }
 
 // Webhook creates a new Builder.
@@ -74,7 +76,7 @@ func Webhook() *Builder {
 	return &Builder{
 		headers:     make(map[string]string),
 		pathParams:  make(map[string]string),
-		queryParams: make(map[string]string),
+		queryParams: url.Values{},
 	}
 }
 
@@ -120,14 +122,14 @@ func (b *Builder) PathParams(params map[string]string) *Builder {
 
 // Query sets a single query parameter.
 func (b *Builder) Query(key, value string) *Builder {
-	b.queryParams[key] = value
+	b.queryParams.Set(key, value)
 	return b
 }
 
 // Queries sets multiple query parameters at once.
 func (b *Builder) Queries(params map[string]string) *Builder {
 	for k, v := range params {
-		b.queryParams[k] = v
+		b.queryParams.Set(k, v)
 	}
 	return b
 }

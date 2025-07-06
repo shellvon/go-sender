@@ -115,9 +115,9 @@ func (t *luosimaoTransformer) buildLuosimaoRequestSpec(
 	reqSpec := &core.HTTPRequestSpec{
 		Method:   http.MethodPost,
 		URL:      requestURL,
-		Headers:  map[string]string{"Content-Type": "application/x-www-form-urlencoded", "Authorization": authHeader},
+		Headers:  map[string]string{"Authorization": authHeader},
 		Body:     body,
-		BodyType: core.BodyTypeRaw,
+		BodyType: core.BodyTypeForm,
 	}
 	return reqSpec, t.handleLuosimaoResponse, nil
 }

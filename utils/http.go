@@ -26,12 +26,8 @@ type HTTPRequestOptions struct {
 	Headers map[string]string // Custom headers
 	Timeout time.Duration     // Request timeout
 
-	// Query string parameters
-	//
-	// Supports:
-	//   - string: single value (e.g., "api_key": "your-key")
-	//   - []string: array values (e.g., "tags": []string{"tag1", "tag2"})
-	Query map[string]interface{} // Query string parameters (only string or []string allowed)
+	// Query string parameters (url.Values allows single or multiple values)
+	Query url.Values // Query string parameters
 
 	// Data handling (similar to Python requests)
 	Data      map[string]string // Form data (application/x-www-form-urlencoded)
@@ -127,7 +123,7 @@ func prepareContext(ctx context.Context, options *HTTPRequestOptions) (context.C
 
 // buildFinalURL builds the final request URL by appending query parameters to the base URL.
 // Supports string and []string values in the query map. Returns the final URL or an error.
-func buildFinalURL(requestURL string, query map[string]interface{}) (string, error) {
+func buildFinalURL(requestURL string, query url.Values) (string, error) {
 	if len(query) == 0 {
 		return requestURL, nil
 	}
@@ -136,16 +132,9 @@ func buildFinalURL(requestURL string, query map[string]interface{}) (string, err
 		return "", fmt.Errorf("failed to parse URL: %w", err)
 	}
 	q := parsedURL.Query()
-	for key, value := range query {
-		switch v := value.(type) {
-		case string:
-			q.Set(key, v)
-		case []string:
-			for _, val := range v {
-				q.Add(key, val)
-			}
-		default:
-			return "", fmt.Errorf("unsupported query parameter type for key '%s': %T (only string and []string are supported)", key, value)
+	for key, values := range query {
+		for _, val := range values {
+			q.Add(key, val)
 		}
 	}
 	parsedURL.RawQuery = q.Encode()
@@ -167,13 +156,18 @@ func getDefaultMethod(method string, reqBody io.Reader) string {
 // setRequestHeaders sets the headers for the HTTP request, including the Content-Type if provided.
 // If User-Agent is not set, it sets a default User-Agent. Content-Type is set if not empty.
 func setRequestHeaders(req *http.Request, headers map[string]string, contentType string) {
+	// 1. apply user headers first (they have highest priority)
 	for key, value := range headers {
 		req.Header.Set(key, value)
 	}
+
+	// 2. ensure default User-Agent
 	if req.Header.Get("User-Agent") == "" {
 		req.Header.Set("User-Agent", core.DefaultUserAgent)
 	}
-	if contentType != "" {
+
+	// 3. set Content-Type only if not already provided
+	if contentType != "" && req.Header.Get("Content-Type") == "" {
 		req.Header.Set("Content-Type", contentType)
 	}
 }

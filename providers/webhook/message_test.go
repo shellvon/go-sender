@@ -2,6 +2,7 @@ package webhook_test
 
 import (
 	"net/http"
+	"net/url"
 	"testing"
 
 	"github.com/shellvon/go-sender/providers/webhook"
@@ -62,7 +63,7 @@ func TestWebhookBuilder_AllOptions(t *testing.T) {
 		t.Errorf("Expected PathParams to contain id=123, got %v", msg.PathParams)
 	}
 
-	if len(msg.QueryParams) != 1 || msg.QueryParams["version"] != "v1" {
+	if len(msg.QueryParams) != 1 || msg.QueryParams.Get("version") != "v1" {
 		t.Errorf("Expected QueryParams to contain version=v1, got %v", msg.QueryParams)
 	}
 }
@@ -126,15 +127,15 @@ func TestWebhookBuilder_MultipleQueryParams(t *testing.T) {
 		Queries(params2).
 		Build()
 
-	expectedParams := map[string]string{
-		"version": "v1",
-		"format":  "json",
-		"pretty":  "true",
+	expectedParams := url.Values{
+		"version": {"v1"},
+		"format":  {"json"},
+		"pretty":  {"true"},
 	}
 
-	for k, v := range expectedParams {
-		if msg.QueryParams[k] != v {
-			t.Errorf("Expected query param %s to be '%s', got '%s'", k, v, msg.QueryParams[k])
+	for k, vals := range expectedParams {
+		if msg.QueryParams.Get(k) != vals[0] {
+			t.Errorf("Expected query param %s to be '%s', got '%s'", k, vals[0], msg.QueryParams.Get(k))
 		}
 	}
 }

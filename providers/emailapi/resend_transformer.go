@@ -120,7 +120,6 @@ func (t *resendTransformer) transformEmail(
 	// Build headers
 	headers := map[string]string{
 		"Authorization":   "Bearer " + account.APISecret,
-		"Content-Type":    "application/json",
 		"Idempotency-Key": msg.MsgID(),
 	}
 

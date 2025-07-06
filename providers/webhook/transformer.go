@@ -88,11 +88,10 @@ func (t *webhookTransformer) Transform(
 	}
 	// Body已经是[]byte，直接使用
 	reqSpec := &core.HTTPRequestSpec{
-		Method:   method,
-		URL:      url,
-		Headers:  headers,
-		Body:     whMsg.Body,
-		BodyType: core.BodyTypeJSON,
+		Method:  method,
+		URL:     url,
+		Headers: headers,
+		Body:    whMsg.Body,
 	}
 	return reqSpec, t.buildResponseHandler(endpoint), nil
 }

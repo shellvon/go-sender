@@ -87,7 +87,13 @@ func (c *BaseConfig[T]) Validate() error {
 }
 
 // GetItems returns the underlying items slice.
-func (c *BaseConfig[T]) GetItems() []T { return c.Items }
+func (c *BaseConfig[T]) GetItems() []T {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	out := make([]T, len(c.Items))
+	copy(out, c.Items)
+	return out
+}
 
 // GetStrategy proxies to embedded ProviderMeta with sane default.
 func (c *BaseConfig[T]) GetStrategy() StrategyType { return c.ProviderMeta.GetStrategy() }
@@ -154,8 +160,13 @@ func (c *BaseConfig[T]) Update(item T) error {
 // 2. Strategy from context (if specified)
 // 3. Default strategy.
 func (c *BaseConfig[T]) Select(ctx context.Context, filter func(T) bool) (T, error) {
+	c.mu.RLock()
+	itemsCopy := make([]T, len(c.Items))
+	copy(itemsCopy, c.Items)
+	c.mu.RUnlock()
+
 	var filtered []T
-	for _, item := range c.Items {
+	for _, item := range itemsCopy {
 		if filter == nil || filter(item) {
 			filtered = append(filtered, item)
 		}

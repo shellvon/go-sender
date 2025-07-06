@@ -111,9 +111,8 @@ func (t *juheTransformer) transformSMS(
 	reqSpec := &core.HTTPRequestSpec{
 		Method:   http.MethodPost,
 		URL:      juheDefaultBaseURI + apiPath,
-		Headers:  map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
 		Body:     body,
-		BodyType: core.BodyTypeRaw,
+		BodyType: core.BodyTypeForm,
 	}
 	return reqSpec, t.handleJuheResponse, nil
 }
@@ -133,7 +132,6 @@ func (t *juheTransformer) transformMMS(
 	reqSpec := &core.HTTPRequestSpec{
 		Method:   http.MethodPost,
 		URL:      juheDefaultBaseURI + juheMMSAPIPath,
-		Headers:  map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
 		Body:     body,
 		BodyType: core.BodyTypeForm,
 	}

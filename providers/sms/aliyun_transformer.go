@@ -181,6 +181,10 @@ func (t *aliyunTransformer) transformSMS(
 		"SmsUpExtendCode": msg.Extend,
 		"OutId":           msg.GetExtraStringOrDefaultEmpty(aliyunOutIDKey),
 	}
+	urlVals := url.Values{}
+	for k, v := range params {
+		urlVals.Set(k, v)
+	}
 
 	endpoint := t.getEndpointByRegion(msg.Type, msg.GetExtraStringOrDefaultEmpty(aliyunRegionKey))
 
@@ -196,9 +200,7 @@ func (t *aliyunTransformer) transformSMS(
 			Version: aliyunDefaultAPIVersion,
 			Account: account,
 		}),
-		QueryParams: params,
-		Body:        nil,
-		BodyType:    core.BodyTypeNone,
+		QueryParams: urlVals,
 	}
 
 	return reqSpec, t.handleAliyunResponse, nil
@@ -243,7 +245,7 @@ func (t *aliyunTransformer) transformVoice(
 		return nil, nil, fmt.Errorf("aliyun voice only supports single number, got %d", len(msg.Mobiles))
 	}
 
-	params := map[string]string{
+	params2 := map[string]string{
 		"CalledNumber":     msg.Mobiles[0],
 		"CalledShowNumber": msg.GetExtraStringOrDefaultEmpty(aliyunCalledShowNumberKey),
 		"PlayTimes":        strconv.Itoa(msg.GetExtraIntOrDefault(aliyunPlayTimesKey, 1)),
@@ -251,18 +253,22 @@ func (t *aliyunTransformer) transformVoice(
 		"Speed":            strconv.Itoa(msg.GetExtraIntOrDefault(aliyunSpeedKey, 0)),
 		"OutId":            msg.GetExtraStringOrDefaultEmpty(aliyunOutIDKey),
 	}
+	urlVals2 := url.Values{}
+	for k, v := range params2 {
+		urlVals2.Set(k, v)
+	}
 
 	// 根据消息类型选择API和参数
 	isVerification := msg.Category == CategoryVerification
 	if isVerification {
 		// 验证码类消息：使用TTS API
-		params["TtsCode"] = msg.TemplateID
+		params2["TtsCode"] = msg.TemplateID
 		if len(msg.TemplateParams) > 0 {
-			params["TtsParam"] = utils.ToJSONString(msg.TemplateParams)
+			params2["TtsParam"] = utils.ToJSONString(msg.TemplateParams)
 		}
 	} else {
 		// 通知类消息：使用Voice API
-		params["VoiceCode"] = msg.TemplateID
+		params2["VoiceCode"] = msg.TemplateID
 	}
 
 	// 根据消息类型设置不同的action
@@ -280,13 +286,13 @@ func (t *aliyunTransformer) transformVoice(
 			Host:    endpoint,
 			Method:  http.MethodPost,
 			Path:    "/",
-			Query:   params,
+			Query:   params2,
 			Body:    nil,
 			Action:  action,
 			Version: aliyunDefaultAPIVersion,
 			Account: account,
 		}),
-		QueryParams: params,
+		QueryParams: urlVals2,
 		BodyType:    core.BodyTypeRaw,
 	}
 

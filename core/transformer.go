@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"net/url"
 	"time"
 )
 
@@ -17,7 +18,7 @@ type HTTPRequestSpec struct {
 	Method      string            `json:"method"`
 	URL         string            `json:"url"`
 	Headers     map[string]string `json:"headers"`
-	QueryParams map[string]string `json:"query_params"`
+	QueryParams url.Values        `json:"query_params"`
 	Body        []byte            `json:"body"`
 	BodyType    BodyType          `json:"body_type"` // "raw", "form", "json",
 	Timeout     time.Duration     `json:"timeout"`
