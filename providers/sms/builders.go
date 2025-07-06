@@ -242,10 +242,7 @@ func (b *BaseBuilder[T]) Build() *Message {
 
 // Aliyun creates a new Aliyun SMS message builder.
 func Aliyun() *AliyunSMSBuilder {
-	builder := &AliyunSMSBuilder{}
-	builder.self = builder
-	builder.subProvider = SubProviderAliyun
-	return builder
+	return newAliyunSMSBuilder()
 }
 
 // Tencent creates a new Tencent SMS message builder.
