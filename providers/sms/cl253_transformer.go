@@ -3,9 +3,9 @@ package sms
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/shellvon/go-sender/core"
@@ -65,25 +65,25 @@ func (t *cl253Transformer) Transform(
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
-		return nil, nil, fmt.Errorf("unsupported message type for CL253: %T", msg)
+		return nil, nil, NewProviderError(string(SubProviderCl253), "INVALID_MESSAGE_TYPE", fmt.Sprintf("unsupported message type for CL253: %T", msg))
 	}
 
 	// Apply CL253-specific defaults
 	t.applyCl253Defaults(smsMsg, account)
 
 	if err := t.validateMessage(smsMsg); err != nil {
-		return nil, nil, fmt.Errorf("message validation failed: %w", err)
+		return nil, nil, NewProviderError(string(SubProviderCl253), "VALIDATION_FAILED", fmt.Sprintf("message validation failed: %v", err))
 	}
 
 	switch smsMsg.Type {
 	case SMSText:
 		return t.transformSMS(smsMsg, account)
 	case Voice:
-		return nil, nil, errors.New("CL253 does not support voice messages")
+		return nil, nil, NewProviderError(string(SubProviderCl253), "UNSUPPORTED_MESSAGE_TYPE", "CL253 does not support voice messages")
 	case MMS:
-		return nil, nil, errors.New("CL253 does not support MMS messages")
+		return nil, nil, NewProviderError(string(SubProviderCl253), "UNSUPPORTED_MESSAGE_TYPE", "CL253 does not support MMS messages")
 	default:
-		return nil, nil, fmt.Errorf("unsupported message type: %v", smsMsg.Type)
+		return nil, nil, NewProviderError(string(SubProviderCl253), "UNSUPPORTED_MESSAGE_TYPE", fmt.Sprintf("unsupported message type: %v", smsMsg.Type))
 	}
 }
 
@@ -91,16 +91,16 @@ func (t *cl253Transformer) Transform(
 func (t *cl253Transformer) validateMessage(msg *Message) error {
 	// 国内短信必须有签名
 	if msg.SignName == "" && utils.HasSignature(msg.Content) && msg.IsDomestic() {
-		return errors.New("sign name is required for CL253 SMS")
+		return NewProviderError(string(SubProviderCl253), "MISSING_SIGNATURE", "sign name is required for CL253 SMS")
 	}
 	if len(msg.Mobiles) == 0 {
-		return errors.New("at least one mobile number is required")
+		return NewProviderError(string(SubProviderCl253), "MISSING_MOBILE", "at least one mobile number is required")
 	}
 	if msg.Content == "" {
-		return errors.New("content is required for CL253 SMS")
+		return NewProviderError(string(SubProviderCl253), "MISSING_CONTENT", "content is required for CL253 SMS")
 	}
 	if msg.IsIntl() && len(msg.Mobiles) > 1 {
-		return errors.New("CL253 international SMS only supports single recipient")
+		return NewProviderError(string(SubProviderCl253), "UNSUPPORTED_RECIPIENTS", "CL253 international SMS only supports single recipient")
 	}
 	return nil
 }
@@ -166,7 +166,7 @@ func (t *cl253Transformer) buildRequestURI(msg *Message, account *Account) strin
 // handleCl253Response 处理 CL253 API 响应.
 func (t *cl253Transformer) handleCl253Response(statusCode int, body []byte) error {
 	if !utils.IsAcceptableStatus(statusCode) {
-		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
+		return NewProviderError(string(SubProviderCl253), strconv.Itoa(statusCode), string(body))
 	}
 	var result struct {
 		Code     string `json:"code"`
@@ -176,14 +176,10 @@ func (t *cl253Transformer) handleCl253Response(statusCode int, body []byte) erro
 		Message  string `json:"message"`
 	}
 	if err := json.Unmarshal(body, &result); err != nil {
-		return fmt.Errorf("failed to parse CL253 response: %w", err)
+		return NewProviderError(string(SubProviderCl253), "PARSE_ERROR", err.Error())
 	}
 	if result.Code != "0" {
-		return &Error{
-			Code:     result.Code,
-			Message:  result.ErrorMsg + result.Message,
-			Provider: string(SubProviderCl253),
-		}
+		return NewProviderError(string(SubProviderCl253), result.Code, result.ErrorMsg+result.Message)
 	}
 	return nil
 }

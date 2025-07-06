@@ -3,7 +3,6 @@ package sms
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -57,27 +56,27 @@ func (t *juheTransformer) Transform(
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
-		return nil, nil, errors.New("invalid message type for juheTransformer")
+		return nil, nil, NewProviderError(string(SubProviderJuhe), "INVALID_MESSAGE_TYPE", "invalid message type for juheTransformer")
 	}
 	if err := t.validateMessage(smsMsg); err != nil {
-		return nil, nil, fmt.Errorf("message validation failed: %w", err)
+		return nil, nil, NewProviderError(string(SubProviderJuhe), "VALIDATION_FAILED", fmt.Sprintf("message validation failed: %v", err))
 	}
 
 	switch smsMsg.Type {
 	case SMSText:
 		return t.transformSMS(smsMsg, account)
 	case Voice:
-		return nil, nil, errors.New("Juhe does not support voice messages")
+		return nil, nil, NewProviderError(string(SubProviderJuhe), "UNSUPPORTED_MESSAGE_TYPE", "Juhe does not support voice messages")
 	case MMS:
 		return t.transformMMS(smsMsg, account)
 	default:
-		return nil, nil, fmt.Errorf("unsupported message type: %v", smsMsg.Type)
+		return nil, nil, NewProviderError(string(SubProviderJuhe), "UNSUPPORTED_MESSAGE_TYPE", fmt.Sprintf("unsupported message type: %v", smsMsg.Type))
 	}
 }
 
 func (t *juheTransformer) validateMessage(msg *Message) error {
 	if len(msg.Mobiles) == 0 {
-		return errors.New("at least one mobile number is required")
+		return NewProviderError(string(SubProviderJuhe), "MISSING_PARAM", "at least one mobile number is required")
 	}
 	return nil
 }
@@ -140,21 +139,15 @@ func (t *juheTransformer) transformMMS(
 
 func (t *juheTransformer) handleJuheResponse(statusCode int, body []byte) error {
 	if !utils.IsAcceptableStatus(statusCode) {
-		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
+		return NewProviderError(string(SubProviderJuhe), strconv.Itoa(statusCode), string(body))
 	}
-	var result struct {
-		ErrorCode int    `json:"error_code"`
-		Reason    string `json:"reason"`
+	var response map[string]interface{}
+	if err := json.Unmarshal(body, &response); err != nil {
+		return NewProviderError(string(SubProviderJuhe), "PARSE_ERROR", err.Error())
 	}
-	if err := json.Unmarshal(body, &result); err != nil {
-		return fmt.Errorf("failed to parse juhe response: %w", err)
-	}
-	if result.ErrorCode != 0 {
-		return &Error{
-			Code:     strconv.Itoa(result.ErrorCode),
-			Message:  result.Reason,
-			Provider: string(SubProviderJuhe),
-		}
+
+	if response["error_code"] != float64(0) {
+		return NewProviderError(string(SubProviderJuhe), strconv.FormatFloat(response["error_code"].(float64), 'f', -1, 64), response["reason"].(string))
 	}
 	return nil
 }

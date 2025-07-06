@@ -302,12 +302,12 @@ func (t *aliyunTransformer) transformVoice(
 // handleAliyunResponse handles Aliyun API response.
 func (t *aliyunTransformer) handleAliyunResponse(statusCode int, body []byte) error {
 	if !utils.IsAcceptableStatus(statusCode) {
-		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
+		return NewProviderError(string(SubProviderAliyun), strconv.Itoa(statusCode), string(body))
 	}
 
 	var response map[string]interface{}
 	if err := json.Unmarshal(body, &response); err != nil {
-		return fmt.Errorf("failed to parse response: %w", err)
+		return NewProviderError(string(SubProviderAliyun), "PARSE_ERROR", err.Error())
 	}
 
 	// Check for Aliyun specific response format
@@ -316,13 +316,9 @@ func (t *aliyunTransformer) handleAliyunResponse(statusCode int, body []byte) er
 			return nil
 		}
 		if msg, okMsg := response["Message"].(string); okMsg {
-			return errors.New(msg)
+			return NewProviderError(string(SubProviderAliyun), code, msg)
 		}
-		return &Error{
-			Code:     code,
-			Message:  "unknown error",
-			Provider: string(SubProviderAliyun),
-		}
+		return NewProviderError(string(SubProviderAliyun), code, "unknown error")
 	}
 
 	return nil

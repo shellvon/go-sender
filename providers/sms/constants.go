@@ -60,7 +60,7 @@ const (
 	tencentPlayTimesKey = "PlayTimes"
 
 	// tencentVoiceSdkAppIDKey is the key for Tencent Voice SdkAppId (for voice SMS).
-	tencentVoiceSdkAppIDKey = "VoiceSdkAppId"
+	tencentVoiceSdkAppIDKey = "VoiceSdkAppid"
 
 	// tencentDefaultRegion is the default region for Tencent SMS.
 	tencentDefaultRegion = "ap-guangzhou"

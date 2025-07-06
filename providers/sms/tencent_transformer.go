@@ -6,10 +6,10 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/shellvon/go-sender/core"
@@ -23,7 +23,8 @@ import (
 // 官方文档:
 //   - 短信API: https://cloud.tencent.com/document/product/382/55981
 //   - 语音API: https://cloud.tencent.com/document/product/1128/51559
-//
+//   - 签名算法: https://github.com/TencentCloud/signature-process-demo/blob/main/services/sms/signature-v3/golang/demo.go
+
 // transformer 支持 text（普通短信）和 voice（语音短信）类型。
 
 const (
@@ -53,14 +54,14 @@ func (t *tencentTransformer) Transform(
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
-		return nil, nil, errors.New("invalid message type for tencentTransformer")
+		return nil, nil, NewProviderError(string(SubProviderTencent), "INVALID_MESSAGE_TYPE", "invalid message type for tencentTransformer")
 	}
 
 	// Apply Tencent-specific defaults
 	t.applyTencentDefaults(smsMsg, account)
 
 	if err := t.validateMessage(smsMsg); err != nil {
-		return nil, nil, err
+		return nil, nil, NewProviderError(string(SubProviderTencent), "VALIDATION_FAILED", fmt.Sprintf("message validation failed: %v", err))
 	}
 
 	switch smsMsg.Type {
@@ -69,24 +70,24 @@ func (t *tencentTransformer) Transform(
 	case Voice:
 		return t.transformVoice(smsMsg, account)
 	case MMS:
-		return nil, nil, fmt.Errorf("unsupported message type: %v", smsMsg.Type)
+		return nil, nil, NewProviderError(string(SubProviderTencent), "UNSUPPORTED_MESSAGE_TYPE", fmt.Sprintf("unsupported message type: %v", smsMsg.Type))
 	default:
-		return nil, nil, fmt.Errorf("unsupported message type: %v", smsMsg.Type)
+		return nil, nil, NewProviderError(string(SubProviderTencent), "UNSUPPORTED_MESSAGE_TYPE", fmt.Sprintf("unsupported message type: %v", smsMsg.Type))
 	}
 }
 
 func (t *tencentTransformer) validateMessage(msg *Message) error {
 	if len(msg.Mobiles) == 0 {
-		return errors.New("mobiles is required")
+		return NewProviderError(string(SubProviderTencent), "MISSING_PARAM", "mobiles is required")
 	}
 	if msg.TemplateID == "" {
-		return errors.New("templateID is required")
+		return NewProviderError(string(SubProviderTencent), "MISSING_PARAM", "templateID is required")
 	}
 	if msg.Type == SMSText && msg.SignName == "" && !msg.IsIntl() {
-		return errors.New("domestic sms requires sign name")
+		return NewProviderError(string(SubProviderTencent), "MISSING_SIGNATURE", "domestic sms requires sign name")
 	}
 	if msg.Type == Voice && len(msg.Mobiles) != 1 {
-		return errors.New("voice sms only supports single mobile")
+		return NewProviderError(string(SubProviderTencent), "INVALID_MOBILE_NUMBER", "voice sms only supports single mobile")
 	}
 	return nil
 }
@@ -106,26 +107,23 @@ func (t *tencentTransformer) transformSMS(
 	}
 
 	params := map[string]interface{}{
-		"PhoneNumberSet":   phoneNumbers,
-		"SmsSdkAppId":      msg.GetExtraStringOrDefaultEmpty(tencentSmsSdkAppIDKey),
-		"TemplateId":       msg.TemplateID,
-		"SignName":         msg.SignName,
-		"TemplateParamSet": msg.ParamsOrder,
-		"ExtendCode":       msg.Extend,
-		"SenderId":         msg.GetExtraStringOrDefaultEmpty(tencentSenderIDKey),
+		"PhoneNumberSet": phoneNumbers,
+		"SmsSdkAppId":    msg.GetExtraStringOrDefaultEmpty(tencentSmsSdkAppIDKey),
+		"TemplateId":     msg.TemplateID,
+		"SignName":       msg.SignName,
+		"ExtendCode":     msg.Extend,
+		"SenderId":       msg.GetExtraStringOrDefaultEmpty(tencentSenderIDKey),
+	}
+
+	if len(msg.ParamsOrder) > 0 {
+		params["TemplateParamSet"] = msg.ParamsOrder
 	}
 
 	region := msg.GetExtraStringOrDefault(tencentRegionKey, tencentDefaultRegion)
-	requestBody := map[string]interface{}{
-		"Action":  tencentSmsAction,
-		"Version": tencentSMSAPIVersion,
-		"Region":  region,
-		"Request": params,
-	}
 
-	bodyData, err := json.Marshal(requestBody)
+	bodyData, err := json.Marshal(params)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to marshal tencent request body: %w", err)
+		return nil, nil, NewProviderError(string(SubProviderTencent), "JSON_MARSHAL_ERROR", fmt.Sprintf("failed to marshal tencent request body: %v", err))
 	}
 
 	timestamp := time.Now().Unix()
@@ -137,10 +135,12 @@ func (t *tencentTransformer) transformSMS(
 		Action:    tencentSmsAction,
 		Version:   tencentSMSAPIVersion,
 		Region:    region,
-		AppSecret: account.APISecret,
+		SecretID:  account.APIKey,
+		SecretKey: account.APISecret,
 		BodyData:  bodyData,
 		Timestamp: timestamp,
 		Date:      date,
+		Service:   "sms",
 	})
 
 	return &core.HTTPRequestSpec{
@@ -165,8 +165,9 @@ func (t *tencentTransformer) transformVoice(
 	calledNumber := t.formatTencentPhone(msg.Mobiles[0], msg.RegionCode)
 
 	params := map[string]interface{}{
-		"CalledNumber":  calledNumber,
-		"VoiceSdkAppId": msg.GetExtraStringOrDefaultEmpty(tencentVoiceSdkAppIDKey),
+		"CalledNumber": calledNumber,
+		// 注意是Appid，不是AppId
+		"VoiceSdkAppid": msg.GetExtraStringOrDefaultEmpty(tencentVoiceSdkAppIDKey),
 	}
 
 	var action string
@@ -177,7 +178,9 @@ func (t *tencentTransformer) transformVoice(
 	} else {
 		action = tencentVoiceNotifyAction
 		params["VoiceId"] = msg.TemplateID
-		params["TemplateParamSet"] = msg.ParamsOrder
+		if len(msg.ParamsOrder) > 0 {
+			params["TemplateParamSet"] = msg.ParamsOrder
+		}
 	}
 	if playTimes := msg.GetExtraIntOrDefault(tencentPlayTimesKey, tencentDefaultPlayTimes); playTimes != 0 {
 		params["PlayTimes"] = playTimes
@@ -188,16 +191,10 @@ func (t *tencentTransformer) transformVoice(
 		account.Region,
 		tencentDefaultRegion,
 	)
-	requestBody := map[string]interface{}{
-		"Action":  action,
-		"Version": tencentVoiceAPIVersion,
-		"Region":  voiceRegion,
-		"Request": params,
-	}
 
-	bodyData, err := json.Marshal(requestBody)
+	bodyData, err := json.Marshal(params)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to marshal tencent voice request body: %w", err)
+		return nil, nil, NewProviderError(string(SubProviderTencent), "JSON_MARSHAL_ERROR", fmt.Sprintf("failed to marshal tencent voice request body: %v", err))
 	}
 
 	timestamp := time.Now().Unix()
@@ -209,10 +206,12 @@ func (t *tencentTransformer) transformVoice(
 		Action:    action,
 		Version:   tencentVoiceAPIVersion,
 		Region:    voiceRegion,
-		AppSecret: account.APISecret,
+		SecretID:  account.APIKey,
+		SecretKey: account.APISecret,
 		BodyData:  bodyData,
 		Timestamp: timestamp,
 		Date:      date,
+		Service:   "vms",
 	})
 
 	return &core.HTTPRequestSpec{
@@ -238,87 +237,122 @@ type tencentHeaderParams struct {
 	Action    string
 	Version   string
 	Region    string
-	AppSecret string
+	SecretID  string
+	SecretKey string
+	Service   string
 	BodyData  []byte
 	Timestamp int64
 	Date      string
 }
 
 // buildTencentHeaders 构造腾讯云API请求头并签名.
-func (t *tencentTransformer) buildTencentHeaders(params tencentHeaderParams) map[string]string {
-	credentialScope := fmt.Sprintf("%s/sms/tc3_request", params.Date)
-	signature := t.calculateTencentSignature(params.AppSecret, params.BodyData, params.Timestamp, credentialScope)
+// SMS API: https://cloud.tencent.com/document/product/382/55981
+// 参考: https://github.com/TencentCloud/signature-process-demo/blob/main/services/sms/signature-v3/golang/demo.go
+func (t *tencentTransformer) buildTencentHeaders(p tencentHeaderParams) map[string]string {
+	// ----- Step1: Canonical Request -----
+	httpRequestMethod := "POST"
+	canonicalURI := "/"
+	canonicalQueryString := ""
+	canonicalHeaders := fmt.Sprintf("content-type:application/json; charset=utf-8\nhost:%s\n", p.Endpoint)
+	signedHeaders := "content-type;host"
+	hashedPayload := t.sha256Hex(p.BodyData)
+	canonicalRequest := strings.Join([]string{
+		httpRequestMethod,
+		canonicalURI,
+		canonicalQueryString,
+		canonicalHeaders,
+		signedHeaders,
+		hashedPayload,
+	}, "\n")
+
+	// ----- Step2: String to sign -----
+	credentialScope := fmt.Sprintf("%s/%s/tc3_request", p.Date, p.Service)
+	stringToSign := fmt.Sprintf("TC3-HMAC-SHA256\n%d\n%s\n%s",
+		p.Timestamp,
+		credentialScope,
+		t.sha256Hex([]byte(canonicalRequest)),
+	)
+
+	// ----- Step3: Signature -----
+	secretDate := t.hmacSha256([]byte("TC3"+p.SecretKey), []byte(p.Date))
+	secretService := t.hmacSha256(secretDate, []byte(p.Service))
+	secretSigning := t.hmacSha256(secretService, []byte("tc3_request"))
+	signature := hex.EncodeToString(t.hmacSha256(secretSigning, []byte(stringToSign)))
+
+	authorization := fmt.Sprintf("TC3-HMAC-SHA256 Credential=%s/%s, SignedHeaders=%s, Signature=%s",
+		p.SecretID,
+		credentialScope,
+		signedHeaders,
+		signature,
+	)
 
 	return map[string]string{
-		"Content-Type":    "application/json",
-		"Host":            params.Endpoint,
-		"X-TC-Action":     params.Action,
-		"X-TC-Version":    params.Version,
-		"X-TC-Timestamp":  strconv.FormatInt(params.Timestamp, 10),
-		"X-TC-Region":     params.Region,
-		"Authorization":   signature,
-		"X-TC-Credential": fmt.Sprintf("%s/%s", params.AppSecret, credentialScope),
+		"Content-Type":   "application/json; charset=utf-8",
+		"Host":           p.Endpoint,
+		"X-TC-Action":    p.Action,
+		"X-TC-Version":   p.Version,
+		"X-TC-Timestamp": strconv.FormatInt(p.Timestamp, 10),
+		"X-TC-Region":    p.Region,
+		"Authorization":  authorization,
 	}
 }
 
-// calculateTencentSignature 计算腾讯云API签名.
-func (t *tencentTransformer) calculateTencentSignature(
-	secretKey string,
-	payload []byte,
-	timestamp int64,
-	credentialScope string,
-) string {
-	h := hmac.New(sha256.New, []byte("TC3"+secretKey))
-	date := time.Unix(timestamp, 0).UTC().Format("20060102")
-	h.Write([]byte(date))
-	dateKey := h.Sum(nil)
+func (t *tencentTransformer) sha256Hex(b []byte) string {
+	sum := sha256.Sum256(b)
+	return hex.EncodeToString(sum[:])
+}
 
-	h = hmac.New(sha256.New, dateKey)
-	h.Write([]byte("sms"))
-	dateServiceKey := h.Sum(nil)
-
-	h = hmac.New(sha256.New, dateServiceKey)
-	h.Write([]byte("tc3_request"))
-	signingKey := h.Sum(nil)
-
-	h = hmac.New(sha256.New, signingKey)
-	h.Write(payload)
-	signature := hex.EncodeToString(h.Sum(nil))
-
-	return fmt.Sprintf("TC3-HMAC-SHA256 Credential=%s/%s, SignedHeaders=content-type;host, Signature=%s",
-		secretKey, credentialScope, signature)
+func (t *tencentTransformer) hmacSha256(key, data []byte) []byte {
+	h := hmac.New(sha256.New, key)
+	h.Write(data)
+	return h.Sum(nil)
 }
 
 // handleTencentResponse 处理腾讯云API响应.
 func (t *tencentTransformer) handleTencentResponse(_ int, body []byte) error {
-	var result struct {
+	// Tencent 返回有两种结构：
+	// 1. 成功/失败明细在 SendStatusSet 数组里
+	// 2. 整体失败时，只有 Error 字段
+
+	var response struct {
 		Response struct {
+			Error *struct {
+				Code    string `json:"Code"`
+				Message string `json:"Message"`
+			} `json:"Error,omitempty"`
+
 			SendStatusSet []struct {
-				SerialNo       string `json:"SerialNo"`
-				PhoneNumber    string `json:"PhoneNumber"`
-				Fee            int    `json:"Fee"`
-				SessionContext string `json:"SessionContext"`
-				Code           string `json:"Code"`
-				Message        string `json:"Message"`
-				IsoCode        string `json:"IsoCode"`
-			} `json:"SendStatusSet"`
+				Code    string `json:"Code"`
+				Message string `json:"Message"`
+			} `json:"SendStatusSet,omitempty"`
 		} `json:"Response"`
 	}
 
-	if err := json.Unmarshal(body, &result); err != nil {
-		return fmt.Errorf("failed to unmarshal tencent response: %w", err)
+	if err := json.Unmarshal(body, &response); err != nil {
+		return NewProviderError(string(ProviderTypeTencent), "PARSE_ERROR", err.Error())
 	}
 
-	if len(result.Response.SendStatusSet) == 0 {
-		return errors.New("no send status found in response")
-	}
-
-	for _, status := range result.Response.SendStatusSet {
-		if status.Code != "OK" {
-			return fmt.Errorf("tencent sms send failed: %s - %s", status.Code, status.Message)
+	if response.Response.Error != nil {
+		return &Error{
+			Code:     response.Response.Error.Code,
+			Message:  response.Response.Error.Message,
+			Provider: string(ProviderTypeTencent),
 		}
 	}
 
+	if len(response.Response.SendStatusSet) == 0 {
+		return NewProviderError(string(ProviderTypeTencent), "NO_STATUS_SET", "tencent API returned success but no SendStatusSet")
+	}
+
+	for _, status := range response.Response.SendStatusSet {
+		if status.Code != "OK" {
+			return &Error{
+				Code:     status.Code,
+				Message:  status.Message,
+				Provider: string(ProviderTypeTencent),
+			}
+		}
+	}
 	return nil
 }
 

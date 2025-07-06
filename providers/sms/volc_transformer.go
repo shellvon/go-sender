@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -80,10 +80,10 @@ func (t *volcTransformer) transformSMS(
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	// 验证参数
 	if len(msg.Mobiles) == 0 {
-		return nil, nil, errors.New("mobiles is required")
+		return nil, nil, NewProviderError(string(SubProviderVolc), "MISSING_PARAM", "mobiles is required")
 	}
 	if msg.SignName == "" {
-		return nil, nil, errors.New("sign name is required")
+		return nil, nil, NewProviderError(string(SubProviderVolc), "MISSING_PARAM", "sign name is required")
 	}
 	if msg.IsIntl() {
 		return nil, nil, NewUnsupportedInternationalError(string(SubProviderVolc), "sendSMS")
@@ -102,7 +102,7 @@ func (t *volcTransformer) transformSMS(
 	}
 	bodyJSON, err := json.Marshal(body)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to marshal volc request body: %w", err)
+		return nil, nil, NewProviderError(string(SubProviderVolc), "JSON_MARSHAL_ERROR", fmt.Sprintf("failed to marshal volc request body: %v", err))
 	}
 
 	// 只维护一份qs
@@ -222,36 +222,19 @@ func (t *volcTransformer) normalizeQueryString(queryString string) string {
 // handleVolcResponse 处理火山引擎API响应.
 func (t *volcTransformer) handleVolcResponse(statusCode int, body []byte) error {
 	if !utils.IsAcceptableStatus(statusCode) {
-		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
+		return NewProviderError(string(ProviderTypeVolc), strconv.Itoa(statusCode), string(body))
 	}
 
-	var result struct {
-		ResponseMetadata struct {
-			RequestID string `json:"RequestId"`
-			Action    string `json:"Action"`
-			Version   string `json:"Version"`
-			Service   string `json:"Service"`
-			Region    string `json:"Region"`
-			Error     *struct {
-				CodeN   int    `json:"CodeN"`
-				Code    string `json:"Code"`
-				Message string `json:"Message"`
-			} `json:"Error,omitempty"`
-		} `json:"ResponseMetadata"`
-		Result struct {
-			// Array of String
-			MessageID []string `json:"MessageID"`
-		} `json:"Result"`
+	var response map[string]interface{}
+	if err := json.Unmarshal(body, &response); err != nil {
+		return NewProviderError(string(ProviderTypeVolc), "PARSE_ERROR", err.Error())
 	}
 
-	if err := json.Unmarshal(body, &result); err != nil {
-		return fmt.Errorf("failed to parse volc response: %w", err)
-	}
-	if result.ResponseMetadata.Error != nil {
+	if response["code"] != 200 {
 		return &Error{
-			Code:     result.ResponseMetadata.Error.Code,
-			Message:  result.ResponseMetadata.Error.Message,
-			Provider: string(SubProviderVolc),
+			Code:     strconv.FormatFloat(response["code"].(float64), 'f', -1, 64),
+			Message:  response["message"].(string),
+			Provider: string(ProviderTypeVolc),
 		}
 	}
 	return nil

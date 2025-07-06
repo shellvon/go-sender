@@ -3,7 +3,6 @@ package sms
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -47,7 +46,7 @@ func (t *yuntongxunTransformer) Transform(
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
-		return nil, nil, fmt.Errorf("unsupported message type for Yuntongxun: %T", msg)
+		return nil, nil, NewProviderError(string(SubProviderYuntongxun), "INVALID_MESSAGE_TYPE", fmt.Sprintf("unsupported message type for Yuntongxun: %T", msg))
 	}
 
 	// Apply Yuntongxun-specific defaults
@@ -59,9 +58,9 @@ func (t *yuntongxunTransformer) Transform(
 	case Voice:
 		return t.transformVoice(smsMsg, account)
 	case MMS:
-		return nil, nil, errors.New("Yuntongxun does not support MMS messages")
+		return nil, nil, NewProviderError(string(SubProviderYuntongxun), "UNSUPPORTED_MESSAGE_TYPE", "Yuntongxun does not support MMS messages")
 	default:
-		return nil, nil, fmt.Errorf("unsupported message type: %v", smsMsg.Type)
+		return nil, nil, NewProviderError(string(SubProviderYuntongxun), "UNSUPPORTED_MESSAGE_TYPE", fmt.Sprintf("unsupported message type: %v", smsMsg.Type))
 	}
 }
 
@@ -80,15 +79,15 @@ func (t *yuntongxunTransformer) transformSMS(
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	// 验证参数
 	if len(msg.Mobiles) == 0 {
-		return nil, nil, errors.New("mobiles is required")
+		return nil, nil, NewProviderError(string(SubProviderYuntongxun), "MISSING_PARAM", "mobiles is required")
 	}
 	if msg.IsIntl() {
 		if msg.Content == "" {
-			return nil, nil, errors.New("international sms requires content")
+			return nil, nil, NewProviderError(string(SubProviderYuntongxun), "MISSING_PARAM", "international sms requires content")
 		}
 	} else {
 		if msg.TemplateID == "" {
-			return nil, nil, errors.New("domestic sms requires templateID")
+			return nil, nil, NewProviderError(string(SubProviderYuntongxun), "MISSING_PARAM", "domestic sms requires templateID")
 		}
 	}
 	// 判断是否为国际短信
@@ -118,7 +117,7 @@ func (t *yuntongxunTransformer) transformDomesticSMS(
 
 	bodyData, err := json.Marshal(data)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to marshal yuntongxun request body: %w", err)
+		return nil, nil, NewProviderError(string(SubProviderYuntongxun), "JSON_MARSHAL_ERROR", fmt.Sprintf("failed to marshal yuntongxun request body: %v", err))
 	}
 
 	return &core.HTTPRequestSpec{
@@ -157,7 +156,7 @@ func (t *yuntongxunTransformer) transformIntlSMS(
 
 	bodyData, err := json.Marshal(data)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to marshal yuntongxun international request body: %w", err)
+		return nil, nil, NewProviderError(string(SubProviderYuntongxun), "JSON_MARSHAL_ERROR", fmt.Sprintf("failed to marshal yuntongxun international request body: %v", err))
 	}
 
 	return &core.HTTPRequestSpec{
@@ -181,10 +180,10 @@ func (t *yuntongxunTransformer) transformVoice(
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	// 验证参数
 	if len(msg.Mobiles) == 0 {
-		return nil, nil, errors.New("mobiles is required")
+		return nil, nil, NewProviderError(string(SubProviderYuntongxun), "MISSING_PARAM", "mobiles is required")
 	}
 	if msg.IsIntl() {
-		return nil, nil, errors.New("voice sms only supports domestic mobile")
+		return nil, nil, NewProviderError(string(SubProviderYuntongxun), "UNSUPPORTED_COUNTRY", "voice sms only supports domestic mobile")
 	}
 	// 只支持国内
 	if msg.IsIntl() {
@@ -244,7 +243,7 @@ func (t *yuntongxunTransformer) transformVoice(
 
 	bodyData, err := json.Marshal(body)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to marshal yuntongxun voice request body: %w", err)
+		return nil, nil, NewProviderError(string(SubProviderYuntongxun), "JSON_MARSHAL_ERROR", fmt.Sprintf("failed to marshal yuntongxun voice request body: %v", err))
 	}
 
 	return &core.HTTPRequestSpec{
@@ -277,18 +276,16 @@ func (t *yuntongxunTransformer) handleYuntongxunResponse(statusCode int, body []
 		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
 	}
 
-	var result struct {
-		StatusCode string `json:"statusCode"`
-		StatusMsg  string `json:"statusMsg"`
+	var response map[string]interface{}
+	if err := json.Unmarshal(body, &response); err != nil {
+		return NewProviderError(string(ProviderTypeYuntongxun), "PARSE_ERROR", err.Error())
 	}
-	if err := json.Unmarshal(body, &result); err != nil {
-		return fmt.Errorf("failed to parse yuntongxun response: %w", err)
-	}
-	if result.StatusCode != "000000" {
+
+	if response["statusCode"] != "000000" {
 		return &Error{
-			Code:     result.StatusCode,
-			Message:  result.StatusMsg,
-			Provider: string(SubProviderYuntongxun),
+			Code:     response["statusCode"].(string),
+			Message:  response["statusMsg"].(string),
+			Provider: string(ProviderTypeYuntongxun),
 		}
 	}
 	return nil
