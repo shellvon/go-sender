@@ -293,19 +293,18 @@ func (t *yunpianTransformer) handleYunpianResponse(statusCode int, body []byte) 
 		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
 	}
 
-	var result struct {
-		Code int    `json:"code"`
-		Msg  string `json:"msg"`
+	var response map[string]interface{}
+	if err := json.Unmarshal(body, &response); err != nil {
+		return NewProviderError(string(ProviderTypeYunpian), "PARSE_ERROR", err.Error())
 	}
-	if err := json.Unmarshal(body, &result); err != nil {
-		return fmt.Errorf("failed to parse yunpian response: %w", err)
-	}
-	if result.Code != 0 {
+
+	if response["code"] != float64(0) {
 		return &Error{
-			Code:     strconv.Itoa(result.Code),
-			Message:  result.Msg,
-			Provider: string(SubProviderYunpian),
+			Code:     strconv.FormatFloat(response["code"].(float64), 'f', -1, 64),
+			Message:  response["msg"].(string),
+			Provider: string(ProviderTypeYunpian),
 		}
 	}
+
 	return nil
 }

@@ -77,7 +77,7 @@ func (t *submailTransformer) Transform(
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
-		return nil, nil, fmt.Errorf("unsupported message type for Submail: %T", msg)
+		return nil, nil, NewProviderError(string(SubProviderSubmail), "INVALID_MESSAGE_TYPE", fmt.Sprintf("unsupported message type for Submail: %T", msg))
 	}
 
 	// Apply Submail-specific defaults
@@ -91,7 +91,7 @@ func (t *submailTransformer) Transform(
 	case MMS:
 		return t.transformMMS(smsMsg, account)
 	default:
-		return nil, nil, fmt.Errorf("unsupported message type: %v", smsMsg.Type)
+		return nil, nil, NewProviderError(string(SubProviderSubmail), "UNSUPPORTED_MESSAGE_TYPE", fmt.Sprintf("unsupported message type: %v", smsMsg.Type))
 	}
 }
 
@@ -129,16 +129,16 @@ func (t *submailTransformer) transformSMS(
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	if len(msg.Mobiles) == 0 {
-		return nil, nil, errors.New("mobiles is required")
+		return nil, nil, NewProviderError(string(SubProviderSubmail), "MISSING_PARAM", "mobiles is required")
 	}
 	if msg.Content == "" && msg.TemplateID == "" {
-		return nil, nil, errors.New("content or templateID is required")
+		return nil, nil, NewProviderError(string(SubProviderSubmail), "MISSING_PARAM", "content or templateID is required")
 	}
 	if msg.IsIntl() && len(msg.Mobiles) > 1000 {
-		return nil, nil, errors.New("international sms: at most 1000 mobiles per request")
+		return nil, nil, NewProviderError(string(SubProviderSubmail), "EXCEEDS_LIMIT", "international sms: at most 1000 mobiles per request")
 	}
 	if !msg.IsIntl() && len(msg.Mobiles) > 10000 {
-		return nil, nil, errors.New("domestic sms: at most 10000 mobiles per request")
+		return nil, nil, NewProviderError(string(SubProviderSubmail), "EXCEEDS_LIMIT", "domestic sms: at most 10000 mobiles per request")
 	}
 	apiPath := t.getSMSPath(msg)
 	return t.buildSubmailRequest(msg, account, apiPath, t.buildSMSParams)
@@ -183,13 +183,13 @@ func (t *submailTransformer) transformVoice(
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	if len(msg.Mobiles) == 0 {
-		return nil, nil, errors.New("mobiles is required")
+		return nil, nil, NewProviderError(string(SubProviderSubmail), "MISSING_PARAM", "mobiles is required")
 	}
 	if msg.Content == "" && msg.TemplateID == "" {
-		return nil, nil, errors.New("voice content or templateID is required")
+		return nil, nil, NewProviderError(string(SubProviderSubmail), "MISSING_PARAM", "voice content or templateID is required")
 	}
 	if len(msg.Mobiles) > 1 {
-		return nil, nil, errors.New("voice only supports single send")
+		return nil, nil, NewProviderError(string(SubProviderSubmail), "EXCEEDS_LIMIT", "voice only supports single send")
 	}
 	apiPath := t.getVoicePath(msg)
 	return t.buildSubmailRequest(msg, account, apiPath, t.buildVoiceParams)
@@ -378,26 +378,19 @@ func (t *submailTransformer) encodeParams(params map[string]string) []byte {
 
 func (t *submailTransformer) handleSubmailResponse(statusCode int, body []byte) error {
 	if !utils.IsAcceptableStatus(statusCode) {
-		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
+		return NewProviderError(string(ProviderTypeSubmail), strconv.Itoa(statusCode), string(body))
 	}
 
-	var result struct {
-		Status string `json:"status"`  // Request status: success/error
-		SendID string `json:"send_id"` // Unique send ID
-		Fee    int    `json:"fee"`     // Billing count
-		Code   string `json:"code"`    // Error code (when status is error)
-		Msg    string `json:"msg"`     // Error message (when status is error)
+	var response map[string]interface{}
+	if err := json.Unmarshal(body, &response); err != nil {
+		return NewProviderError(string(ProviderTypeSubmail), "PARSE_ERROR", err.Error())
 	}
 
-	if err := json.Unmarshal(body, &result); err != nil {
-		return fmt.Errorf("failed to parse submail response: %w", err)
-	}
-
-	if result.Status != "success" {
+	if response["status"] != "success" {
 		return &Error{
-			Code:     result.Code,
-			Message:  result.Msg,
-			Provider: string(SubProviderSubmail),
+			Code:     response["code"].(string),
+			Message:  response["msg"].(string),
+			Provider: string(ProviderTypeSubmail),
 		}
 	}
 

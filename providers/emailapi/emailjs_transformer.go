@@ -37,12 +37,11 @@ func newEmailJSTransformer() core.HTTPTransformer[*Account] {
 }
 
 // CanTransform checks if this transformer can handle the given message.
-func (t *emailJSTransformer) CanTransform(msg core.Message) bool {
-	emailMsg, ok := msg.(*Message)
-	if !ok {
-		return false
+func (t *emailJSTransformer) CanTransform(message core.Message) bool {
+	if emailMsg, ok := message.(*Message); ok {
+		return ok && emailMsg.SubProvider == string(SubProviderEmailJS)
 	}
-	return emailMsg.SubProvider == string(SubProviderEmailJS)
+	return false
 }
 
 // Transform converts an EmailJS message to HTTP request specification.

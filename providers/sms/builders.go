@@ -240,90 +240,98 @@ func (b *BaseBuilder[T]) Build() *Message {
 	}
 }
 
-// Aliyun returns an Aliyun SMS builder.
-//   - SMS(普通文本): https://help.aliyun.com/zh/sms/developer-reference/api-dysmsapi-2017-05-25-sendsms
-//   - MMS(卡片消息): https://help.aliyun.com/zh/sms/developer-reference/api-dysmsapi-2017-05-25-sendcardsms
-//   - Voice(验证码或文本转语音): https://help.aliyun.com/zh/vms/developer-reference/api-dyvmsapi-2017-05-25-singlecallbytts
-//   - Voice(通知): https://help.aliyun.com/zh/vms/developer-reference/api-dyvmsapi-2017-05-25-singlecallbyvoice
+// Aliyun creates a new Aliyun SMS message builder.
 func Aliyun() *AliyunSMSBuilder {
-	return newAliyunSMSBuilder()
+	builder := &AliyunSMSBuilder{}
+	builder.self = builder
+	builder.subProvider = SubProviderAliyun
+	return builder
 }
 
-// Tencent returns a Tencent SMS builder.
-//   - SMS(普通文本): https://cloud.tencent.com/document/product/382/55981
-//   - Voice(语音验证码API): https://cloud.tencent.com/document/product/1128/51559
-//   - Voice(语音通知API): https://cloud.tencent.com/document/product/1128/51558
+// Tencent creates a new Tencent SMS message builder.
 func Tencent() *TencentSMSBuilder {
-	return newTencentSMSBuilder()
+	builder := &TencentSMSBuilder{}
+	builder.self = builder
+	builder.subProvider = SubProviderTencent
+	return builder
 }
 
-// Cl253 returns a CL253 SMS builder.
-//   - SMS(普通文本): https://doc.chuanglan.com/
-//   - Voice(语音验证码API): https://doc.chuanglan.com/
+// Cl253 creates a new CL253 SMS message builder.
 func Cl253() *Cl253SMSBuilder {
-	return newCl253SMSBuilder()
+	builder := &Cl253SMSBuilder{}
+	builder.self = builder
+	builder.subProvider = SubProviderCl253
+	return builder
 }
 
-// Huawei returns a Huawei SMS builder.
-//   - SMS(普通文本): https://support.huaweicloud.com/api-msgsms/sms_05_0001.html
+// Huawei creates a new Huawei SMS message builder.
 func Huawei() *HuaweiSMSBuilder {
-	return newHuaweiSMSBuilder()
+	builder := &HuaweiSMSBuilder{}
+	builder.self = builder
+	builder.subProvider = SubProviderHuawei
+	return builder
 }
 
-// Juhe returns a Juhe SMS builder.
-//   - SMS国内短信API: https://www.juhe.cn/docs/api/id/54
-//   - SMS国际短信API: https://www.juhe.cn/docs/api/id/357
-//   - MMS视频短信API: https://www.juhe.cn/docs/api/id/363
+// Juhe creates a new Juhe SMS message builder.
 func Juhe() *JuheSMSBuilder {
-	return newJuheSMSBuilder()
+	builder := &JuheSMSBuilder{}
+	builder.self = builder
+	builder.subProvider = SubProviderJuhe
+	return builder
 }
 
-// Luosimao returns a Luosimao SMS builder.
-//   - SMS(普通文本): https://luosimao.com/docs/api
-//   - Voice(语音验证码API): https://luosimao.com/docs/api/51
+// Luosimao creates a new Luosimao SMS message builder.
 func Luosimao() *LuosimaoSMSBuilder {
-	return newLuosimaoSMSBuilder()
+	builder := &LuosimaoSMSBuilder{}
+	builder.self = builder
+	builder.subProvider = SubProviderLuosimao
+	return builder
 }
 
-// Smsbao returns a Smsbao SMS builder.
-//   - SMS(国内文本): https://www.smsbao.com/openapi
-//   - SMS(国际短信): https://www.smsbao.com/openapi/299.html
-//   - Voice(语音短信): https://www.smsbao.com/openapi/214.html
+// Smsbao creates a new Smsbao SMS message builder.
 func Smsbao() *SmsbaoSMSBuilder {
-	return newSmsbaoSMSBuilder()
+	builder := &SmsbaoSMSBuilder{}
+	builder.self = builder
+	builder.subProvider = SubProviderSmsbao
+	return builder
 }
 
-// Submail returns a Submail SMS builder.
-//   - SMS国内短信: https://www.mysubmail.com/documents/FppOR3
-//   - SMS国际短信: https://www.mysubmail.com/documents/3UQA3
-//   - SMS模板短信: https://www.mysubmail.com/documents/OOVyh
-//   - SMS群发: https://www.mysubmail.com/documents/AzD4Z4
-//   - Voice语音: https://www.mysubmail.com/documents/meE3C1
-//   - MMS彩信: https://www.mysubmail.com/documents/N6ktR
+// Submail creates a new Submail SMS message builder.
 func Submail() *SubmailSMSBuilder {
-	return newSubmailSMSBuilder()
+	builder := &SubmailSMSBuilder{}
+	builder.self = builder
+	builder.subProvider = SubProviderSubmail
+	return builder
 }
 
-// Ucp returns a UCP SMS builder.
-//   - SMS(普通文本): http://docs.ucpaas.com/doku.php
+// Ucp creates a new UCP SMS message builder.
 func Ucp() *UcpSMSBuilder {
-	return newUcpSMSBuilder()
+	builder := &UcpSMSBuilder{}
+	builder.self = builder
+	builder.subProvider = SubProviderUcp
+	return builder
 }
 
-// Volc returns a Volc SMS builder.
-//   - SMS(普通文本): https://www.volcengine.com/product/cloud-sms
+// Volc creates a new Volc SMS message builder.
 func Volc() *VolcSMSBuilder {
-	return newVolcSMSBuilder()
+	builder := &VolcSMSBuilder{}
+	builder.self = builder
+	builder.subProvider = SubProviderVolc
+	return builder
 }
 
-// Yuntongxun returns a Yuntongxun SMS builder.
-//   - SMS(普通文本): https://www.yuntongxun.com/developer-center
+// Yuntongxun creates a new Yuntongxun SMS message builder.
 func Yuntongxun() *YuntongxunSMSBuilder {
-	return newYuntongxunSMSBuilder()
+	builder := &YuntongxunSMSBuilder{}
+	builder.self = builder
+	builder.subProvider = SubProviderYuntongxun
+	return builder
 }
 
-// Yunpian returns a Yunpian SMS builder.
-//   - SMS(普通文本): https://www.yunpian.com/dev-doc
+// Yunpian creates a new Yunpian SMS message builder.
 func Yunpian() *YunpianSMSBuilder {
-	return newYunpianSMSBuilder()
+	builder := &YunpianSMSBuilder{}
+	builder.self = builder
+	builder.subProvider = SubProviderYunpian
+	return builder
 }

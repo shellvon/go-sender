@@ -1,5 +1,7 @@
 package emailapi
 
+const resendTagsKey = "tags"
+
 // ResendTag represents a tag for Resend email messages.
 type ResendTag struct {
 	Name  string

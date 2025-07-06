@@ -2,10 +2,10 @@ package sms
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/shellvon/go-sender/core"
@@ -89,7 +89,7 @@ func (t *smsbaoTransformer) transformSMS(
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	if account == nil || account.APIKey == "" || account.APISecret == "" {
-		return nil, nil, errors.New("smsbao account Key(username) and Secret(password) are required")
+		return nil, nil, NewProviderError(string(ProviderTypeSmsbao), "AUTH_ERROR", "smsbao account Key(username) and Secret(password) are required")
 	}
 	mobiles := strings.Join(msg.Mobiles, ",")
 	content := utils.AddSignature(msg.Content, msg.SignName)
@@ -130,17 +130,17 @@ func (t *smsbaoTransformer) transformVoice(
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	// 检查语音短信的限制
 	if msg.IsIntl() {
-		return nil, nil, errors.New("voice sms only supports domestic mobile")
+		return nil, nil, NewProviderError(string(ProviderTypeSmsbao), "UNSUPPORTED_COUNTRY", "voice sms only supports domestic mobile")
 	}
 	if len(msg.Mobiles) != 1 {
-		return nil, nil, errors.New("voice sms only supports single domestic mobile")
+		return nil, nil, NewProviderError(string(ProviderTypeSmsbao), "INVALID_MOBILE_NUMBER", fmt.Sprintf("smsbao voice only supports single mobile, got %d", len(msg.Mobiles)))
 	}
 	if len(msg.Mobiles[0]) != 11 || msg.Mobiles[0][0] != '1' {
-		return nil, nil, errors.New("only support domestic mobile for voice sms")
+		return nil, nil, NewProviderError(string(ProviderTypeSmsbao), "INVALID_MOBILE_FORMAT", "only support domestic mobile for voice sms")
 	}
 
 	if account == nil || account.APIKey == "" || account.APISecret == "" {
-		return nil, nil, errors.New("smsbao account Key(username) and Secret(password) are required")
+		return nil, nil, NewProviderError(string(ProviderTypeSmsbao), "AUTH_ERROR", "smsbao account Key(username) and Secret(password) are required")
 	}
 
 	// 构建查询参数
@@ -161,33 +161,23 @@ func (t *smsbaoTransformer) transformVoice(
 // handleSMSBaoResponse 处理短信宝 API 响应.
 func handleSMSBaoResponse(statusCode int, body []byte) error {
 	if !utils.IsAcceptableStatus(statusCode) {
-		return fmt.Errorf("smsbao API returned non-OK status: %d", statusCode)
+		return NewProviderError(string(ProviderTypeSmsbao), strconv.Itoa(statusCode), string(body))
 	}
 
-	resp := string(body)
-	if resp == "0" {
-		return nil // 成功
+	code := string(body)
+	if code != "0" {
+		return NewProviderError(string(ProviderTypeSmsbao), code, smsBaoErrorMap[code])
 	}
 
-	// 错误码映射表
-	errorMessages := map[string]string{
-		"30": "password error",
-		"40": "account does not exist",
-		"41": "insufficient balance",
-		"42": "account expired",
-		"43": "IP address restriction",
-		"50": "content contains sensitive words",
-		"51": "incorrect mobile number",
-	}
+	return nil
+}
 
-	message, exists := errorMessages[resp]
-	if !exists {
-		message = fmt.Sprintf("smsbao unknown error: %s", resp)
-	}
-
-	return &Error{
-		Code:     resp,
-		Message:  message,
-		Provider: string(SubProviderSmsbao),
-	}
+var smsBaoErrorMap = map[string]string{
+	"30": "password error",
+	"40": "account does not exist",
+	"41": "insufficient balance",
+	"42": "account expired",
+	"43": "IP address restriction",
+	"50": "content contains sensitive words",
+	"51": "incorrect mobile number",
 }

@@ -68,7 +68,7 @@ func (t *luosimaoTransformer) Transform(
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
-		return nil, nil, fmt.Errorf("unsupported message type for Luosimao: %T", msg)
+		return nil, nil, NewProviderError(string(SubProviderLuosimao), "INVALID_MESSAGE_TYPE", fmt.Sprintf("unsupported message type for Luosimao: %T", msg))
 	}
 
 	// Apply Luosimao-specific defaults
@@ -80,9 +80,9 @@ func (t *luosimaoTransformer) Transform(
 	case Voice:
 		return t.transformVoice(smsMsg, account)
 	case MMS:
-		return nil, nil, fmt.Errorf("unsupported message type: %v", smsMsg.Type)
+		return nil, nil, NewProviderError(string(SubProviderLuosimao), "UNSUPPORTED_MESSAGE_TYPE", fmt.Sprintf("unsupported message type: %v", smsMsg.Type))
 	default:
-		return nil, nil, fmt.Errorf("unsupported message type: %v", smsMsg.Type)
+		return nil, nil, NewProviderError(string(SubProviderLuosimao), "UNSUPPORTED_MESSAGE_TYPE", fmt.Sprintf("unsupported message type: %v", smsMsg.Type))
 	}
 }
 
@@ -164,7 +164,7 @@ func (t *luosimaoTransformer) transformVoice(
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	if msg.Category != CategoryVerification {
-		return nil, nil, fmt.Errorf("unsupported voice category: %v", msg.Category)
+		return nil, nil, NewProviderError(string(SubProviderLuosimao), "UNSUPPORTED_CATEGORY", fmt.Sprintf("unsupported voice category: %v", msg.Category))
 	}
 	params := url.Values{}
 	params.Set("mobile", msg.Mobiles[0])
@@ -180,21 +180,14 @@ func (t *luosimaoTransformer) transformVoice(
 //   - 统一处理单发、批量、语音接口返回
 func (t *luosimaoTransformer) handleLuosimaoResponse(statusCode int, body []byte) error {
 	if !utils.IsAcceptableStatus(statusCode) {
-		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
+		return NewProviderError(string(SubProviderLuosimao), strconv.Itoa(statusCode), string(body))
 	}
-	var result struct {
-		Error int    `json:"error"`
-		Msg   string `json:"msg"`
+	var response map[string]interface{}
+	if err := json.Unmarshal(body, &response); err != nil {
+		return NewProviderError(string(SubProviderLuosimao), "PARSE_ERROR", err.Error())
 	}
-	if err := json.Unmarshal(body, &result); err != nil {
-		return fmt.Errorf("failed to parse luosimao response: %w", err)
-	}
-	if result.Error != 0 {
-		return &Error{
-			Code:     strconv.Itoa(result.Error),
-			Message:  result.Msg,
-			Provider: string(SubProviderLuosimao),
-		}
+	if response["errorno"] != float64(0) {
+		return NewProviderError(string(SubProviderLuosimao), strconv.Itoa(int(response["errorno"].(float64))), response["msg"].(string))
 	}
 	return nil
 }

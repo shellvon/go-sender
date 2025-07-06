@@ -48,3 +48,7 @@ const (
 	ErrorCodeUnsupportedMessageType   = "UNSUPPORTED_MESSAGE_TYPE"
 	ErrorCodeUnsupportedInternational = "UNSUPPORTED_INTERNATIONAL"
 )
+
+func NewProviderError(provider, code, message string) *Error {
+	return &Error{Code: code, Message: message, Provider: provider}
+}

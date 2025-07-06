@@ -3,7 +3,6 @@ package sms
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -53,7 +52,7 @@ func (t *ucpTransformer) Transform(
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
-		return nil, nil, fmt.Errorf("unsupported message type for UCP: %T", msg)
+		return nil, nil, NewProviderError(string(SubProviderUcp), "INVALID_MESSAGE_TYPE", fmt.Sprintf("unsupported message type for UCP: %T", msg))
 	}
 
 	// Apply UCP-specific defaults
@@ -63,9 +62,9 @@ func (t *ucpTransformer) Transform(
 	case SMSText:
 		return t.transformSMS(smsMsg, account)
 	case Voice, MMS:
-		return nil, nil, fmt.Errorf("unsupported message type: %v", smsMsg.Type)
+		return nil, nil, NewProviderError(string(SubProviderUcp), "UNSUPPORTED_MESSAGE_TYPE", fmt.Sprintf("unsupported message type: %v", smsMsg.Type))
 	default:
-		return nil, nil, fmt.Errorf("unsupported message type: %v", smsMsg.Type)
+		return nil, nil, NewProviderError(string(SubProviderUcp), "UNSUPPORTED_MESSAGE_TYPE", fmt.Sprintf("unsupported message type: %v", smsMsg.Type))
 	}
 }
 
@@ -83,10 +82,10 @@ func (t *ucpTransformer) transformSMS(
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	// 验证参数
 	if len(msg.Mobiles) == 0 {
-		return nil, nil, errors.New("mobiles is required")
+		return nil, nil, NewProviderError(string(SubProviderUcp), "MISSING_PARAM", "mobiles is required")
 	}
 	if msg.TemplateID == "" {
-		return nil, nil, errors.New("templateID is required")
+		return nil, nil, NewProviderError(string(SubProviderUcp), "MISSING_PARAM", "templateID is required")
 	}
 
 	// 根据手机号数量选择API
@@ -127,21 +126,19 @@ func (t *ucpTransformer) transformSMS(
 // handleUcpResponse 处理云之讯API响应.
 func (t *ucpTransformer) handleUcpResponse(statusCode int, body []byte) error {
 	if !utils.IsAcceptableStatus(statusCode) {
-		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
+		return NewProviderError(string(ProviderTypeUcp), strconv.Itoa(statusCode), string(body))
 	}
 
-	var result struct {
-		Code int    `json:"code"`
-		Msg  string `json:"msg"`
+	var response map[string]interface{}
+	if err := json.Unmarshal(body, &response); err != nil {
+		return NewProviderError(string(ProviderTypeUcp), "PARSE_ERROR", err.Error())
 	}
-	if err := json.Unmarshal(body, &result); err != nil {
-		return fmt.Errorf("failed to parse ucp response: %w", err)
-	}
-	if result.Code != 0 {
+
+	if response["code"] != "000000" {
 		return &Error{
-			Code:     strconv.Itoa(result.Code),
-			Message:  result.Msg,
-			Provider: string(SubProviderUcp),
+			Code:     strconv.Itoa(int(response["code"].(float64))),
+			Message:  response["msg"].(string),
+			Provider: string(ProviderTypeUcp),
 		}
 	}
 	return nil

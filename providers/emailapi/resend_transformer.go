@@ -40,12 +40,11 @@ func newResendTransformer() core.HTTPTransformer[*Account] {
 }
 
 // CanTransform checks if this transformer can handle the given message.
-func (t *resendTransformer) CanTransform(msg core.Message) bool {
-	emailMsg, ok := msg.(*Message)
-	if !ok {
-		return false
+func (t *resendTransformer) CanTransform(message core.Message) bool {
+	if emailMsg, ok := message.(*Message); ok {
+		return ok && emailMsg.SubProvider == string(SubProviderResend)
 	}
-	return emailMsg.SubProvider == string(SubProviderResend)
+	return false
 }
 
 // Transform converts a Resend message to HTTP request specification.

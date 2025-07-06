@@ -95,7 +95,7 @@ func (mq *MemoryQueue[T]) IsEmpty() bool {
 
 func (mq *MemoryQueue[T]) EnqueueDelayed(ctx context.Context, item T, delay time.Duration) error {
 	if atomic.LoadInt32(&mq.closed) == 1 {
-		return errors.New("queue is closed")
+		return ErrQueueClosed
 	}
 
 	// If item implements Schedulable, set the scheduled time

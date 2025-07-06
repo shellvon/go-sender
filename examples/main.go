@@ -288,7 +288,7 @@ func runSMSDemo() {
 			Build()
 	case "tencent":
 		// 腾讯云短信示例
-		msg = sms.Tencent().To(phone).Content("【GoSender】Your code is 1234.").SignName(from).Build()
+		msg = sms.Tencent().Type(sms.Voice).VoiceSdkAppID("1401009332").SmsSdkAppID("1401009332").To(phone).Content("【GoSender】Your code is 1234.").TemplateID(templateID).SignName(from).Build()
 	case "cl253":
 		// 创蓝253短信示例
 		msg = sms.Cl253().To(phone).Content("【GoSender】Your code is 1234.").Build()

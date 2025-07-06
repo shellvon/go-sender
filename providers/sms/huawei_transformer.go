@@ -3,7 +3,6 @@ package sms
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -59,38 +58,38 @@ func (t *huaweiTransformer) Transform(
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
-		return nil, nil, fmt.Errorf("unsupported message type for Huawei: %T", msg)
+		return nil, nil, NewProviderError(string(SubProviderHuawei), "INVALID_MESSAGE_TYPE", fmt.Sprintf("unsupported message type for Huawei: %T", msg))
 	}
 
 	// Apply Huawei-specific defaults
 	t.applyHuaweiDefaults(smsMsg, account)
 
 	if err := t.validateMessage(smsMsg); err != nil {
-		return nil, nil, fmt.Errorf("message validation failed: %w", err)
+		return nil, nil, NewProviderError(string(SubProviderHuawei), "VALIDATION_FAILED", fmt.Sprintf("message validation failed: %v", err))
 	}
 
 	switch smsMsg.Type {
 	case SMSText:
 		return t.transformSMS(smsMsg, account)
 	case Voice:
-		return nil, nil, errors.New("Huawei does not support voice messages")
+		return nil, nil, NewProviderError(string(SubProviderHuawei), "UNSUPPORTED_MESSAGE_TYPE", "Huawei does not support voice messages")
 	case MMS:
-		return nil, nil, errors.New("Huawei does not support MMS messages")
+		return nil, nil, NewProviderError(string(SubProviderHuawei), "UNSUPPORTED_MESSAGE_TYPE", "Huawei does not support MMS messages")
 	default:
-		return nil, nil, fmt.Errorf("unsupported message type: %v", smsMsg.Type)
+		return nil, nil, NewProviderError(string(SubProviderHuawei), "UNSUPPORTED_MESSAGE_TYPE", fmt.Sprintf("unsupported message type: %v", smsMsg.Type))
 	}
 }
 
 // validateMessage validates the message for Huawei.
 func (t *huaweiTransformer) validateMessage(msg *Message) error {
 	if msg.TemplateID == "" {
-		return errors.New("templateId is required for Huawei SMS")
+		return NewProviderError(string(SubProviderHuawei), "MISSING_PARAM", "templateId is required for Huawei SMS")
 	}
 	if len(msg.Mobiles) == 0 {
-		return errors.New("at least one mobile number is required")
+		return NewProviderError(string(SubProviderHuawei), "MISSING_PARAM", "at least one mobile number is required")
 	}
 	if msg.SignName == "" {
-		return errors.New("sign name is required for Huawei SMS")
+		return NewProviderError(string(SubProviderHuawei), "MISSING_PARAM", "sign name is required for Huawei SMS")
 	}
 	return nil
 }
@@ -187,21 +186,14 @@ func (t *huaweiTransformer) buildHuaweiWsseHeader(appKey, appSecret string) stri
 // handleHuaweiResponse 处理华为云短信 API 响应.
 func (t *huaweiTransformer) handleHuaweiResponse(statusCode int, body []byte) error {
 	if !utils.IsAcceptableStatus(statusCode) {
-		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
+		return NewProviderError(string(SubProviderHuawei), strconv.Itoa(statusCode), string(body))
 	}
-	var result struct {
-		Code        string `json:"code"`
-		Description string `json:"description"`
+	var response map[string]interface{}
+	if err := json.Unmarshal(body, &response); err != nil {
+		return NewProviderError(string(SubProviderHuawei), "PARSE_ERROR", err.Error())
 	}
-	if err := json.Unmarshal(body, &result); err != nil {
-		return fmt.Errorf("failed to parse huawei response: %w", err)
-	}
-	if result.Code != huaweiSuccessCode {
-		return &Error{
-			Code:     result.Code,
-			Message:  result.Description,
-			Provider: string(SubProviderHuawei),
-		}
+	if response["code"] != "000000" {
+		return NewProviderError(string(SubProviderHuawei), response["code"].(string), response["description"].(string))
 	}
 	return nil
 }
