@@ -22,7 +22,7 @@ type TextMessage struct {
 	//  - "HTML": Use HTML-style formatting (<b>bold</b>, <i>italic</i>, etc.)
 	//  - "Markdown": This is a legacy mode, retained for backward compatibility. To use this mode, pass Markdown in the parse_mode field, Use Markdown-style formatting (*bold*, _italic_, etc.)
 	//  - "MarkdownV2": Use MarkdownV2-style formatting (more strict)
-	ParseMode string `json:"parse_mode,omitempty"`
+	ParseMode ParseMode `json:"parse_mode,omitempty"`
 
 	// Entities - A JSON-serialized list of special entities that appear in message text, which can be specified instead of parse_mode.
 	// Optional. Allows for more precise control over text formatting and special entities.
@@ -48,6 +48,9 @@ func (m *TextMessage) Validate() error {
 	}
 	if strings.TrimSpace(m.Text) == "" {
 		return core.NewParamError("text cannot be empty")
+	}
+	if m.ParseMode != "" && !m.ParseMode.IsValid() {
+		return core.NewParamError("invalid parse mode")
 	}
 	return nil
 }

@@ -9,7 +9,7 @@ type DiceMessage struct {
 	BaseMessage
 
 	// Emoji on which the dice throw animation is based. Must be one of "🎲", "🎯", "🏀", "⚽", "🎳", or "🎰". Defaults to "🎲"
-	Emoji string `json:"emoji,omitempty"`
+	Emoji DiceEmoji `json:"emoji,omitempty"`
 }
 
 // NewDiceMessage creates a new DiceMessage instance.
@@ -28,6 +28,9 @@ func NewDiceMessage(chatID string) *DiceMessage {
 func (m *DiceMessage) Validate() error {
 	if m.ChatID == "" {
 		return core.NewParamError("chat_id cannot be empty")
+	}
+	if m.Emoji != "" && !m.Emoji.IsValid() {
+		return core.NewParamError("invalid dice emoji: " + string(m.Emoji))
 	}
 	return nil
 }

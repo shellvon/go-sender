@@ -15,7 +15,7 @@ type TextBuilder struct {
 	*baseBuilder[*TextBuilder]
 
 	text               string
-	parseMode          string
+	parseMode          ParseMode
 	entities           []MessageEntity
 	linkPreviewOptions *LinkPreviewOptions
 }
@@ -42,7 +42,7 @@ func (b *TextBuilder) Text(t string) *TextBuilder {
 //   - "HTML": Use HTML-style formatting (<b>bold</b>, <i>italic</i>, etc.)
 //   - "Markdown": This is a legacy mode, retained for backward compatibility. To use this mode, pass Markdown in the parse_mode field, Use Markdown-style formatting (*bold*, _italic_, etc.)
 //   - "MarkdownV2": Use MarkdownV2-style formatting (more strict)
-func (b *TextBuilder) ParseMode(mode string) *TextBuilder {
+func (b *TextBuilder) ParseMode(mode ParseMode) *TextBuilder {
 	b.parseMode = mode
 	return b
 }
@@ -72,4 +72,25 @@ func (b *TextBuilder) Build() *TextMessage {
 		LinkPreviewOptions: b.linkPreviewOptions,
 	}
 	return msg
+}
+
+// WithParseMode sets the parse mode for the text message.
+func (b *TextBuilder) WithParseMode(mode ParseMode) *TextBuilder {
+	b.parseMode = mode
+	return b
+}
+
+// WithMarkdown sets the parse mode to Markdown.
+func (b *TextBuilder) WithMarkdown() *TextBuilder {
+	return b.WithParseMode(ParseModeMarkdown)
+}
+
+// WithMarkdownV2 sets the parse mode to MarkdownV2.
+func (b *TextBuilder) WithMarkdownV2() *TextBuilder {
+	return b.WithParseMode(ParseModeMarkdownV2)
+}
+
+// WithHTML sets the parse mode to HTML.
+func (b *TextBuilder) WithHTML() *TextBuilder {
+	return b.WithParseMode(ParseModeHTML)
 }

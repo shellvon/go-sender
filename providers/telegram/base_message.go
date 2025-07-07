@@ -54,9 +54,13 @@ type MediaMessage struct {
 	// Caption for the media, 0-1024 characters after entities parsing
 	Caption string `json:"caption,omitempty"`
 
-	// Mode for parsing entities in the caption. See formatting options for more details on supported modes.
-	// Options: "HTML", "Markdown", "MarkdownV2"
-	ParseMode string `json:"parse_mode,omitempty"`
+	// ParseMode - Mode for parsing entities in the message text. see https://core.telegram.org/bots/api#formatting-options
+	//
+	// Can be:
+	//  - "HTML": Use HTML-style formatting (<b>bold</b>, <i>italic</i>, etc.)
+	//  - "Markdown": This is a legacy mode, retained for backward compatibility. To use this mode, pass Markdown in the parse_mode field, Use Markdown-style formatting (*bold*, _italic_, etc.)
+	//  - "MarkdownV2": Use MarkdownV2-style formatting (more strict)
+	ParseMode ParseMode `json:"parse_mode,omitempty"`
 
 	// A JSON-serialized list of special entities that appear in the caption, which can be specified instead of parse_mode
 	CaptionEntities []MessageEntity `json:"caption_entities,omitempty"`

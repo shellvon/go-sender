@@ -8,11 +8,32 @@ import (
 
 const maxMarkdownContentLength = 4096
 
-// Markdown versions.
+// MarkdownVersion represents the version of markdown format
+type MarkdownVersion string
+
 const (
-	MarkdownVersionLegacy = "legacy"
-	MarkdownVersionV2     = "v2"
+	// MarkdownVersionLegacy is the legacy version of markdown format.
+	MarkdownVersionLegacy MarkdownVersion = "legacy"
+	// MarkdownVersionV2 is the new version of markdown format.
+	// It is recommended to use the latest client version to experience the message.
+	// only available on client version 4.1.36 or higher (Android 4.1.38 or higher), lower version will be treated as plain text
+	MarkdownVersionV2 MarkdownVersion = "v2"
 )
+
+// String implements the Stringer interface.
+func (v MarkdownVersion) String() string {
+	return string(v)
+}
+
+// IsValid checks if the markdown version is valid.
+func (v MarkdownVersion) IsValid() bool {
+	switch v {
+	case MarkdownVersionLegacy, MarkdownVersionV2:
+		return true
+	default:
+		return false
+	}
+}
 
 // MarkdownContent represents the markdown content for a WeCom message.
 type MarkdownContent struct {
@@ -20,7 +41,7 @@ type MarkdownContent struct {
 	Content string `json:"content"`
 	// Version of the markdown message.
 	// Currently, v2 or legacy is supported.
-	Version string `json:"version"`
+	Version MarkdownVersion `json:"version,omitempty"`
 }
 
 // MarkdownMessage represents a markdown message for WeCom.
@@ -38,7 +59,9 @@ type MarkdownMessage struct {
 //   - Only content and version are required.
 //   - version is "legacy" if not provided or empty.
 //   - version is "v2" if provided version is "v2".
-func NewMarkdownMessage(content string, version string) *MarkdownMessage {
+//
+// See https://developer.work.weixin.qq.com/document/path/91770#markdown%E7%B1%BB%E5%9E%8B for more details.
+func NewMarkdownMessage(content string, version MarkdownVersion) *MarkdownMessage {
 	return Markdown().Content(content).Version(version).Build()
 }
 
@@ -49,6 +72,9 @@ func (m *MarkdownMessage) Validate() error {
 	}
 	if len([]rune(m.Markdown.Content)) > maxMarkdownContentLength {
 		return core.NewParamError("markdown content exceeds 4096 characters")
+	}
+	if m.Markdown.Version != "" && !m.Markdown.Version.IsValid() {
+		return core.NewParamError("invalid markdown version: " + string(m.Markdown.Version))
 	}
 	return nil
 }

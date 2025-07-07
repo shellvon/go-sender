@@ -30,7 +30,7 @@ type PollMessage struct {
 	IsAnonymous bool `json:"is_anonymous,omitempty"`
 
 	// Poll type, "quiz" or "regular", defaults to "regular"
-	Type string `json:"type,omitempty"`
+	Type PollType `json:"type,omitempty"`
 
 	// True, if the poll allows multiple answers, ignored for polls in quiz mode, defaults to False
 	AllowsMultipleAnswers bool `json:"allows_multiple_answers,omitempty"`

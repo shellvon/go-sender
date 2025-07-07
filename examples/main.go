@@ -221,7 +221,7 @@ func runTelegramDemo() {
 			name: "Dice Message",
 			msg: telegram.Dice().
 				Chat(chatID).
-				Emoji("🎲").
+				Emoji(telegram.DiceEmojiDice).
 				Build(),
 		},
 		{
