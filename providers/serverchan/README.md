@@ -6,6 +6,10 @@
 
 ---
 
+## Known Issues
+
+⚠️ **Important Notice**: While the ServerChan API might return success responses, some messages may not be delivered to the WeChat Official Account. This is a limitation of the ServerChan service itself and not an issue with this implementation.
+
 ## Features
 
 - Multiple SendKeys with round-robin / random / weighted load-balancing.
