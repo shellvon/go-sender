@@ -65,25 +65,45 @@ func (t *cl253Transformer) Transform(
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
-		return nil, nil, NewProviderError(string(SubProviderCl253), "INVALID_MESSAGE_TYPE", fmt.Sprintf("unsupported message type for CL253: %T", msg))
+		return nil, nil, NewProviderError(
+			string(SubProviderCl253),
+			"INVALID_MESSAGE_TYPE",
+			fmt.Sprintf("unsupported message type for CL253: %T", msg),
+		)
 	}
 
 	// Apply CL253-specific defaults
 	t.applyCl253Defaults(smsMsg, account)
 
 	if err := t.validateMessage(smsMsg); err != nil {
-		return nil, nil, NewProviderError(string(SubProviderCl253), "VALIDATION_FAILED", fmt.Sprintf("message validation failed: %v", err))
+		return nil, nil, NewProviderError(
+			string(SubProviderCl253),
+			"VALIDATION_FAILED",
+			fmt.Sprintf("message validation failed: %v", err),
+		)
 	}
 
 	switch smsMsg.Type {
 	case SMSText:
 		return t.transformSMS(smsMsg, account)
 	case Voice:
-		return nil, nil, NewProviderError(string(SubProviderCl253), "UNSUPPORTED_MESSAGE_TYPE", "CL253 does not support voice messages")
+		return nil, nil, NewProviderError(
+			string(SubProviderCl253),
+			"UNSUPPORTED_MESSAGE_TYPE",
+			"CL253 does not support voice messages",
+		)
 	case MMS:
-		return nil, nil, NewProviderError(string(SubProviderCl253), "UNSUPPORTED_MESSAGE_TYPE", "CL253 does not support MMS messages")
+		return nil, nil, NewProviderError(
+			string(SubProviderCl253),
+			"UNSUPPORTED_MESSAGE_TYPE",
+			"CL253 does not support MMS messages",
+		)
 	default:
-		return nil, nil, NewProviderError(string(SubProviderCl253), "UNSUPPORTED_MESSAGE_TYPE", fmt.Sprintf("unsupported message type: %v", smsMsg.Type))
+		return nil, nil, NewProviderError(
+			string(SubProviderCl253),
+			"UNSUPPORTED_MESSAGE_TYPE",
+			fmt.Sprintf("unsupported message type: %v", smsMsg.Type),
+		)
 	}
 }
 
@@ -100,7 +120,11 @@ func (t *cl253Transformer) validateMessage(msg *Message) error {
 		return NewProviderError(string(SubProviderCl253), "MISSING_CONTENT", "content is required for CL253 SMS")
 	}
 	if msg.IsIntl() && len(msg.Mobiles) > 1 {
-		return NewProviderError(string(SubProviderCl253), "UNSUPPORTED_RECIPIENTS", "CL253 international SMS only supports single recipient")
+		return NewProviderError(
+			string(SubProviderCl253),
+			"UNSUPPORTED_RECIPIENTS",
+			"CL253 international SMS only supports single recipient",
+		)
 	}
 	return nil
 }

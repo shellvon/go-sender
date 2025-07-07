@@ -9,12 +9,21 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/providers/email"
+	"github.com/shellvon/go-sender/providers/lark"
 	"github.com/shellvon/go-sender/providers/sms"
 	"github.com/shellvon/go-sender/providers/telegram"
 )
+
+// newLoggingHTTPClient returns an http.Client with logging capabilities.
+func newLoggingHTTPClient() *http.Client {
+	return &http.Client{
+		Transport: &LoggingTransport{},
+	}
+}
 
 // main is the unified entry for all provider examples.
 // Usage:
@@ -76,20 +85,181 @@ func runTelegramDemo() {
 		log.Println("Init telegram provider failed:", err)
 		return
 	}
-	msg := telegram.NewTextMessage(chatID, "Hello from go-sender example!")
-	err = prov.Send(context.Background(), msg, nil)
+
+	// Test all message types
+	messages := []struct {
+		name string
+		msg  core.Message
+	}{
+		{
+			name: "Text Message",
+			msg: telegram.Text().
+				Chat(chatID).
+				Text("Hello from go-sender! This is a text message test.").
+				ParseMode("HTML").
+				Build(),
+		},
+		{
+			name: "Photo Message",
+			msg: telegram.Photo().
+				Chat(chatID).
+				File("https://picsum.photos/200/300").
+				Caption("This is a photo message test.").
+				Build(),
+		},
+		{
+			name: "Audio Message",
+			msg: telegram.Audio().
+				Chat(chatID).
+				File("https://www2.cs.uic.edu/~i101/SoundFiles/BabyElephantWalk60.wav").
+				Caption("This is an audio message test.").
+				Title("Baby Elephant Walk").
+				Performer("Henry Mancini").
+				Build(),
+		},
+		{
+			name: "Voice Message",
+			msg: telegram.Voice().
+				Chat(chatID).
+				File("https://www2.cs.uic.edu/~i101/SoundFiles/CantinaBand3.wav").
+				Caption("This is a voice message test.").
+				Build(),
+		},
+		{
+			name: "Document Message",
+			msg: telegram.Document().
+				Chat(chatID).
+				File("https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf").
+				Caption("This is a document message test.").
+				Build(),
+		},
+		{
+			name: "Video Message",
+			msg: telegram.Video().
+				Chat(chatID).
+				File("http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4").
+				Caption("This is a video message test.").
+				Build(),
+		},
+		{
+			name: "Animation Message",
+			msg: telegram.Animation().
+				Chat(chatID).
+				File("https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExcDd6bGF4OWN1bnF3OWFxbzF1aHBxM2t1ZDV1bWx1c2Vxd2RqcnR6eCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKnxHjgNvUVClHy/giphy.gif").
+				Caption("This is an animation message test.").
+				Build(),
+		},
+		{
+			name: "Location Message",
+			msg: telegram.Location().
+				Chat(chatID).
+				Coordinates(40.7128, -74.0060).
+				Build(),
+		},
+		{
+			name: "Contact Message",
+			msg: telegram.Contact().
+				Chat(chatID).
+				Phone("+1234567890").
+				FirstName("John").
+				LastName("Doe").
+				Build(),
+		},
+		{
+			name: "Poll Message",
+			msg: telegram.Poll().
+				Chat(chatID).
+				Question("What's your favorite programming language?").
+				Options(
+					telegram.Option("Go"),
+					telegram.Option("Python"),
+					telegram.Option("JavaScript"),
+					telegram.Option("Java"),
+				).
+				IsAnonymous(true).
+				AllowsMultipleAnswers(true).
+				Build(),
+		},
+		{
+			name: "Dice Message",
+			msg: telegram.Dice().
+				Chat(chatID).
+				Emoji("🎲").
+				Build(),
+		},
+		{
+			name: "Venue Message",
+			msg: telegram.Venue().
+				Chat(chatID).
+				Latitude(40.7128).
+				Longitude(-74.0060).
+				Title("New York City").
+				Address("New York, NY, USA").
+				Build(),
+		},
+	}
+
+	// Send all messages
+	for _, m := range messages {
+		log.Printf("Sending %s...", m.name)
+		err = prov.Send(context.Background(), m.msg, &core.ProviderSendOptions{
+			HTTPClient: newLoggingHTTPClient(),
+		})
+		if err != nil {
+			log.Printf("Failed to send %s: %v", m.name, err)
+		} else {
+			log.Printf("Successfully sent %s!", m.name)
+		}
+		// Sleep for 3 seconds between messages to avoid hitting rate limits
+		// Telegram limits:
+		// - 30 messages per second to different chats
+		// - 20 messages per minute to the same chat
+		time.Sleep(3 * time.Second)
+	}
+}
+
+// runLarkDemo demonstrates how to send a message using the Lark provider.
+// Required environment variables:
+//
+//	LARK_WEBHOOK_KEY - Lark webhook key (the part after /hook/)
+//	LARK_WEBHOOK_SECRET - (optional) Lark webhook secret
+//
+// This demo will send a simple text message to the specified Lark group.
+func runLarkDemo() {
+	log.Println("[DEMO] Lark provider")
+	key := os.Getenv("LARK_WEBHOOK_KEY")
+	secret := os.Getenv("LARK_WEBHOOK_SECRET")
+	if key == "" {
+		log.Println("Please set LARK_WEBHOOK_KEY environment variable.")
+		return
+	}
+	cfg := lark.Config{
+		Items: []*lark.Account{{
+			BaseAccount: core.BaseAccount{
+				AccountMeta: core.AccountMeta{
+					Name: "default",
+				},
+				Credentials: core.Credentials{
+					APIKey:    key,
+					APISecret: secret,
+				},
+			},
+		}},
+	}
+	prov, err := lark.New(&cfg)
+	if err != nil {
+		log.Println("Init lark provider failed:", err)
+		return
+	}
+	msg := lark.Text().Content("Hello from go-sender example!").Build()
+	err = prov.Send(context.Background(), msg, &core.ProviderSendOptions{
+		HTTPClient: newLoggingHTTPClient(),
+	})
 	if err != nil {
 		log.Println("Send failed:", err)
 	} else {
 		log.Println("Send success!")
 	}
-}
-
-// runLarkDemo is a placeholder for Lark provider demo.
-// TODO: Implement Lark message sending example.
-func runLarkDemo() {
-	log.Println("[DEMO] Lark provider: please implement your test logic here.")
-	// TODO: Add real lark send example
 }
 
 // runEmailDemo demonstrates how to send an email using the email provider.
@@ -148,7 +318,9 @@ func runEmailDemo() {
 		Subject("Go-Sender Example").
 		Attach("main.go").
 		Build()
-	err = prov.Send(context.Background(), msg, nil)
+	err = prov.Send(context.Background(), msg, &core.ProviderSendOptions{
+		HTTPClient: newLoggingHTTPClient(),
+	})
 	if err != nil {
 		log.Println("Send failed:", err)
 	} else {
@@ -288,7 +460,15 @@ func runSMSDemo() {
 			Build()
 	case "tencent":
 		// 腾讯云短信示例
-		msg = sms.Tencent().Type(sms.Voice).VoiceSdkAppID("1401009332").SmsSdkAppID("1401009332").To(phone).Content("【GoSender】Your code is 1234.").TemplateID(templateID).SignName(from).Build()
+		msg = sms.Tencent().
+			Type(sms.Voice).
+			VoiceSdkAppID("1401009332").
+			SmsSdkAppID("1401009332").
+			To(phone).
+			Content("【GoSender】Your code is 1234.").
+			TemplateID(templateID).
+			SignName(from).
+			Build()
 	case "cl253":
 		// 创蓝253短信示例
 		msg = sms.Cl253().To(phone).Content("【GoSender】Your code is 1234.").Build()
@@ -305,9 +485,7 @@ func runSMSDemo() {
 		return
 	}
 	err = prov.Send(context.Background(), msg, &core.ProviderSendOptions{
-		HTTPClient: &http.Client{
-			Transport: &LoggingTransport{},
-		},
+		HTTPClient: newLoggingHTTPClient(),
 	})
 	if err != nil {
 		log.Println("Send failed:", err)

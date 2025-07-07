@@ -56,21 +56,37 @@ func (t *juheTransformer) Transform(
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
-		return nil, nil, NewProviderError(string(SubProviderJuhe), "INVALID_MESSAGE_TYPE", "invalid message type for juheTransformer")
+		return nil, nil, NewProviderError(
+			string(SubProviderJuhe),
+			"INVALID_MESSAGE_TYPE",
+			"invalid message type for juheTransformer",
+		)
 	}
 	if err := t.validateMessage(smsMsg); err != nil {
-		return nil, nil, NewProviderError(string(SubProviderJuhe), "VALIDATION_FAILED", fmt.Sprintf("message validation failed: %v", err))
+		return nil, nil, NewProviderError(
+			string(SubProviderJuhe),
+			"VALIDATION_FAILED",
+			fmt.Sprintf("message validation failed: %v", err),
+		)
 	}
 
 	switch smsMsg.Type {
 	case SMSText:
 		return t.transformSMS(smsMsg, account)
 	case Voice:
-		return nil, nil, NewProviderError(string(SubProviderJuhe), "UNSUPPORTED_MESSAGE_TYPE", "Juhe does not support voice messages")
+		return nil, nil, NewProviderError(
+			string(SubProviderJuhe),
+			"UNSUPPORTED_MESSAGE_TYPE",
+			"Juhe does not support voice messages",
+		)
 	case MMS:
 		return t.transformMMS(smsMsg, account)
 	default:
-		return nil, nil, NewProviderError(string(SubProviderJuhe), "UNSUPPORTED_MESSAGE_TYPE", fmt.Sprintf("unsupported message type: %v", smsMsg.Type))
+		return nil, nil, NewProviderError(
+			string(SubProviderJuhe),
+			"UNSUPPORTED_MESSAGE_TYPE",
+			fmt.Sprintf("unsupported message type: %v", smsMsg.Type),
+		)
 	}
 }
 
@@ -147,7 +163,11 @@ func (t *juheTransformer) handleJuheResponse(statusCode int, body []byte) error 
 	}
 
 	if response["error_code"] != float64(0) {
-		return NewProviderError(string(SubProviderJuhe), strconv.FormatFloat(response["error_code"].(float64), 'f', -1, 64), response["reason"].(string))
+		return NewProviderError(
+			string(SubProviderJuhe),
+			strconv.FormatFloat(response["error_code"].(float64), 'f', -1, 64),
+			response["reason"].(string),
+		)
 	}
 	return nil
 }

@@ -58,25 +58,45 @@ func (t *huaweiTransformer) Transform(
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
-		return nil, nil, NewProviderError(string(SubProviderHuawei), "INVALID_MESSAGE_TYPE", fmt.Sprintf("unsupported message type for Huawei: %T", msg))
+		return nil, nil, NewProviderError(
+			string(SubProviderHuawei),
+			"INVALID_MESSAGE_TYPE",
+			fmt.Sprintf("unsupported message type for Huawei: %T", msg),
+		)
 	}
 
 	// Apply Huawei-specific defaults
 	t.applyHuaweiDefaults(smsMsg, account)
 
 	if err := t.validateMessage(smsMsg); err != nil {
-		return nil, nil, NewProviderError(string(SubProviderHuawei), "VALIDATION_FAILED", fmt.Sprintf("message validation failed: %v", err))
+		return nil, nil, NewProviderError(
+			string(SubProviderHuawei),
+			"VALIDATION_FAILED",
+			fmt.Sprintf("message validation failed: %v", err),
+		)
 	}
 
 	switch smsMsg.Type {
 	case SMSText:
 		return t.transformSMS(smsMsg, account)
 	case Voice:
-		return nil, nil, NewProviderError(string(SubProviderHuawei), "UNSUPPORTED_MESSAGE_TYPE", "Huawei does not support voice messages")
+		return nil, nil, NewProviderError(
+			string(SubProviderHuawei),
+			"UNSUPPORTED_MESSAGE_TYPE",
+			"Huawei does not support voice messages",
+		)
 	case MMS:
-		return nil, nil, NewProviderError(string(SubProviderHuawei), "UNSUPPORTED_MESSAGE_TYPE", "Huawei does not support MMS messages")
+		return nil, nil, NewProviderError(
+			string(SubProviderHuawei),
+			"UNSUPPORTED_MESSAGE_TYPE",
+			"Huawei does not support MMS messages",
+		)
 	default:
-		return nil, nil, NewProviderError(string(SubProviderHuawei), "UNSUPPORTED_MESSAGE_TYPE", fmt.Sprintf("unsupported message type: %v", smsMsg.Type))
+		return nil, nil, NewProviderError(
+			string(SubProviderHuawei),
+			"UNSUPPORTED_MESSAGE_TYPE",
+			fmt.Sprintf("unsupported message type: %v", smsMsg.Type),
+		)
 	}
 }
 

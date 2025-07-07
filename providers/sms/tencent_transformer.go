@@ -54,14 +54,22 @@ func (t *tencentTransformer) Transform(
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
-		return nil, nil, NewProviderError(string(SubProviderTencent), "INVALID_MESSAGE_TYPE", "invalid message type for tencentTransformer")
+		return nil, nil, NewProviderError(
+			string(SubProviderTencent),
+			"INVALID_MESSAGE_TYPE",
+			"invalid message type for tencentTransformer",
+		)
 	}
 
 	// Apply Tencent-specific defaults
 	t.applyTencentDefaults(smsMsg, account)
 
 	if err := t.validateMessage(smsMsg); err != nil {
-		return nil, nil, NewProviderError(string(SubProviderTencent), "VALIDATION_FAILED", fmt.Sprintf("message validation failed: %v", err))
+		return nil, nil, NewProviderError(
+			string(SubProviderTencent),
+			"VALIDATION_FAILED",
+			fmt.Sprintf("message validation failed: %v", err),
+		)
 	}
 
 	switch smsMsg.Type {
@@ -70,9 +78,17 @@ func (t *tencentTransformer) Transform(
 	case Voice:
 		return t.transformVoice(smsMsg, account)
 	case MMS:
-		return nil, nil, NewProviderError(string(SubProviderTencent), "UNSUPPORTED_MESSAGE_TYPE", fmt.Sprintf("unsupported message type: %v", smsMsg.Type))
+		return nil, nil, NewProviderError(
+			string(SubProviderTencent),
+			"UNSUPPORTED_MESSAGE_TYPE",
+			fmt.Sprintf("unsupported message type: %v", smsMsg.Type),
+		)
 	default:
-		return nil, nil, NewProviderError(string(SubProviderTencent), "UNSUPPORTED_MESSAGE_TYPE", fmt.Sprintf("unsupported message type: %v", smsMsg.Type))
+		return nil, nil, NewProviderError(
+			string(SubProviderTencent),
+			"UNSUPPORTED_MESSAGE_TYPE",
+			fmt.Sprintf("unsupported message type: %v", smsMsg.Type),
+		)
 	}
 }
 
@@ -87,7 +103,11 @@ func (t *tencentTransformer) validateMessage(msg *Message) error {
 		return NewProviderError(string(SubProviderTencent), "MISSING_SIGNATURE", "domestic sms requires sign name")
 	}
 	if msg.Type == Voice && len(msg.Mobiles) != 1 {
-		return NewProviderError(string(SubProviderTencent), "INVALID_MOBILE_NUMBER", "voice sms only supports single mobile")
+		return NewProviderError(
+			string(SubProviderTencent),
+			"INVALID_MOBILE_NUMBER",
+			"voice sms only supports single mobile",
+		)
 	}
 	return nil
 }
@@ -123,7 +143,11 @@ func (t *tencentTransformer) transformSMS(
 
 	bodyData, err := json.Marshal(params)
 	if err != nil {
-		return nil, nil, NewProviderError(string(SubProviderTencent), "JSON_MARSHAL_ERROR", fmt.Sprintf("failed to marshal tencent request body: %v", err))
+		return nil, nil, NewProviderError(
+			string(SubProviderTencent),
+			"JSON_MARSHAL_ERROR",
+			fmt.Sprintf("failed to marshal tencent request body: %v", err),
+		)
 	}
 
 	timestamp := time.Now().Unix()
@@ -194,7 +218,11 @@ func (t *tencentTransformer) transformVoice(
 
 	bodyData, err := json.Marshal(params)
 	if err != nil {
-		return nil, nil, NewProviderError(string(SubProviderTencent), "JSON_MARSHAL_ERROR", fmt.Sprintf("failed to marshal tencent voice request body: %v", err))
+		return nil, nil, NewProviderError(
+			string(SubProviderTencent),
+			"JSON_MARSHAL_ERROR",
+			fmt.Sprintf("failed to marshal tencent voice request body: %v", err),
+		)
 	}
 
 	timestamp := time.Now().Unix()
@@ -341,7 +369,11 @@ func (t *tencentTransformer) handleTencentResponse(_ int, body []byte) error {
 	}
 
 	if len(response.Response.SendStatusSet) == 0 {
-		return NewProviderError(string(ProviderTypeTencent), "NO_STATUS_SET", "tencent API returned success but no SendStatusSet")
+		return NewProviderError(
+			string(ProviderTypeTencent),
+			"NO_STATUS_SET",
+			"tencent API returned success but no SendStatusSet",
+		)
 	}
 
 	for _, status := range response.Response.SendStatusSet {
