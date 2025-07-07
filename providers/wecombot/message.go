@@ -47,31 +47,6 @@ func (m *BaseMessage) GetMsgType() MessageType {
 	return m.MsgType
 }
 
-func (m *TextMessage) ProviderType() core.ProviderType {
-	return core.ProviderTypeWecombot
-}
-
-func (m *MarkdownMessage) ProviderType() core.ProviderType {
-	return core.ProviderTypeWecombot
-}
-
-func (m *ImageMessage) ProviderType() core.ProviderType {
-	return core.ProviderTypeWecombot
-}
-
-func (m *NewsMessage) ProviderType() core.ProviderType {
-	return core.ProviderTypeWecombot
-}
-
-func (m *TemplateCardMessage) ProviderType() core.ProviderType {
-	return core.ProviderTypeWecombot
-}
-
-// ProviderType implementations for new message types.
-func (m *VoiceMessage) ProviderType() core.ProviderType {
-	return core.ProviderTypeWecombot
-}
-
-func (m *FileMessage) ProviderType() core.ProviderType {
+func (m *BaseMessage) ProviderType() core.ProviderType {
 	return core.ProviderTypeWecombot
 }

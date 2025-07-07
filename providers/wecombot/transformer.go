@@ -37,6 +37,9 @@ func (t *wecombotTransformer) Transform(
 	if account == nil {
 		return nil, nil, errors.New("no account provided")
 	}
+	if err := wecomMsg.Validate(); err != nil {
+		return nil, nil, err
+	}
 
 	// Build webhook URL
 	webhookURL := fmt.Sprintf("https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=%s", account.APIKey)

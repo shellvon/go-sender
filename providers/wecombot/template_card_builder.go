@@ -16,6 +16,11 @@ type TemplateCardBuilder struct {
 	mainTitle MainTitle
 	subTitle  string
 
+	// For news_notice type
+	cardImage           *CardImage
+	imageTextArea       *ImageTextArea
+	verticalContentList []VerticalContent
+
 	// currently support only URL jump
 	jumpURL string
 }
@@ -37,6 +42,37 @@ func (b *TemplateCardBuilder) SubTitle(text string) *TemplateCardBuilder {
 	return b
 }
 
+// CardImage sets the card image section (news_notice only).
+// aspectRatio is the width/height ratio of the image.
+func (b *TemplateCardBuilder) CardImage(url string, aspectRatio float64) *TemplateCardBuilder {
+	b.cardImage = &CardImage{
+		URL:         url,
+		AspectRatio: aspectRatio,
+	}
+	return b
+}
+
+// ImageTextArea sets the image text area section (news_notice only).
+func (b *TemplateCardBuilder) ImageTextArea(title, desc, imageURL, jumpURL string) *TemplateCardBuilder {
+	b.imageTextArea = &ImageTextArea{
+		Type:     1, // URL type
+		URL:      jumpURL,
+		Title:    title,
+		Desc:     desc,
+		ImageURL: imageURL,
+	}
+	return b
+}
+
+// AddVerticalContent adds a vertical content item (news_notice only).
+func (b *TemplateCardBuilder) AddVerticalContent(title, desc string) *TemplateCardBuilder {
+	b.verticalContentList = append(b.verticalContentList, VerticalContent{
+		Title: title,
+		Desc:  desc,
+	})
+	return b
+}
+
 // JumpURL configures a URL jump action.
 func (b *TemplateCardBuilder) JumpURL(url string) *TemplateCardBuilder {
 	b.jumpURL = url
@@ -53,6 +89,15 @@ func (b *TemplateCardBuilder) Build() *TemplateCardMessage {
 		MainTitle:    b.mainTitle,
 		SubTitleText: b.subTitle,
 		CardAction:   action,
+	}
+
+	// Add news_notice specific fields
+	if b.cardType == CardTypeNewsNotice {
+		tpl.CardImage = b.cardImage
+		tpl.ImageTextArea = b.imageTextArea
+		if len(b.verticalContentList) > 0 {
+			tpl.VerticalContentList = b.verticalContentList
+		}
 	}
 
 	return &TemplateCardMessage{

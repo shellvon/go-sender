@@ -3,8 +3,12 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/md5"
+	"encoding/base64"
 	"flag"
 	"fmt"
+	"image"
+	"image/png"
 	"io"
 	"log"
 	"net/http"
@@ -13,10 +17,34 @@ import (
 
 	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/providers/email"
-	"github.com/shellvon/go-sender/providers/lark"
 	"github.com/shellvon/go-sender/providers/sms"
 	"github.com/shellvon/go-sender/providers/telegram"
+	"github.com/shellvon/go-sender/providers/wecombot"
 )
+
+// createEmptyImage creates a 100x100 transparent PNG image and returns its base64 and MD5.
+func createEmptyImage() (string, string, error) {
+	// Create a new 100x100 image
+	img := image.NewRGBA(image.Rect(0, 0, 100, 100))
+
+	// Encode to PNG
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, img); err != nil {
+		return "", "", fmt.Errorf("failed to encode PNG: %w", err)
+	}
+
+	// Calculate MD5 of the raw image data
+	hash := md5.New()
+	if _, err := hash.Write(buf.Bytes()); err != nil {
+		return "", "", fmt.Errorf("failed to calculate MD5: %w", err)
+	}
+	imgMD5 := fmt.Sprintf("%x", hash.Sum(nil))
+
+	// Convert to base64
+	imgBase64 := base64.StdEncoding.EncodeToString(buf.Bytes())
+
+	return imgBase64, imgMD5, nil
+}
 
 // newLoggingHTTPClient returns an http.Client with logging capabilities.
 func newLoggingHTTPClient() *http.Client {
@@ -43,6 +71,8 @@ func main() {
 		runTelegramDemo()
 	case "lark":
 		runLarkDemo()
+	case "wecombot":
+		runWecombotDemo()
 	case "email":
 		runEmailDemo()
 	case "sms":
@@ -221,44 +251,179 @@ func runTelegramDemo() {
 // runLarkDemo demonstrates how to send a message using the Lark provider.
 // Required environment variables:
 //
-//	LARK_WEBHOOK_KEY - Lark webhook key (the part after /hook/)
-//	LARK_WEBHOOK_SECRET - (optional) Lark webhook secret
+//	LARK_BOT_TOKEN - Lark Bot token
+//	LARK_CHAT_ID   - Lark chat ID
 //
-// This demo will send a simple text message to the specified Lark group.
+// This demo will send a simple text message to the specified chat.
 func runLarkDemo() {
 	log.Println("[DEMO] Lark provider")
-	key := os.Getenv("LARK_WEBHOOK_KEY")
-	secret := os.Getenv("LARK_WEBHOOK_SECRET")
+}
+
+// runLarkDemo demonstrates how to send a message using the Lark provider.
+// Required environment variables:
+//
+//	WECOM_BOT_KEY - WeCom Bot webhook key (the part after /key=)
+//
+// This demo will send various types of messages to the specified WeCom group.
+func runWecombotDemo() {
+	log.Println("[DEMO] WeCom Bot provider")
+	key := os.Getenv("WECOM_BOT_KEY")
 	if key == "" {
-		log.Println("Please set LARK_WEBHOOK_KEY environment variable.")
+		log.Println("Please set WECOM_BOT_KEY environment variable.")
 		return
 	}
-	cfg := lark.Config{
-		Items: []*lark.Account{{
+	cfg := wecombot.Config{
+		Items: []*wecombot.Account{{
 			BaseAccount: core.BaseAccount{
 				AccountMeta: core.AccountMeta{
 					Name: "default",
 				},
 				Credentials: core.Credentials{
-					APIKey:    key,
-					APISecret: secret,
+					APIKey: key,
 				},
 			},
 		}},
 	}
-	prov, err := lark.New(&cfg)
+	prov, err := wecombot.New(&cfg)
 	if err != nil {
-		log.Println("Init lark provider failed:", err)
+		log.Println("Init wecom bot provider failed:", err)
 		return
 	}
-	msg := lark.Text().Content("Hello from go-sender example!").Build()
-	err = prov.Send(context.Background(), msg, &core.ProviderSendOptions{
-		HTTPClient: newLoggingHTTPClient(),
-	})
-	if err != nil {
-		log.Println("Send failed:", err)
-	} else {
-		log.Println("Send success!")
+
+	// Test all message types
+	messages := []struct {
+		name string
+		msg  core.Message
+	}{
+		{
+			name: "Text Message",
+			msg: wecombot.Text().
+				Content("Hello from go-sender! This is a text message test.").
+				MentionUsers([]string{"@all"}).
+				Build(),
+		},
+		{
+			name: "Image Message",
+			msg: func() core.Message {
+				base64Img, imgMD5, err := createEmptyImage()
+				if err != nil {
+					log.Printf("Failed to create empty image: %v", err)
+					return nil
+				}
+				return wecombot.Image().
+					Base64(base64Img).
+					MD5(imgMD5).
+					Build()
+			}(),
+		},
+		{
+			name: "Markdown Message (Legacy)",
+			msg: wecombot.Markdown().
+				Content("# Hello from go-sender!\n\n**This** is a *markdown* message test.\n\n> Legacy version").
+				Version(wecombot.MarkdownVersionLegacy).
+				Build(),
+		},
+		{
+			name: "Markdown Message (V2)",
+			msg: wecombot.Markdown().
+				Content("# 一、标题\n" +
+					"## 二级标题\n" +
+					"### 三级标题\n\n" +
+					"# 二、字体\n" +
+					"*斜体*\n" +
+					"**加粗**\n\n" +
+					"# 三、列表 \n" +
+					"- 无序列表 1 \n" +
+					"- 无序列表 2\n" +
+					"  - 无序列表 2.1\n" +
+					"  - 无序列表 2.2\n" +
+					"1. 有序列表 1\n" +
+					"2. 有序列表 2\n\n" +
+					"# 四、引用\n" +
+					"> 一级引用\n" +
+					">> 二级引用\n" +
+					">>> 三级引用\n\n" +
+					"# 五、链接\n" +
+					"[这是一个链接](https://work.weixin.qq.com/api/doc)\n" +
+					"![](https://res.mail.qq.com/node/ww/wwopenmng/images/independent/doc/test_pic_msg1.png)\n\n" +
+					"# 六、分割线\n" +
+					"---\n\n" +
+					"# 七、代码\n" +
+					"`这是行内代码`\n" +
+					"```\n" +
+					"这是独立代码块\n" +
+					"```\n\n" +
+					"# 八、表格\n" +
+					"| 姓名 | 文化衫尺寸 | 收货地址 |\n" +
+					"| :--- | :---: | ---: |\n" +
+					"| 张三 | S | 广州 |\n" +
+					"| 李四 | L | 深圳 |",
+				).
+				Version(wecombot.MarkdownVersionV2).
+				Build(),
+		},
+		{
+			name: "File Message",
+			msg: wecombot.File().
+				LocalPath("main.go").
+				Build(),
+		},
+		{
+			name: "News Message",
+			msg: wecombot.News().
+				AddArticle(
+					"Go-Sender Example",
+					"Testing WeCom Bot News Message",
+					"https://github.com/shellvon/go-sender",
+					"https://golang.org/lib/godoc/images/go-logo-blue.svg",
+				).
+				AddArticle(
+					"Second Article",
+					"Another article in the news message",
+					"https://github.com/shellvon/go-sender/blob/main/docs/getting-started.md",
+					"https://golang.org/lib/godoc/images/cloud.png",
+				).
+				Build(),
+		},
+		{
+			name: "Template Card (Text Notice)",
+			msg: wecombot.Card(wecombot.CardTypeTextNotice).
+				MainTitle("Go-Sender Demo", "Testing Template Card").
+				SubTitle("This is a text notice template card.\nClick to view more details.").
+				JumpURL("https://github.com/shellvon/go-sender").
+				Build(),
+		},
+		{
+			name: "Template Card (News Notice)",
+			msg: wecombot.Card(wecombot.CardTypeNewsNotice).
+				MainTitle("Go-Sender News", "Important Updates").
+				CardImage("https://golang.org/lib/godoc/images/go-logo-blue.svg", 1.8).
+				ImageTextArea(
+					"Latest Release",
+					"Check out our new features and improvements",
+					"https://golang.org/lib/godoc/images/cloud.png",
+					"https://github.com/shellvon/go-sender/releases",
+				).
+				AddVerticalContent("New Features", "Support for all message types").
+				AddVerticalContent("Improvements", "Enhanced error handling").
+				JumpURL("https://github.com/shellvon/go-sender/releases").
+				Build(),
+		},
+	}
+
+	// Send all messages
+	for _, m := range messages {
+		log.Printf("Sending %s...", m.name)
+		err = prov.Send(context.Background(), m.msg, &core.ProviderSendOptions{
+			HTTPClient: newLoggingHTTPClient(),
+		})
+		if err != nil {
+			log.Printf("Failed to send %s: %v", m.name, err)
+		} else {
+			log.Printf("Successfully sent %s!", m.name)
+		}
+		// Sleep for 2 seconds between messages to avoid hitting rate limits
+		time.Sleep(2 * time.Second)
 	}
 }
 
