@@ -15,29 +15,46 @@ const (
 	// DefaultUserAgent is the default User-Agent for HTTP requests.
 	DefaultUserAgent = "go-sender/1.0.0"
 	// DefaultHTTPTimeout is the default timeout for HTTP requests.
-	DefaultHTTPTimeout   = 30 * time.Second
-	defaultMaxAttempts   = 3
-	defaultInitialDelay  = 100 * time.Millisecond
-	defaultMaxDelay      = 30 * time.Second
+	DefaultHTTPTimeout = 30 * time.Second
+	// defaultMaxAttempts specifies the default maximum number of retry attempts.
+	defaultMaxAttempts = 3
+	// defaultInitialDelay specifies the default initial delay before the first retry.
+	defaultInitialDelay = 100 * time.Millisecond
+	// defaultMaxDelay specifies the default maximum delay between retries.
+	defaultMaxDelay = 30 * time.Second
+	// defaultBackoffFactor specifies the default factor by which the delay increases with each attempt.
 	defaultBackoffFactor = 2.0
-	DefaultTimeout       = 30 * time.Second
-	maxIdleConns         = 100
-	maxIdleConnsPerHost  = 10
-	idleConnTimeout      = 90 * time.Second
+	// DefaultTimeout specifies the default timeout for send operations.
+	DefaultTimeout = 30 * time.Second
+	// maxIdleConns specifies the maximum number of idle (keep-alive) connections to keep open.
+	maxIdleConns = 100
+	// maxIdleConnsPerHost specifies the maximum idle (keep-alive) connections to keep per-host.
+	maxIdleConnsPerHost = 10
+	// idleConnTimeout specifies the amount of time an idle (keep-alive) connection will remain open before closing itself.
+	idleConnTimeout = 90 * time.Second
 )
 
+// BodyType represents the type of a message body for HTTP requests.
 type BodyType int
 
 const (
+	// BodyTypeNone indicates no specific body type.
 	BodyTypeNone BodyType = iota
+	// BodyTypeJSON indicates a JSON body type.
 	BodyTypeJSON
+	// BodyTypeForm indicates a form-encoded body type.
 	BodyTypeForm
+	// BodyTypeText indicates a plain text body type.
 	BodyTypeText
+	// BodyTypeXML indicates an XML body type.
 	BodyTypeXML
+	// BodyTypeRaw indicates a raw binary body type.
 	BodyTypeRaw
 )
 
-//nolint:gochecknoglobals // constant mapping table, safe as global
+// bodyTypeToString maps BodyType values to their string representations.
+//
+//nolint:gochecknoglobals // constant mapping table, safe as global.
 var bodyTypeToString = map[BodyType]string{
 	BodyTypeNone: "none",
 	BodyTypeJSON: "json",
@@ -47,7 +64,9 @@ var bodyTypeToString = map[BodyType]string{
 	BodyTypeRaw:  "raw",
 }
 
-//nolint:gochecknoglobals // reverse lookup table, safe as global
+// stringToBodyType maps string representations to BodyType values.
+//
+//nolint:gochecknoglobals // reverse lookup table, safe as global.
 var stringToBodyType = map[string]BodyType{
 	"none": BodyTypeNone,
 	"json": BodyTypeJSON,
@@ -57,7 +76,7 @@ var stringToBodyType = map[string]BodyType{
 	"raw":  BodyTypeRaw,
 }
 
-// String implements fmt.Stringer for human-readable output.
+// String implements fmt.Stringer for human-readable output of BodyType.
 func (b *BodyType) String() string {
 	if b == nil {
 		return "unknown"
@@ -68,7 +87,7 @@ func (b *BodyType) String() string {
 	return "unknown"
 }
 
-// ContentType returns the corresponding HTTP Content-Type header value.
+// ContentType returns the corresponding HTTP Content-Type header value for the BodyType.
 func (b *BodyType) ContentType() string {
 	if b == nil {
 		return ""
@@ -123,12 +142,13 @@ func DefaultHTTPClient() *http.Client {
 }
 
 // EnsureHTTPClient ensures that the HTTP client has a default User-Agent.
+// If the provided client is nil, a default client is created.
 func EnsureHTTPClient(client *http.Client) *http.Client {
 	if client == nil {
 		client = DefaultHTTPClient()
 	}
 
-	// Ensure User-Agent is set
+	// Ensure User-Agent is set.
 	if client.Transport == nil {
 		client.Transport = &http.Transport{}
 	}
@@ -138,20 +158,20 @@ func EnsureHTTPClient(client *http.Client) *http.Client {
 
 // SendOptions manages all configurations related to sending notifications.
 type SendOptions struct {
-	// Whether to send asynchronously.
+	// Async indicates whether to send asynchronously.
 	Async bool
-	// Priority (1-10, 10 is highest).
+	// Priority (1-10, 10 is highest) specifies the priority of the message.
 	Priority int
-	// Time until which sending should be delayed.
+	// DelayUntil specifies the exact time until which sending should be delayed.
 	// This field is only effective when `Async` is set to `true`.
 	DelayUntil *time.Time
-	// Send operation timeout.
+	// Timeout specifies the send operation timeout.
 	Timeout time.Duration
-	// Additional metadata.
+	// Metadata holds additional metadata for the message.
 	Metadata map[string]interface{}
-	// Disable circuit breaker middleware.
+	// DisableCircuitBreaker indicates whether to disable the circuit breaker middleware for this send.
 	DisableCircuitBreaker bool
-	// Disable rate limiter.
+	// DisableRateLimiter indicates whether to disable the rate limiter middleware for this send.
 	DisableRateLimiter bool
 	// Callback is an optional function that will be executed after the message
 	// has been fully processed (either successfully sent or failed after all retries).
@@ -165,44 +185,55 @@ type SendOptions struct {
 	// Specifying a Callback also implies that `Async` must be set to `true`
 	// for the callback to be effective, as callbacks are not supported for synchronous sends.
 	Callback func(error)
-	// Custom retry policy (overrides global), deserializable from queue will lost the filter function.
+	// RetryPolicy allows for a custom retry policy for this send operation (overrides global).
+	// Note: The Filter function within RetryPolicy will be lost if deserialized from a queue.
 	RetryPolicy *RetryPolicy
-	// HTTPClient allows per-send custom HTTP client.
-	// Only affects HTTP-based providers; SMTP/email is not affected.
-	// Optional: custom HTTP client for this send.
+	// HTTPClient allows a per-send custom HTTP client.
+	// Only affects HTTP-based providers; SMTP/email providers are not affected.
+	// This client is optional.
 	HTTPClient *http.Client
 }
 
-// NotificationMiddleware holds configurations for notification middlewares.
+// NotificationMiddleware holds configurations for various notification middlewares.
 type NotificationMiddleware struct {
-	RateLimiter    RateLimiter      // Rate limiting configuration.
-	Retry          *RetryPolicy     // Retry configuration.
-	Queue          Queue            // Queue configuration.
-	CircuitBreaker CircuitBreaker   // Circuit breaker configuration.
-	Metrics        MetricsCollector // Metrics collection configuration.
+	// RateLimiter specifies the rate limiting configuration.
+	RateLimiter RateLimiter
+	// Retry specifies the retry configuration.
+	Retry *RetryPolicy
+	// Queue specifies the queue configuration.
+	Queue Queue
+	// CircuitBreaker specifies the circuit breaker configuration.
+	CircuitBreaker CircuitBreaker
+	// Metrics specifies the metrics collection configuration.
+	Metrics MetricsCollector
 }
 
-// RetryPolicy manages unified retry settings.
+// RetryPolicy manages unified retry settings for message sending.
 type RetryPolicy struct {
-	MaxAttempts    int           // Maximum number of retry attempts.
-	InitialDelay   time.Duration // Initial delay before the first retry.
-	MaxDelay       time.Duration // Maximum delay between retries.
-	BackoffFactor  float64       // Factor by which the delay increases with each attempt.
-	Filter         RetryFilter   // Custom filter function to determine if retry should occur.
-	currentAttempt int           // Internal state for managing retry attempts.
-	rng            *rand.Rand    // Random number generator.
-	mu             sync.RWMutex  // Mutex for thread safety.
+	// MaxAttempts specifies the maximum number of retry attempts.
+	MaxAttempts int
+	// InitialDelay specifies the initial delay before the first retry.
+	InitialDelay time.Duration
+	// MaxDelay specifies the maximum delay between retries.
+	MaxDelay time.Duration
+	// BackoffFactor specifies the factor by which the delay increases with each attempt.
+	BackoffFactor float64
+	// Filter is a custom filter function to determine if a retry should occur.
+	Filter RetryFilter
+	// currentAttempt tracks the internal state for managing retry attempts.
+	currentAttempt int
+	// mu protects the currentAttempt field for concurrent access.
+	mu sync.RWMutex
 }
 
 // NewRetryPolicy creates a new RetryPolicy with the given options.
 func NewRetryPolicy(opts ...RetryOption) *RetryPolicy {
 	policy := &RetryPolicy{
-		MaxAttempts:   defaultMaxAttempts,            // Default to 3 attempts
-		InitialDelay:  defaultInitialDelay,           // Default to 100ms
-		MaxDelay:      defaultMaxDelay,               // Default to 30 seconds max delay
-		BackoffFactor: defaultBackoffFactor,          // Default to exponential backoff
-		Filter:        DefaultRetryFilter(nil, true), // Default to retry on all errors
-		rng:           rand.New(rand.NewSource(time.Now().UnixNano())),
+		MaxAttempts:   defaultMaxAttempts,            // Default to 3 attempts.
+		InitialDelay:  defaultInitialDelay,           // Default to 100ms.
+		MaxDelay:      defaultMaxDelay,               // Default to 30 seconds max delay.
+		BackoffFactor: defaultBackoffFactor,          // Default to exponential backoff.
+		Filter:        DefaultRetryFilter(nil, true), // Default to retry on all errors.
 	}
 	for _, opt := range opts {
 		opt(policy)
@@ -210,9 +241,9 @@ func NewRetryPolicy(opts ...RetryOption) *RetryPolicy {
 	return policy
 }
 
-// Reset resets the retry policy's current attempt.
+// Reset resets the retry policy's current attempt count to zero.
 func (r *RetryPolicy) Reset() {
-	r.mu.Lock()
+	r.mu.Lock() // Acquire write lock for initialization.
 	defer r.mu.Unlock()
 	r.currentAttempt = 0
 }
@@ -227,7 +258,7 @@ func (r *RetryPolicy) ShouldRetry(attempt int, err error) bool {
 		return false
 	}
 
-	// If no filter is provided, don't retry
+	// If no filter is provided, do not retry.
 	if r.Filter == nil {
 		return false
 	}
@@ -241,66 +272,70 @@ func (r *RetryPolicy) ShouldRetry(attempt int, err error) bool {
 // Exponential backoff calculation:
 //   - The attempt parameter is 0-indexed for the first attempt, 1 for the second, etc.
 //   - For exponential backoff, the factor should be raised to the power of the attempt number.
-//     So, for attempt 0, delay = initialDelay * backoffFactor^0 = initialDelay
-//   - For attempt 1, delay = initialDelay * backoffFactor^1 And so on.
+//     So, for attempt 0, delay = initialDelay * backoffFactor^0 = initialDelay.
+//   - For attempt 1, delay = initialDelay * backoffFactor^1. And so on.
 func (r *RetryPolicy) NextDelay(attempt int, _ error) time.Duration {
 	calculatedDelay := time.Duration(float64(r.InitialDelay) * math.Pow(r.BackoffFactor, float64(attempt)))
+
+	// Apply full jitter using the package-level default random number generator, which is concurrency safe.
 	if calculatedDelay > 0 {
-		calculatedDelay = time.Duration(r.rng.Int63n(int64(calculatedDelay) + 1))
+		calculatedDelay = time.Duration(rand.Int63n(int64(calculatedDelay) + 1))
 	}
-	// Cap the delay at MaxDelay
+
+	// Cap the delay at MaxDelay.
 	if calculatedDelay > r.MaxDelay {
 		calculatedDelay = r.MaxDelay
 	}
+
 	return calculatedDelay
 }
 
 // RetryOption is a function type for configuring retry behavior.
 type RetryOption func(*RetryPolicy)
 
-// WithRetryMaxAttempts sets the maximum number of retry attempts.
+// WithRetryMaxAttempts sets the maximum number of retry attempts for the policy.
 func WithRetryMaxAttempts(attempts int) RetryOption {
 	return func(c *RetryPolicy) {
 		c.MaxAttempts = attempts
 	}
 }
 
-// WithRetryInitialDelay sets the initial delay before the first retry.
+// WithRetryInitialDelay sets the initial delay before the first retry for the policy.
 func WithRetryInitialDelay(delay time.Duration) RetryOption {
 	return func(c *RetryPolicy) {
 		c.InitialDelay = delay
 	}
 }
 
-// WithRetryMaxDelay sets the maximum delay between retries.
+// WithRetryMaxDelay sets the maximum delay between retries for the policy.
 func WithRetryMaxDelay(delay time.Duration) RetryOption {
 	return func(c *RetryPolicy) {
 		c.MaxDelay = delay
 	}
 }
 
-// WithRetryBackoffFactor sets the factor by which the delay increases with each attempt.
+// WithRetryBackoffFactor sets the factor by which the delay increases with each attempt for the policy.
 func WithRetryBackoffFactor(factor float64) RetryOption {
 	return func(c *RetryPolicy) {
 		c.BackoffFactor = factor
 	}
 }
 
-// WithRetryFilter sets the custom filter function to determine if retry should occur.
+// WithRetryFilter sets the custom filter function to determine if retry should occur for the policy.
 func WithRetryFilter(filter RetryFilter) RetryOption {
 	return func(c *RetryPolicy) {
 		c.Filter = filter
 	}
 }
 
-// DefaultRetryFilter creates a default retry filter that uses retryable errors and optional classifier fallback.
+// DefaultRetryFilter creates a default retry filter that uses retryable errors and an optional classifier fallback.
 func DefaultRetryFilter(retryableErrors []error, fallbackToClassifier bool) RetryFilter {
 	return func(_ int, err error) bool {
 		if err == nil {
 			return false
 		}
 
-		// Check if error is in retryable errors list
+		// Check if error is in the retryable errors list.
 		if len(retryableErrors) > 0 {
 			for _, retryableErr := range retryableErrors {
 				if errors.Is(err, retryableErr) {
@@ -309,7 +344,7 @@ func DefaultRetryFilter(retryableErrors []error, fallbackToClassifier bool) Retr
 			}
 		}
 
-		// Fallback to classifier if enabled
+		// Fallback to classifier if enabled.
 		if fallbackToClassifier {
 			classifier := NewDefaultErrorClassifier()
 			return classifier.IsRetryableError(err)
@@ -381,7 +416,6 @@ func WithSendDisableRateLimiter(disable bool) SendOption {
 }
 
 // WithSendCallback sets the callback function to be executed after message processing.
-// Note: callback is only effective for local/in-memory queue or async goroutine scenarios, and will not be called in distributed queues (such as Redis).
 func WithSendCallback(callback func(error)) SendOption {
 	return func(o *SendOptions) {
 		o.Callback = callback
@@ -396,7 +430,6 @@ func WithSendRetryPolicy(policy *RetryPolicy) SendOption {
 }
 
 // WithSendHTTPClient sets a custom HTTP client for this send operation.
-// Only affects HTTP-based providers; SMTP/email providers are not affected.
 func WithSendHTTPClient(client *http.Client) SendOption {
 	return func(opts *SendOptions) {
 		opts.HTTPClient = EnsureHTTPClient(client)
@@ -411,7 +444,7 @@ const internalContextItemNameKey = "__gosender_internal_ctx_item_name__"
 
 // defaultSerializer is the default SendOptionsSerializer instance.
 //
-//nolint:gochecknoglobals // Reason: defaultSerializer is a global default for SendOptions serialization
+//nolint:gochecknoglobals // Reason: defaultSerializer is a global default for SendOptions serialization.
 var defaultSerializer SendOptionsSerializer = &DefaultSendOptionsSerializer{}
 
 // serializeSendOptions serializes relevant SendOptions fields to JSON for storage in Metadata.
@@ -425,9 +458,9 @@ func serializeSendOptions(
 	if metadata == nil {
 		metadata = make(map[string]interface{})
 	}
-	// Note: metadata key conflict detection removed for lint compliance
+	// Note: metadata key conflict detection removed for lint compliance.
 
-	// Preserve context information for queue recovery
+	// Preserve context information for queue recovery.
 	if itemName := GetItemNameFromCtx(ctx); itemName != "" {
 		metadata[internalContextItemNameKey] = itemName
 	}
@@ -447,20 +480,20 @@ func deserializeSendOptions(
 	metadata map[string]interface{},
 ) (context.Context, *SendOptions, error) {
 	opts := &SendOptions{
-		Metadata: metadata, // Preserve original Metadata
+		Metadata: metadata, // Preserve original Metadata.
 	}
 	if metadata == nil {
 		return ctx, opts, nil
 	}
 
-	// Restore context information from metadata
+	// Restore context information from metadata.
 	if itemName, ok := metadata[internalContextItemNameKey].(string); ok && itemName != "" {
 		ctx = WithCtxItemName(ctx, itemName)
 	}
 
 	data, ok := metadata[frameworkMetadataKey]
 	if !ok {
-		return ctx, opts, nil // Use defaults if key is missing
+		return ctx, opts, nil // Use defaults if key is missing.
 	}
 
 	dataBytes, ok := data.([]byte)
@@ -474,7 +507,7 @@ func deserializeSendOptions(
 		return nil, nil, NewSenderError(ErrCodeQueueDeserializationFailed, "failed to deserialize SendOptions", err)
 	}
 
-	// Merge deserialized options with preserved metadata
+	// Merge deserialized options with preserved metadata.
 	opts.Priority = deserializedOpts.Priority
 	opts.Timeout = deserializedOpts.Timeout
 	opts.DisableCircuitBreaker = deserializedOpts.DisableCircuitBreaker
@@ -487,19 +520,19 @@ func deserializeSendOptions(
 // Validate validates the retry policy configuration.
 func (r *RetryPolicy) Validate() error {
 	if r.MaxAttempts < 0 {
-		return NewSenderError(ErrCodeRetryPolicyInvalid, "max attempts cannot be negative", nil)
+		return NewSenderError(ErrCodeRetryPolicyInvalid, "max attempts cannot be negative.", nil)
 	}
 	if r.InitialDelay < 0 {
-		return NewSenderError(ErrCodeRetryPolicyInvalid, "initial delay cannot be negative", nil)
+		return NewSenderError(ErrCodeRetryPolicyInvalid, "initial delay cannot be negative.", nil)
 	}
 	if r.MaxDelay < 0 {
-		return NewSenderError(ErrCodeRetryPolicyInvalid, "max delay cannot be negative", nil)
+		return NewSenderError(ErrCodeRetryPolicyInvalid, "max delay cannot be negative.", nil)
 	}
 	if r.BackoffFactor <= 0 {
-		return NewSenderError(ErrCodeRetryPolicyInvalid, "backoff factor must be positive", nil)
+		return NewSenderError(ErrCodeRetryPolicyInvalid, "backoff factor must be positive.", nil)
 	}
 	if r.InitialDelay > r.MaxDelay {
-		return NewSenderError(ErrCodeRetryPolicyInvalid, "initial delay cannot be greater than max delay", nil)
+		return NewSenderError(ErrCodeRetryPolicyInvalid, "initial delay cannot be greater than max delay.", nil)
 	}
 	return nil
 }

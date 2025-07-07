@@ -308,14 +308,13 @@ func (s *DefaultSendOptionsSerializer) Deserialize(data []byte) (*SendOptions, e
 
 	// Convert serializable RetryPolicy back to RetryPolicy if present
 	if dataStruct.RetryPolicy != nil {
-		opts.RetryPolicy = &RetryPolicy{
-			MaxAttempts:   dataStruct.RetryPolicy.MaxAttempts,
-			InitialDelay:  time.Duration(dataStruct.RetryPolicy.InitialDelay),
-			MaxDelay:      time.Duration(dataStruct.RetryPolicy.MaxDelay),
-			BackoffFactor: dataStruct.RetryPolicy.BackoffFactor,
-			// Use default filter since custom filter cannot be serialized
-			Filter: DefaultRetryFilter([]error{}, true),
-		}
+		opts.RetryPolicy = NewRetryPolicy(
+			WithRetryMaxAttempts(dataStruct.RetryPolicy.MaxAttempts),
+			WithRetryInitialDelay(time.Duration(dataStruct.RetryPolicy.InitialDelay)),
+			WithRetryMaxDelay(time.Duration(dataStruct.RetryPolicy.MaxDelay)),
+			WithRetryBackoffFactor(dataStruct.RetryPolicy.BackoffFactor),
+			WithRetryFilter(DefaultRetryFilter([]error{}, true)),
+		)
 	}
 
 	return opts, nil
