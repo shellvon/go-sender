@@ -89,7 +89,11 @@ func (t *smsbaoTransformer) transformSMS(
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	if account == nil || account.APIKey == "" || account.APISecret == "" {
-		return nil, nil, NewProviderError(string(ProviderTypeSmsbao), "AUTH_ERROR", "smsbao account Key(username) and Secret(password) are required")
+		return nil, nil, NewProviderError(
+			string(ProviderTypeSmsbao),
+			"AUTH_ERROR",
+			"smsbao account Key(username) and Secret(password) are required",
+		)
 	}
 	mobiles := strings.Join(msg.Mobiles, ",")
 	content := utils.AddSignature(msg.Content, msg.SignName)
@@ -130,17 +134,33 @@ func (t *smsbaoTransformer) transformVoice(
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	// 检查语音短信的限制
 	if msg.IsIntl() {
-		return nil, nil, NewProviderError(string(ProviderTypeSmsbao), "UNSUPPORTED_COUNTRY", "voice sms only supports domestic mobile")
+		return nil, nil, NewProviderError(
+			string(ProviderTypeSmsbao),
+			"UNSUPPORTED_COUNTRY",
+			"voice sms only supports domestic mobile",
+		)
 	}
 	if len(msg.Mobiles) != 1 {
-		return nil, nil, NewProviderError(string(ProviderTypeSmsbao), "INVALID_MOBILE_NUMBER", fmt.Sprintf("smsbao voice only supports single mobile, got %d", len(msg.Mobiles)))
+		return nil, nil, NewProviderError(
+			string(ProviderTypeSmsbao),
+			"INVALID_MOBILE_NUMBER",
+			fmt.Sprintf("smsbao voice only supports single mobile, got %d", len(msg.Mobiles)),
+		)
 	}
 	if len(msg.Mobiles[0]) != 11 || msg.Mobiles[0][0] != '1' {
-		return nil, nil, NewProviderError(string(ProviderTypeSmsbao), "INVALID_MOBILE_FORMAT", "only support domestic mobile for voice sms")
+		return nil, nil, NewProviderError(
+			string(ProviderTypeSmsbao),
+			"INVALID_MOBILE_FORMAT",
+			"only support domestic mobile for voice sms",
+		)
 	}
 
 	if account == nil || account.APIKey == "" || account.APISecret == "" {
-		return nil, nil, NewProviderError(string(ProviderTypeSmsbao), "AUTH_ERROR", "smsbao account Key(username) and Secret(password) are required")
+		return nil, nil, NewProviderError(
+			string(ProviderTypeSmsbao),
+			"AUTH_ERROR",
+			"smsbao account Key(username) and Secret(password) are required",
+		)
 	}
 
 	// 构建查询参数

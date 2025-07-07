@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/shellvon/go-sender/core"
-	"github.com/shellvon/go-sender/utils"
 )
 
 const (
@@ -102,9 +101,6 @@ func (t *telegramTransformer) Transform(
 
 // handleTelegramResponse 处理 Telegram API 响应.
 func handleTelegramResponse(statusCode int, body []byte) error {
-	if !utils.IsAcceptableStatus(statusCode) {
-		return fmt.Errorf("telegram API returned non-OK status: %d", statusCode)
-	}
 	var result struct {
 		OK          bool   `json:"ok"`
 		ErrorCode   int    `json:"error_code,omitempty"`

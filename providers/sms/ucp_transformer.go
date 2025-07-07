@@ -52,7 +52,11 @@ func (t *ucpTransformer) Transform(
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
-		return nil, nil, NewProviderError(string(SubProviderUcp), "INVALID_MESSAGE_TYPE", fmt.Sprintf("unsupported message type for UCP: %T", msg))
+		return nil, nil, NewProviderError(
+			string(SubProviderUcp),
+			"INVALID_MESSAGE_TYPE",
+			fmt.Sprintf("unsupported message type for UCP: %T", msg),
+		)
 	}
 
 	// Apply UCP-specific defaults
@@ -62,9 +66,17 @@ func (t *ucpTransformer) Transform(
 	case SMSText:
 		return t.transformSMS(smsMsg, account)
 	case Voice, MMS:
-		return nil, nil, NewProviderError(string(SubProviderUcp), "UNSUPPORTED_MESSAGE_TYPE", fmt.Sprintf("unsupported message type: %v", smsMsg.Type))
+		return nil, nil, NewProviderError(
+			string(SubProviderUcp),
+			"UNSUPPORTED_MESSAGE_TYPE",
+			fmt.Sprintf("unsupported message type: %v", smsMsg.Type),
+		)
 	default:
-		return nil, nil, NewProviderError(string(SubProviderUcp), "UNSUPPORTED_MESSAGE_TYPE", fmt.Sprintf("unsupported message type: %v", smsMsg.Type))
+		return nil, nil, NewProviderError(
+			string(SubProviderUcp),
+			"UNSUPPORTED_MESSAGE_TYPE",
+			fmt.Sprintf("unsupported message type: %v", smsMsg.Type),
+		)
 	}
 }
 

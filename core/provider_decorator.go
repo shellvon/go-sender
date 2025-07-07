@@ -144,7 +144,13 @@ func (pd *ProviderDecorator) processQueueItem(ctx context.Context, item *QueueIt
 
 	// If ScheduledAt is set and is in the future, wait until that time
 	if item.ScheduledAt != nil && item.ScheduledAt.After(time.Now()) {
-		pd.logInfo(fmt.Sprintf("Message %s scheduled for future processing, waiting until %s", item.ID, item.ScheduledAt.Format(time.RFC3339)))
+		pd.logInfo(
+			fmt.Sprintf(
+				"Message %s scheduled for future processing, waiting until %s",
+				item.ID,
+				item.ScheduledAt.Format(time.RFC3339),
+			),
+		)
 		select {
 		case <-time.After(time.Until(*item.ScheduledAt)):
 			// Waited successfully, continue processing

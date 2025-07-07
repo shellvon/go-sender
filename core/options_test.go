@@ -2,7 +2,6 @@ package core_test
 
 import (
 	"errors"
-	"math"
 	"testing"
 	"time"
 
@@ -44,7 +43,7 @@ func TestRetryPolicy_ShouldRetryAndNextDelay(t *testing.T) {
 	}
 
 	// Calculate expected max delay without jitter for attempt 1
-	expectedMaxDelay := time.Duration(float64(p.InitialDelay) * math.Pow(p.BackoffFactor, 1))
+	expectedMaxDelay := time.Duration(float64(p.InitialDelay) * p.BackoffFactor)
 	delay := p.NextDelay(1, nil)
 
 	// With full jitter, the delay should be between 0 and expectedMaxDelay (inclusive)
@@ -370,13 +369,13 @@ func TestRetryPolicy_EdgeCases(t *testing.T) {
 
 	// 测试NextDelay边界情况 - 注意NextDelay的计算公式，并检查范围而非固定值
 	delay := policy.NextDelay(1, nil)
-	expectedDelay1Max := time.Duration(float64(policy.InitialDelay) * math.Pow(policy.BackoffFactor, 1))
+	expectedDelay1Max := time.Duration(float64(policy.InitialDelay) * policy.BackoffFactor)
 	if delay < 0 || delay > expectedDelay1Max {
 		t.Errorf("Expected NextDelay for attempt 1 to be between 0 and %v, got %v", expectedDelay1Max, delay)
 	}
 
 	delay = policy.NextDelay(2, nil)
-	expectedDelay2Max := time.Duration(float64(policy.InitialDelay) * math.Pow(policy.BackoffFactor, 2))
+	expectedDelay2Max := time.Duration(float64(policy.InitialDelay) * policy.BackoffFactor * policy.BackoffFactor)
 	if delay < 0 || delay > expectedDelay2Max {
 		t.Errorf("Expected NextDelay for attempt 2 to be between 0 and %v, got %v", expectedDelay2Max, delay)
 	}

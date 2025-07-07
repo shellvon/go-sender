@@ -102,7 +102,11 @@ func (t *volcTransformer) transformSMS(
 	}
 	bodyJSON, err := json.Marshal(body)
 	if err != nil {
-		return nil, nil, NewProviderError(string(SubProviderVolc), "JSON_MARSHAL_ERROR", fmt.Sprintf("failed to marshal volc request body: %v", err))
+		return nil, nil, NewProviderError(
+			string(SubProviderVolc),
+			"JSON_MARSHAL_ERROR",
+			fmt.Sprintf("failed to marshal volc request body: %v", err),
+		)
 	}
 
 	// 只维护一份qs

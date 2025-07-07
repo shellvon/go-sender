@@ -2,11 +2,15 @@ package lark
 
 import (
 	"errors"
+
+	"github.com/shellvon/go-sender/core"
 )
 
 // TextMessage represents a text message for Lark/Feishu.
 type TextMessage struct {
-	BaseMessage
+	*core.DefaultMessage // Embed DefaultMessage
+
+	BaseMessage *BaseMessage
 
 	Content TextContent `json:"content"`
 }
@@ -33,8 +37,9 @@ func (b *TextBuilder) Content(text string) *TextBuilder {
 // Build assembles a *TextMessage.
 func (b *TextBuilder) Build() *TextMessage {
 	return &TextMessage{
-		BaseMessage: BaseMessage{MsgType: TypeText},
-		Content:     TextContent{Text: b.text},
+		DefaultMessage: &core.DefaultMessage{}, // Correctly initialize embedded struct pointer
+		BaseMessage:    &BaseMessage{MsgType: TypeText},
+		Content:        TextContent{Text: b.text},
 	}
 }
 
@@ -46,6 +51,11 @@ func NewTextMessage(text string) *TextMessage {
 // GetMsgType returns the message type.
 func (m *TextMessage) GetMsgType() MessageType {
 	return TypeText
+}
+
+// ProviderType returns the provider type.
+func (m *TextMessage) ProviderType() core.ProviderType {
+	return core.ProviderTypeLark
 }
 
 // Validate validates the text message.

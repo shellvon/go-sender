@@ -77,7 +77,11 @@ func (t *submailTransformer) Transform(
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	smsMsg, ok := msg.(*Message)
 	if !ok {
-		return nil, nil, NewProviderError(string(SubProviderSubmail), "INVALID_MESSAGE_TYPE", fmt.Sprintf("unsupported message type for Submail: %T", msg))
+		return nil, nil, NewProviderError(
+			string(SubProviderSubmail),
+			"INVALID_MESSAGE_TYPE",
+			fmt.Sprintf("unsupported message type for Submail: %T", msg),
+		)
 	}
 
 	// Apply Submail-specific defaults
@@ -91,7 +95,11 @@ func (t *submailTransformer) Transform(
 	case MMS:
 		return t.transformMMS(smsMsg, account)
 	default:
-		return nil, nil, NewProviderError(string(SubProviderSubmail), "UNSUPPORTED_MESSAGE_TYPE", fmt.Sprintf("unsupported message type: %v", smsMsg.Type))
+		return nil, nil, NewProviderError(
+			string(SubProviderSubmail),
+			"UNSUPPORTED_MESSAGE_TYPE",
+			fmt.Sprintf("unsupported message type: %v", smsMsg.Type),
+		)
 	}
 }
 
@@ -132,13 +140,25 @@ func (t *submailTransformer) transformSMS(
 		return nil, nil, NewProviderError(string(SubProviderSubmail), "MISSING_PARAM", "mobiles is required")
 	}
 	if msg.Content == "" && msg.TemplateID == "" {
-		return nil, nil, NewProviderError(string(SubProviderSubmail), "MISSING_PARAM", "content or templateID is required")
+		return nil, nil, NewProviderError(
+			string(SubProviderSubmail),
+			"MISSING_PARAM",
+			"content or templateID is required",
+		)
 	}
 	if msg.IsIntl() && len(msg.Mobiles) > 1000 {
-		return nil, nil, NewProviderError(string(SubProviderSubmail), "EXCEEDS_LIMIT", "international sms: at most 1000 mobiles per request")
+		return nil, nil, NewProviderError(
+			string(SubProviderSubmail),
+			"EXCEEDS_LIMIT",
+			"international sms: at most 1000 mobiles per request",
+		)
 	}
 	if !msg.IsIntl() && len(msg.Mobiles) > 10000 {
-		return nil, nil, NewProviderError(string(SubProviderSubmail), "EXCEEDS_LIMIT", "domestic sms: at most 10000 mobiles per request")
+		return nil, nil, NewProviderError(
+			string(SubProviderSubmail),
+			"EXCEEDS_LIMIT",
+			"domestic sms: at most 10000 mobiles per request",
+		)
 	}
 	apiPath := t.getSMSPath(msg)
 	return t.buildSubmailRequest(msg, account, apiPath, t.buildSMSParams)
@@ -186,10 +206,18 @@ func (t *submailTransformer) transformVoice(
 		return nil, nil, NewProviderError(string(SubProviderSubmail), "MISSING_PARAM", "mobiles is required")
 	}
 	if msg.Content == "" && msg.TemplateID == "" {
-		return nil, nil, NewProviderError(string(SubProviderSubmail), "MISSING_PARAM", "voice content or templateID is required")
+		return nil, nil, NewProviderError(
+			string(SubProviderSubmail),
+			"MISSING_PARAM",
+			"voice content or templateID is required",
+		)
 	}
 	if len(msg.Mobiles) > 1 {
-		return nil, nil, NewProviderError(string(SubProviderSubmail), "EXCEEDS_LIMIT", "voice only supports single send")
+		return nil, nil, NewProviderError(
+			string(SubProviderSubmail),
+			"EXCEEDS_LIMIT",
+			"voice only supports single send",
+		)
 	}
 	apiPath := t.getVoicePath(msg)
 	return t.buildSubmailRequest(msg, account, apiPath, t.buildVoiceParams)

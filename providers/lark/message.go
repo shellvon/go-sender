@@ -30,12 +30,11 @@ type Message interface {
 	GetMsgType() MessageType
 }
 
-// BaseMessage is the base message structure
+// BaseMessage is the base message structure.
 type BaseMessage struct {
 	core.DefaultMessage
 
 	MsgType MessageType `json:"msg_type"`
-	MsgID   string      `json:"msg_id,omitempty"`
 }
 
 // GetMsgType implements the Message interface.
