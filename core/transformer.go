@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"net/http"
 	"net/url"
 	"time"
 )
@@ -24,5 +25,7 @@ type HTTPRequestSpec struct {
 	Timeout     time.Duration     `json:"timeout"`
 }
 
-// ResponseHandler defines the interface for handling HTTP responses.
-type ResponseHandler func(statusCode int, body []byte) error
+// ResponseHandler processes an HTTP response. Implementations must ensure resp.Body is CLOSED.
+// A common pattern is to call utils.ReadAndClose(resp) to obtain body bytes
+// then perform validation/decoding.
+type ResponseHandler func(resp *http.Response) error

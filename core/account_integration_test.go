@@ -421,7 +421,7 @@ func TestAccount_ConfigurationExample(t *testing.T) {
 	}
 }
 
-//nolint:gocyclo,gocognit // test function naturally complex with many subtests and branches
+//nolint:gocyclo,gocognit,cyclop  // test function naturally complex with many subtests and branches
 func TestAccountConfigDynamicUpdate(t *testing.T) {
 	t.Run("Basic CRUD Operations", func(t *testing.T) {
 		config := &core.BaseConfig[*core.BaseAccount]{}

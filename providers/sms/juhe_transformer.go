@@ -2,8 +2,6 @@ package sms
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/url"
 	"sort"
@@ -11,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/shellvon/go-sender/core"
-	"github.com/shellvon/go-sender/utils"
 )
 
 // @ProviderName: Juhe / 聚合数据
@@ -35,72 +32,37 @@ const (
 	juheMMSAPIPath      = "/caixinv2/send"
 )
 
-type juheTransformer struct{}
+type juheTransformer struct {
+	*BaseTransformer
+}
+
+func newJuheTransformer() *juheTransformer {
+	transformer := &juheTransformer{}
+	transformer.BaseTransformer = NewBaseTransformer(
+		string(core.ProviderTypeSMS),
+		string(SubProviderJuhe),
+		&core.ResponseHandlerConfig{
+			SuccessField:      "error_code",
+			SuccessValue:      "0",
+			ErrorCodeField:    "error_code",
+			ErrorMessageField: "reason",
+			ErrorField:        "error_code",
+		},
+		WithSMSHandler(transformer.transformSMS),
+		WithMMSHandler(transformer.transformMMS),
+	)
+	return transformer
+}
 
 func init() {
-	RegisterTransformer(string(SubProviderJuhe), &juheTransformer{})
-}
-
-func (t *juheTransformer) CanTransform(msg core.Message) bool {
-	smsMsg, ok := msg.(*Message)
-	if !ok {
-		return false
-	}
-	return smsMsg.SubProvider == string(SubProviderJuhe)
-}
-
-func (t *juheTransformer) Transform(
-	_ context.Context,
-	msg core.Message,
-	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
-	smsMsg, ok := msg.(*Message)
-	if !ok {
-		return nil, nil, NewProviderError(
-			string(SubProviderJuhe),
-			"INVALID_MESSAGE_TYPE",
-			"invalid message type for juheTransformer",
-		)
-	}
-	if err := t.validateMessage(smsMsg); err != nil {
-		return nil, nil, NewProviderError(
-			string(SubProviderJuhe),
-			"VALIDATION_FAILED",
-			fmt.Sprintf("message validation failed: %v", err),
-		)
-	}
-
-	switch smsMsg.Type {
-	case SMSText:
-		return t.transformSMS(smsMsg, account)
-	case Voice:
-		return nil, nil, NewProviderError(
-			string(SubProviderJuhe),
-			"UNSUPPORTED_MESSAGE_TYPE",
-			"Juhe does not support voice messages",
-		)
-	case MMS:
-		return t.transformMMS(smsMsg, account)
-	default:
-		return nil, nil, NewProviderError(
-			string(SubProviderJuhe),
-			"UNSUPPORTED_MESSAGE_TYPE",
-			fmt.Sprintf("unsupported message type: %v", smsMsg.Type),
-		)
-	}
-}
-
-func (t *juheTransformer) validateMessage(msg *Message) error {
-	if len(msg.Mobiles) == 0 {
-		return NewProviderError(string(SubProviderJuhe), "MISSING_PARAM", "at least one mobile number is required")
-	}
-	return nil
+	RegisterTransformer(string(SubProviderJuhe), newJuheTransformer())
 }
 
 // transformSMS 处理短信（国内/国际）
 //   - 国内短信 API: https://www.juhe.cn/docs/api/id/54
 //   - 国际短信 API: https://www.juhe.cn/docs/api/id/357
 func (t *juheTransformer) transformSMS(
+	_ context.Context,
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
@@ -129,12 +91,13 @@ func (t *juheTransformer) transformSMS(
 		Body:     body,
 		BodyType: core.BodyTypeForm,
 	}
-	return reqSpec, t.handleJuheResponse, nil
+	return reqSpec, nil, nil
 }
 
 // transformMMS 处理彩信/视频短信
 //   - API: https://www.juhe.cn/docs/api/id/363
 func (t *juheTransformer) transformMMS(
+	_ context.Context,
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
@@ -150,26 +113,7 @@ func (t *juheTransformer) transformMMS(
 		Body:     body,
 		BodyType: core.BodyTypeForm,
 	}
-	return reqSpec, t.handleJuheResponse, nil
-}
-
-func (t *juheTransformer) handleJuheResponse(statusCode int, body []byte) error {
-	if !utils.IsAcceptableStatus(statusCode) {
-		return NewProviderError(string(SubProviderJuhe), strconv.Itoa(statusCode), string(body))
-	}
-	var response map[string]interface{}
-	if err := json.Unmarshal(body, &response); err != nil {
-		return NewProviderError(string(SubProviderJuhe), "PARSE_ERROR", err.Error())
-	}
-
-	if response["error_code"] != float64(0) {
-		return NewProviderError(
-			string(SubProviderJuhe),
-			strconv.FormatFloat(response["error_code"].(float64), 'f', -1, 64),
-			response["reason"].(string),
-		)
-	}
-	return nil
+	return reqSpec, nil, nil
 }
 
 // 如果您的模板里面有变量则需要提交此参数,如:#code#=123456,参数需要urlencode

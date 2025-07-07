@@ -6,10 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/shellvon/go-sender/core"
-	"github.com/shellvon/go-sender/utils"
 )
 
 // @ProviderName: EmailJS
@@ -108,11 +106,14 @@ func (t *emailJSTransformer) transformEmail(
 		return nil, nil, fmt.Errorf("failed to marshal EmailJS request body: %w", err)
 	}
 	return &core.HTTPRequestSpec{
-		Method:   http.MethodPost,
-		URL:      defaultEmailjsAPIPath,
-		Body:     bodyData,
-		BodyType: core.BodyTypeJSON,
-	}, t.handleEmailJSResponse, nil
+			Method:   http.MethodPost,
+			URL:      defaultEmailjsAPIPath,
+			Body:     bodyData,
+			BodyType: core.BodyTypeJSON,
+		}, core.NewResponseHandler(&core.ResponseHandlerConfig{
+			ResponseType:   core.BodyTypeText,
+			SuccessPattern: "OK",
+		}), nil
 }
 
 // prepareTemplateData intelligently merges message fields with template data
@@ -171,18 +172,4 @@ func isEmptyValue(v interface{}) bool {
 	default:
 		return false
 	}
-}
-
-// handleEmailJSResponse handles EmailJS API response.
-func (t *emailJSTransformer) handleEmailJSResponse(statusCode int, body []byte) error {
-	if !utils.IsAcceptableStatus(statusCode) {
-		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
-	}
-
-	// EmailJS returns "OK" on success
-	if strings.Contains(string(body), "OK") {
-		return nil
-	}
-
-	return fmt.Errorf("EmailJS send failed: %s", string(body))
 }

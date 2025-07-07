@@ -32,86 +32,30 @@ const (
 )
 
 // huaweiTransformer implements HTTPRequestTransformer for Huawei Cloud SMS.
-type huaweiTransformer struct{}
+type huaweiTransformer struct {
+	*BaseTransformer
+}
 
 // init automatically registers the Huawei transformer.
 func init() {
-	RegisterTransformer(string(SubProviderHuawei), &huaweiTransformer{})
+	RegisterTransformer(string(SubProviderHuawei), newHuaweiTransformer())
 }
 
-// CanTransform checks if this transformer can handle the given message.
-func (t *huaweiTransformer) CanTransform(msg core.Message) bool {
-	smsMsg, ok := msg.(*Message)
-	if !ok {
-		return false
-	}
-	return smsMsg.SubProvider == string(SubProviderHuawei)
-}
-
-// Transform converts a Huawei SMS message to HTTP request specification
-//
-// - 短信API(国内/国际): https://support.huaweicloud.com/intl/zh-cn/api-msgsms/sms_05_0001.html
-func (t *huaweiTransformer) Transform(
-	_ context.Context,
-	msg core.Message,
-	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
-	smsMsg, ok := msg.(*Message)
-	if !ok {
-		return nil, nil, NewProviderError(
-			string(SubProviderHuawei),
-			"INVALID_MESSAGE_TYPE",
-			fmt.Sprintf("unsupported message type for Huawei: %T", msg),
-		)
-	}
-
-	// Apply Huawei-specific defaults
-	t.applyHuaweiDefaults(smsMsg, account)
-
-	if err := t.validateMessage(smsMsg); err != nil {
-		return nil, nil, NewProviderError(
-			string(SubProviderHuawei),
-			"VALIDATION_FAILED",
-			fmt.Sprintf("message validation failed: %v", err),
-		)
-	}
-
-	switch smsMsg.Type {
-	case SMSText:
-		return t.transformSMS(smsMsg, account)
-	case Voice:
-		return nil, nil, NewProviderError(
-			string(SubProviderHuawei),
-			"UNSUPPORTED_MESSAGE_TYPE",
-			"Huawei does not support voice messages",
-		)
-	case MMS:
-		return nil, nil, NewProviderError(
-			string(SubProviderHuawei),
-			"UNSUPPORTED_MESSAGE_TYPE",
-			"Huawei does not support MMS messages",
-		)
-	default:
-		return nil, nil, NewProviderError(
-			string(SubProviderHuawei),
-			"UNSUPPORTED_MESSAGE_TYPE",
-			fmt.Sprintf("unsupported message type: %v", smsMsg.Type),
-		)
-	}
-}
-
-// validateMessage validates the message for Huawei.
-func (t *huaweiTransformer) validateMessage(msg *Message) error {
-	if msg.TemplateID == "" {
-		return NewProviderError(string(SubProviderHuawei), "MISSING_PARAM", "templateId is required for Huawei SMS")
-	}
-	if len(msg.Mobiles) == 0 {
-		return NewProviderError(string(SubProviderHuawei), "MISSING_PARAM", "at least one mobile number is required")
-	}
-	if msg.SignName == "" {
-		return NewProviderError(string(SubProviderHuawei), "MISSING_PARAM", "sign name is required for Huawei SMS")
-	}
-	return nil
+func newHuaweiTransformer() *huaweiTransformer {
+	transformer := &huaweiTransformer{}
+	transformer.BaseTransformer = NewBaseTransformer(
+		string(core.ProviderTypeSMS),
+		string(SubProviderHuawei),
+		&core.ResponseHandlerConfig{
+			SuccessField:      "code",
+			SuccessValue:      "000000",
+			ErrorCodeField:    "code",
+			ErrorMessageField: "description",
+			ErrorField:        "code",
+		},
+		WithSMSHandler(transformer.transformSMS),
+	)
+	return transformer
 }
 
 // transformSMS transforms SMS message to HTTP request
@@ -122,6 +66,7 @@ func (t *huaweiTransformer) validateMessage(msg *Message) error {
 // 但部分号码不符合号码规则要求，则在响应消息中会通过状态码标识发送失败的号码，不影响其他正常号码的短信发送。号码之间以英文逗号分隔，
 // 每个号码最大长度为21位，最多允许携带500个号码。如果携带超过500个号码，则全部号码都会发送失败。
 func (t *huaweiTransformer) transformSMS(
+	_ context.Context,
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
@@ -171,7 +116,7 @@ func (t *huaweiTransformer) transformSMS(
 		Headers: headers,
 		Body:    body,
 	}
-	return reqSpec, t.handleHuaweiResponse, nil
+	return reqSpec, nil, nil
 }
 
 // formatHuaweiPhoneNumber formats phone number for Huawei Cloud API
@@ -201,25 +146,4 @@ func (t *huaweiTransformer) buildHuaweiWsseHeader(appKey, appSecret string) stri
 		"UsernameToken Username=\"%s\",PasswordDigest=\"%s\",Nonce=\"%s\",Created=\"%s\"",
 		appKey, passwordDigest, nonce, now,
 	)
-}
-
-// handleHuaweiResponse 处理华为云短信 API 响应.
-func (t *huaweiTransformer) handleHuaweiResponse(statusCode int, body []byte) error {
-	if !utils.IsAcceptableStatus(statusCode) {
-		return NewProviderError(string(SubProviderHuawei), strconv.Itoa(statusCode), string(body))
-	}
-	var response map[string]interface{}
-	if err := json.Unmarshal(body, &response); err != nil {
-		return NewProviderError(string(SubProviderHuawei), "PARSE_ERROR", err.Error())
-	}
-	if response["code"] != "000000" {
-		return NewProviderError(string(SubProviderHuawei), response["code"].(string), response["description"].(string))
-	}
-	return nil
-}
-
-// applyHuaweiDefaults applies Huawei-specific defaults to the message.
-func (t *huaweiTransformer) applyHuaweiDefaults(msg *Message, account *Account) {
-	// Apply common defaults first
-	msg.ApplyCommonDefaults(account)
 }

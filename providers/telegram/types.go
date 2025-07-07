@@ -187,7 +187,7 @@ type MessageEntity struct {
 	CustomEmojiID string `json:"custom_emoji_id,omitempty"`
 }
 
-// Validate validates the MessageEntity
+// Validate validates the MessageEntity.
 func (e *MessageEntity) Validate() error {
 	if !e.Type.IsValid() {
 		return core.NewParamError("invalid entity type: " + string(e.Type))
@@ -200,6 +200,7 @@ func (e *MessageEntity) Validate() error {
 	}
 
 	// Validate type-specific fields
+	//nolint:exhaustive // exhaustive check is not necessary for all types
 	switch e.Type {
 	case EntityTypeTextLink:
 		if e.URL == "" {

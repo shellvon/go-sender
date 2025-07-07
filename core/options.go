@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"math"
-	"math/rand"
+	"math/rand/v2"
 	"net/http"
 	"sync"
 	"time"
@@ -278,8 +278,9 @@ func (r *RetryPolicy) NextDelay(attempt int, _ error) time.Duration {
 	calculatedDelay := time.Duration(float64(r.InitialDelay) * math.Pow(r.BackoffFactor, float64(attempt)))
 
 	// Apply full jitter using the package-level default random number generator, which is concurrency safe.
+	//nolint:gosec // G404: This is for retry delay jitter, not security-related
 	if calculatedDelay > 0 {
-		calculatedDelay = time.Duration(rand.Int63n(int64(calculatedDelay) + 1))
+		calculatedDelay = time.Duration(rand.Int64N(int64(calculatedDelay) + 1))
 	}
 
 	// Cap the delay at MaxDelay.

@@ -33,26 +33,7 @@ var _ core.Selectable = (*Endpoint)(nil)
 var _ core.Validatable = (*Endpoint)(nil)
 
 // ResponseConfig defines how to handle webhook responses.
-type ResponseConfig struct {
-	// Success criteria
-	SuccessStatusCodes []int `json:"success_status_codes,omitempty"` // Custom success status codes (default: 2xx)
-
-	// Response validation
-	ValidateResponse bool `json:"validate_response,omitempty"` // Whether to validate response body
-
-	// Response parsing
-	ResponseType core.BodyType `json:"response_type,omitempty"` // "json", "text", "xml", "none"
-
-	// JSON response validation (when ResponseType is "json")
-	SuccessField string `json:"success_field,omitempty"` // Field name indicating success (e.g., "success", "ok")
-	SuccessValue string `json:"success_value,omitempty"` // Expected value for success (e.g., "true", "ok")
-	ErrorField   string `json:"error_field,omitempty"`   // Field name containing error message
-	MessageField string `json:"message_field,omitempty"` // Field name containing response message
-
-	// Text response validation (when ResponseType is "text")
-	SuccessPattern string `json:"success_pattern,omitempty"` // Regex pattern for success response
-	ErrorPattern   string `json:"error_pattern,omitempty"`   // Regex pattern for error response
-}
+type ResponseConfig = core.ResponseHandlerConfig
 
 // IsEnabled checks if the endpoint is enabled.
 func (e *Endpoint) IsEnabled() bool {

@@ -36,14 +36,6 @@ func NewUnsupportedInternationalError(provider string, feature string) *Error {
 	}
 }
 
-// Error implements the error interface for Error.
-func (e *Error) Error() string {
-	return fmt.Sprintf("Error(provider=%s, code=%s, msg=%s)", e.Provider, e.Code, e.Message)
-}
-
-// IsRetryable returns whether the error is retryable.
-func (e *Error) IsRetryable() bool { return false }
-
 const (
 	ErrorCodeUnsupportedMessageType   = "UNSUPPORTED_MESSAGE_TYPE"
 	ErrorCodeUnsupportedInternational = "UNSUPPORTED_INTERNATIONAL"
@@ -52,3 +44,11 @@ const (
 func NewProviderError(provider, code, message string) *Error {
 	return &Error{Code: code, Message: message, Provider: provider}
 }
+
+// Error implements the error interface for Error.
+func (e *Error) Error() string {
+	return fmt.Sprintf("Error(provider=%s, code=%s, msg=%s)", e.Provider, e.Code, e.Message)
+}
+
+// IsRetryable returns whether the error is retryable.
+func (e *Error) IsRetryable() bool { return false }

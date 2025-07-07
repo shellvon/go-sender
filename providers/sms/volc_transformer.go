@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -32,49 +31,35 @@ const (
 	volcDefaultSmsService  = "volcSMS"
 )
 
-type volcTransformer struct{}
+type volcTransformer struct {
+	*BaseTransformer
+}
 
 func init() {
-	RegisterTransformer(string(SubProviderVolc), &volcTransformer{})
+	RegisterTransformer(string(SubProviderVolc), newVolcTransformer())
 }
 
-func (t *volcTransformer) CanTransform(msg core.Message) bool {
-	smsMsg, ok := msg.(*Message)
-	return ok && smsMsg.SubProvider == string(SubProviderVolc)
-}
-
-func (t *volcTransformer) Transform(
-	_ context.Context,
-	msg core.Message,
-	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
-	smsMsg, ok := msg.(*Message)
-	if !ok {
-		return nil, nil, fmt.Errorf("unsupported message type for Volc: %T", msg)
-	}
-
-	// Apply Volc-specific defaults
-	t.applyVolcDefaults(smsMsg, account)
-
-	switch smsMsg.Type {
-	case SMSText:
-		return t.transformSMS(smsMsg, account)
-	case Voice, MMS:
-		return nil, nil, fmt.Errorf("unsupported message type: %v", smsMsg.Type)
-	default:
-		return nil, nil, fmt.Errorf("unsupported message type: %v", smsMsg.Type)
-	}
-}
-
-// applyVolcDefaults applies Volc-specific defaults to the message.
-func (t *volcTransformer) applyVolcDefaults(msg *Message, account *Account) {
-	// Apply common defaults first
-	msg.ApplyCommonDefaults(account)
+func newVolcTransformer() *volcTransformer {
+	transformer := &volcTransformer{}
+	transformer.BaseTransformer = NewBaseTransformer(
+		string(core.ProviderTypeSMS),
+		string(SubProviderVolc),
+		&core.ResponseHandlerConfig{
+			SuccessField:      "code",
+			SuccessValue:      "0",
+			ErrorCodeField:    "code",
+			ErrorMessageField: "message",
+			ErrorField:        "code",
+		},
+		WithSMSHandler(transformer.transformSMS),
+	)
+	return transformer
 }
 
 // transformSMS transforms SMS message to HTTP request
 //   - 短信API: https://www.volcengine.com/docs/6361/67380
 func (t *volcTransformer) transformSMS(
+	_ context.Context,
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
@@ -122,7 +107,7 @@ func (t *volcTransformer) transformSMS(
 		URL:     url,
 		Headers: headers,
 		Body:    bodyJSON,
-	}, t.handleVolcResponse, nil
+	}, nil, nil
 }
 
 // buildVolcHeaders constructs VolcEngine signature headers.
@@ -221,25 +206,4 @@ func (t *volcTransformer) normalizeQueryString(queryString string) string {
 		}
 	}
 	return strings.Join(canonicalQS, "&")
-}
-
-// handleVolcResponse 处理火山引擎API响应.
-func (t *volcTransformer) handleVolcResponse(statusCode int, body []byte) error {
-	if !utils.IsAcceptableStatus(statusCode) {
-		return NewProviderError(string(ProviderTypeVolc), strconv.Itoa(statusCode), string(body))
-	}
-
-	var response map[string]interface{}
-	if err := json.Unmarshal(body, &response); err != nil {
-		return NewProviderError(string(ProviderTypeVolc), "PARSE_ERROR", err.Error())
-	}
-
-	if response["code"] != 200 {
-		return &Error{
-			Code:     strconv.FormatFloat(response["code"].(float64), 'f', -1, 64),
-			Message:  response["message"].(string),
-			Provider: string(ProviderTypeVolc),
-		}
-	}
-	return nil
 }

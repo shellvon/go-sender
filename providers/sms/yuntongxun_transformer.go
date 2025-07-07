@@ -28,64 +28,41 @@ const (
 //
 // transformer 支持 text（国内/国际，国内模板，国际内容）和 voice（仅国内）类型。
 
-type yuntongxunTransformer struct{}
+type yuntongxunTransformer struct {
+	*BaseTransformer
+}
 
+func newYuntongxunTransformer() *yuntongxunTransformer {
+	transformer := &yuntongxunTransformer{}
+	transformer.BaseTransformer = NewBaseTransformer(
+		string(core.ProviderTypeSMS),
+		string(SubProviderYunpian),
+		nil,
+	)
+	transformer.BaseTransformer = NewBaseTransformer(
+		string(core.ProviderTypeSMS),
+		string(SubProviderYunpian),
+		&core.ResponseHandlerConfig{
+			SuccessField:      "statusCode",
+			SuccessValue:      "000000",
+			ErrorCodeField:    "statusCode",
+			ErrorMessageField: "statusMsg",
+			ErrorField:        "statusCode",
+		},
+		WithSMSHandler(transformer.transformSMS),
+		WithVoiceHandler(transformer.transformVoice),
+	)
+	return transformer
+}
 func init() {
-	RegisterTransformer(string(SubProviderYuntongxun), &yuntongxunTransformer{})
-}
-
-func (t *yuntongxunTransformer) CanTransform(msg core.Message) bool {
-	smsMsg, ok := msg.(*Message)
-	return ok && smsMsg.SubProvider == string(SubProviderYuntongxun)
-}
-
-func (t *yuntongxunTransformer) Transform(
-	_ context.Context,
-	msg core.Message,
-	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
-	smsMsg, ok := msg.(*Message)
-	if !ok {
-		return nil, nil, NewProviderError(
-			string(SubProviderYuntongxun),
-			"INVALID_MESSAGE_TYPE",
-			fmt.Sprintf("unsupported message type for Yuntongxun: %T", msg),
-		)
-	}
-
-	// Apply Yuntongxun-specific defaults
-	t.applyYuntongxunDefaults(smsMsg, account)
-
-	switch smsMsg.Type {
-	case SMSText:
-		return t.transformSMS(smsMsg, account)
-	case Voice:
-		return t.transformVoice(smsMsg, account)
-	case MMS:
-		return nil, nil, NewProviderError(
-			string(SubProviderYuntongxun),
-			"UNSUPPORTED_MESSAGE_TYPE",
-			"Yuntongxun does not support MMS messages",
-		)
-	default:
-		return nil, nil, NewProviderError(
-			string(SubProviderYuntongxun),
-			"UNSUPPORTED_MESSAGE_TYPE",
-			fmt.Sprintf("unsupported message type: %v", smsMsg.Type),
-		)
-	}
-}
-
-// applyYuntongxunDefaults applies Yuntongxun-specific defaults to the message.
-func (t *yuntongxunTransformer) applyYuntongxunDefaults(msg *Message, account *Account) {
-	// Apply common defaults first
-	msg.ApplyCommonDefaults(account)
+	RegisterTransformer(string(SubProviderYuntongxun), newYuntongxunTransformer())
 }
 
 // transformSMS transforms SMS message to HTTP request
 //   - 国内短信: https://doc.yuntongxun.com/pe/5a533de33b8496dd00dce07c
 //   - 国际短信: https://doc.yuntongxun.com/pe/604f29eda80948a1006e928d
 func (t *yuntongxunTransformer) transformSMS(
+	_ context.Context,
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
@@ -145,7 +122,7 @@ func (t *yuntongxunTransformer) transformDomesticSMS(
 		URL:     url,
 		Headers: t.buildHeaders(account),
 		Body:    bodyData,
-	}, t.handleYuntongxunResponse, nil
+	}, nil, nil
 }
 
 // 国际短信: https://doc.yuntongxun.com/pe/604f29eda80948a1006e928d
@@ -188,7 +165,7 @@ func (t *yuntongxunTransformer) transformIntlSMS(
 		URL:     url,
 		Headers: t.buildHeaders(account),
 		Body:    bodyData,
-	}, t.handleYuntongxunResponse, nil
+	}, nil, nil
 }
 
 // transformVoice transforms voice message to HTTP request
@@ -199,6 +176,7 @@ func (t *yuntongxunTransformer) transformIntlSMS(
 // 外呼通知
 //   - 语音通知: https://doc.yuntongxun.com/pe/5a5342c73b8496dd00dce139
 func (t *yuntongxunTransformer) transformVoice(
+	_ context.Context,
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
@@ -283,7 +261,7 @@ func (t *yuntongxunTransformer) transformVoice(
 		URL:     url,
 		Headers: t.buildHeaders(account),
 		Body:    bodyData,
-	}, t.handleYuntongxunResponse, nil
+	}, nil, nil
 }
 
 // generateSignature 生成云讯通API签名.
@@ -300,25 +278,4 @@ func (t *yuntongxunTransformer) buildHeaders(account *Account) map[string]string
 		"Content-Type":  "application/json;charset=utf-8",
 		"Authorization": utils.Base64Encode(fmt.Sprintf("%s:%s", account.APIKey, datetime)),
 	}
-}
-
-// handleYuntongxunResponse 处理云讯通API响应.
-func (t *yuntongxunTransformer) handleYuntongxunResponse(statusCode int, body []byte) error {
-	if !utils.IsAcceptableStatus(statusCode) {
-		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
-	}
-
-	var response map[string]interface{}
-	if err := json.Unmarshal(body, &response); err != nil {
-		return NewProviderError(string(ProviderTypeYuntongxun), "PARSE_ERROR", err.Error())
-	}
-
-	if response["statusCode"] != "000000" {
-		return &Error{
-			Code:     response["statusCode"].(string),
-			Message:  response["statusMsg"].(string),
-			Provider: string(ProviderTypeYuntongxun),
-		}
-	}
-	return nil
 }

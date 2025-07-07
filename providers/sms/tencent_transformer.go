@@ -36,60 +36,57 @@ const (
 	tencentVoiceNotifyAction = "SendVoice"
 )
 
-type tencentTransformer struct{}
+type tencentTransformer struct {
+	*BaseTransformer
+}
+
+func newTencentTransformer() *tencentTransformer {
+	transformer := &tencentTransformer{}
+	transformer.BaseTransformer = NewBaseTransformer(
+		string(core.ProviderTypeSMS),
+		string(SubProviderTencent),
+		nil,
+		WithBeforeHook(transformer.beforeSend),
+		WithSMSHandler(transformer.transformSMS),
+		WithVoiceHandler(transformer.transformVoice),
+	)
+	return transformer
+}
 
 func init() {
-	RegisterTransformer(string(SubProviderTencent), &tencentTransformer{})
+	RegisterTransformer(string(SubProviderTencent), newTencentTransformer())
 }
 
-func (t *tencentTransformer) CanTransform(msg core.Message) bool {
-	smsMsg, ok := msg.(*Message)
-	return ok && smsMsg.SubProvider == string(SubProviderTencent)
+func (t *tencentTransformer) beforeSend(ctx context.Context, msg *Message, account *Account) error {
+	if err := t.applyTencentDefaults(ctx, msg, account); err != nil {
+		return err
+	}
+	if err := t.validateMessage(msg); err != nil {
+		return err
+	}
+	return nil
 }
 
-func (t *tencentTransformer) Transform(
-	_ context.Context,
-	msg core.Message,
-	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
-	smsMsg, ok := msg.(*Message)
-	if !ok {
-		return nil, nil, NewProviderError(
-			string(SubProviderTencent),
-			"INVALID_MESSAGE_TYPE",
-			"invalid message type for tencentTransformer",
-		)
-	}
+func (t *tencentTransformer) applyTencentDefaults(_ context.Context, msg *Message, account *Account) error {
+	// Apply common defaults first
+	msg.ApplyCommonDefaults(account)
 
-	// Apply Tencent-specific defaults
-	t.applyTencentDefaults(smsMsg, account)
+	// Apply Aliyun-specific defaults
+	region := utils.FirstNonEmpty(
+		// 优先使用消息中的 region，其次使用 account 中的 region，最后使用默认值
+		msg.GetExtraStringOrDefaultEmpty(tencentRegionKey),
+		account.Region,
+		aliyunDefaultRegion,
+	)
+	msg.Extras[aliyunRegionKey] = region
 
-	if err := t.validateMessage(smsMsg); err != nil {
-		return nil, nil, NewProviderError(
-			string(SubProviderTencent),
-			"VALIDATION_FAILED",
-			fmt.Sprintf("message validation failed: %v", err),
-		)
+	if msg.Extras[tencentSmsSdkAppIDKey] == "" {
+		msg.Extras[tencentSmsSdkAppIDKey] = account.AppID
 	}
-
-	switch smsMsg.Type {
-	case SMSText:
-		return t.transformSMS(smsMsg, account)
-	case Voice:
-		return t.transformVoice(smsMsg, account)
-	case MMS:
-		return nil, nil, NewProviderError(
-			string(SubProviderTencent),
-			"UNSUPPORTED_MESSAGE_TYPE",
-			fmt.Sprintf("unsupported message type: %v", smsMsg.Type),
-		)
-	default:
-		return nil, nil, NewProviderError(
-			string(SubProviderTencent),
-			"UNSUPPORTED_MESSAGE_TYPE",
-			fmt.Sprintf("unsupported message type: %v", smsMsg.Type),
-		)
+	if msg.Extras[tencentVoiceSdkAppIDKey] == "" {
+		msg.Extras[tencentVoiceSdkAppIDKey] = account.AppID
 	}
+	return nil
 }
 
 func (t *tencentTransformer) validateMessage(msg *Message) error {
@@ -117,6 +114,7 @@ func (t *tencentTransformer) validateMessage(msg *Message) error {
 //   - 国际/港澳台短信: 支持验证码、通知类短信和营销短信
 //   - API文档: https://cloud.tencent.com/document/product/382/55981
 func (t *tencentTransformer) transformSMS(
+	_ context.Context,
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
@@ -182,6 +180,7 @@ func (t *tencentTransformer) transformSMS(
 //
 // 当短信为验证码类型时，使用语音验证码API，否则使用语音通知API.
 func (t *tencentTransformer) transformVoice(
+	_ context.Context,
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
@@ -337,7 +336,12 @@ func (t *tencentTransformer) hmacSha256(key, data []byte) []byte {
 }
 
 // handleTencentResponse 处理腾讯云API响应.
-func (t *tencentTransformer) handleTencentResponse(_ int, body []byte) error {
+func (t *tencentTransformer) handleTencentResponse(resp *http.Response) error {
+	body, _, err := utils.ReadAndClose(resp)
+	if err != nil {
+		return NewProviderError(string(ProviderTypeTencent), "READ_ERROR", err.Error())
+	}
+
 	// Tencent 返回有两种结构：
 	// 1. 成功/失败明细在 SendStatusSet 数组里
 	// 2. 整体失败时，只有 Error 字段
@@ -356,8 +360,8 @@ func (t *tencentTransformer) handleTencentResponse(_ int, body []byte) error {
 		} `json:"Response"`
 	}
 
-	if err := json.Unmarshal(body, &response); err != nil {
-		return NewProviderError(string(ProviderTypeTencent), "PARSE_ERROR", err.Error())
+	if decodeErr := json.Unmarshal(body, &response); decodeErr != nil {
+		return NewProviderError(string(ProviderTypeTencent), "PARSE_ERROR", decodeErr.Error())
 	}
 
 	if response.Response.Error != nil {
@@ -386,25 +390,4 @@ func (t *tencentTransformer) handleTencentResponse(_ int, body []byte) error {
 		}
 	}
 	return nil
-}
-
-func (t *tencentTransformer) applyTencentDefaults(msg *Message, account *Account) {
-	// Apply common defaults first
-	msg.ApplyCommonDefaults(account)
-
-	// Apply Aliyun-specific defaults
-	region := utils.FirstNonEmpty(
-		// 优先使用消息中的 region，其次使用 account 中的 region，最后使用默认值
-		msg.GetExtraStringOrDefaultEmpty(tencentRegionKey),
-		account.Region,
-		aliyunDefaultRegion,
-	)
-	msg.Extras[aliyunRegionKey] = region
-
-	if msg.Extras[tencentSmsSdkAppIDKey] == "" {
-		msg.Extras[tencentSmsSdkAppIDKey] = account.AppID
-	}
-	if msg.Extras[tencentVoiceSdkAppIDKey] == "" {
-		msg.Extras[tencentVoiceSdkAppIDKey] = account.AppID
-	}
 }
