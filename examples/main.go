@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/shellvon/go-sender/core"
+	"github.com/shellvon/go-sender/providers/dingtalk"
 	"github.com/shellvon/go-sender/providers/email"
 	"github.com/shellvon/go-sender/providers/sms"
 	"github.com/shellvon/go-sender/providers/telegram"
@@ -63,7 +64,7 @@ func newLoggingHTTPClient() *http.Client {
 //
 // Each demo requires you to set the corresponding environment variables.
 func main() {
-	provider := flag.String("provider", "", "Provider to demo: telegram, lark, email, sms")
+	provider := flag.String("provider", "", "Provider to demo: telegram, lark, email, sms, dingtalk")
 	flag.Parse()
 
 	switch *provider {
@@ -77,8 +78,11 @@ func main() {
 		runEmailDemo()
 	case "sms":
 		runSMSDemo()
+	case "dingtalk":
+		runDingTalkDemo()
+		os.Exit(0)
 	default:
-		log.Println("Usage: go run main.go --provider=[telegram|lark|email|sms]")
+		log.Println("Usage: go run main.go --provider=[telegram|lark|email|sms|dingtalk]")
 		os.Exit(1)
 	}
 }
@@ -656,5 +660,134 @@ func runSMSDemo() {
 		log.Println("Send failed:", err)
 	} else {
 		log.Println("Send success!")
+	}
+}
+
+// runDingTalkDemo demonstrates how to send messages using the DingTalk provider.
+// Required environment variables:
+//
+//	DINGTALK_BOT_TOKEN - DingTalk Bot token
+//	DINGTALK_BOT_SECRET - DingTalk Bot secret
+//
+// This demo will send various types of messages to the specified DingTalk group.
+func runDingTalkDemo() {
+	log.Println("[DEMO] DingTalk provider")
+	key := os.Getenv("DINGTALK_BOT_TOKEN")
+	secret := os.Getenv("DINGTALK_BOT_SECRET")
+	if key == "" || secret == "" {
+		log.Println("Please set DINGTALK_BOT_TOKEN and DINGTALK_BOT_SECRET environment variables.")
+		return
+	}
+	cfg := dingtalk.Config{
+		Items: []*dingtalk.Account{{
+			BaseAccount: core.BaseAccount{
+				AccountMeta: core.AccountMeta{
+					Name: "default",
+				},
+				Credentials: core.Credentials{
+					APIKey:    key,
+					APISecret: secret,
+				},
+			},
+		}},
+	}
+	prov, _ := dingtalk.New(&cfg)
+	demos := []struct {
+		name string
+		msg  core.Message
+	}{
+		{
+			name: "Text Message",
+			msg: dingtalk.Text().
+				Content("这是一条文本消息\n支持换行和@指定用户").
+				AtMobiles([]string{"***REMOVED***"}).
+				AtAll().
+				Build(),
+		},
+		{
+			name: "Markdown Message",
+			msg: dingtalk.Markdown().
+				Title("这是一条 Markdown 消息").
+				Text("# 标题\n" +
+					"## 二级标题\n" +
+					"### 三级标题\n\n" +
+					"#### 文本样式\n" +
+					"- **加粗文本**\n" +
+					"- *斜体文本*\n" +
+					"- ~~删除线文本~~\n\n" +
+					"#### 图片\n" +
+					"![](https://img.alicdn.com/tfs/TB1NwmBEL9TBuNjy1zbXXXpepXa-2400-1218.png)\n\n" +
+					"#### 链接\n" +
+					"[点击跳转](https://www.dingtalk.com)\n\n" +
+					"#### 代码段\n" +
+					"```go\n" +
+					"package main\n\n" +
+					"func main() {\n" +
+					"    println(\"Hello DingTalk\")\n" +
+					"}\n" +
+					"```").
+				Build(),
+		},
+		{
+			name: "Link Message",
+			msg: dingtalk.Link().
+				Title("这是一条链接消息").
+				Text("链接消息支持标题、描述、链接和图片").
+				MessageURL("https://www.dingtalk.com").
+				PicURL("https://img.alicdn.com/tfs/TB1NwmBEL9TBuNjy1zbXXXpepXa-2400-1218.png").
+				Build(),
+		},
+		{
+			name: "ActionCard Message (整体跳转)",
+			msg: dingtalk.ActionCard().
+				Title("这是一条整体跳转 ActionCard").
+				Text("# 惊喜\n"+
+					"## 惊喜来了\n\n"+
+					"![](https://img.alicdn.com/tfs/TB1NwmBEL9TBuNjy1zbXXXpepXa-2400-1218.png)\n\n"+
+					"新版本发布了！").
+				SingleButton("查看详情", "https://www.dingtalk.com").
+				BtnOrientation("0").
+				Build(),
+		},
+		{
+			name: "ActionCard Message (独立跳转)",
+			msg: dingtalk.ActionCard().
+				Title("这是一条独立跳转 ActionCard").
+				Text("# 惊喜\n"+
+					"## 惊喜来了\n\n"+
+					"![](https://img.alicdn.com/tfs/TB1NwmBEL9TBuNjy1zbXXXpepXa-2400-1218.png)\n\n"+
+					"新版本发布了！").
+				AddButton("文档", "https://www.dingtalk.com/doc").
+				AddButton("示例", "https://www.dingtalk.com/example").
+				BtnOrientation("1").
+				Build(),
+		},
+		{
+			name: "FeedCard Message",
+			msg: dingtalk.FeedCard().
+				AddLink(
+					"新版本发布",
+					"https://www.dingtalk.com/release",
+					"https://img.alicdn.com/tfs/TB1NwmBEL9TBuNjy1zbXXXpepXa-2400-1218.png",
+				).
+				AddLink(
+					"使用文档",
+					"https://www.dingtalk.com/doc",
+					"https://img.alicdn.com/tfs/TB1NwmBEL9TBuNjy1zbXXXpepXa-2400-1218.png",
+				).
+				Build(),
+		},
+	}
+
+	for _, demo := range demos {
+		log.Printf("Testing %s...\n", demo.name)
+		if err := prov.Send(context.Background(), demo.msg, &core.ProviderSendOptions{
+			HTTPClient: newLoggingHTTPClient(),
+		}); err != nil {
+			log.Printf("%s failed: %v\n", demo.name, err)
+		} else {
+			log.Printf("%s success!\n", demo.name)
+		}
+		time.Sleep(3 * time.Second) // 限流保护
 	}
 }

@@ -9,6 +9,7 @@ import (
 // Reference: https://open.dingtalk.com/document/robots/custom-robot-access
 
 // MessageType defines the message types supported by DingTalk.
+//   - Supported message types: https://open.dingtalk.com/document/orgapp/custom-bot-send-message-type
 type MessageType string
 
 const (

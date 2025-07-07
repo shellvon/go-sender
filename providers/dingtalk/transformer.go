@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/utils"
@@ -26,6 +27,8 @@ func (t *dingTalkTransformer) CanTransform(msg core.Message) bool {
 }
 
 // Transform converts a DingTalk message to HTTP request specification.
+//   - https://open.dingtalk.com/document/orgapp/custom-bot-send-message-type
+//   - https://open.dingtalk.com/document/orgapp/customize-robot-security-settings#title-7fs-kgs-36x
 func (t *dingTalkTransformer) Transform(
 	_ context.Context,
 	msg core.Message,
@@ -44,19 +47,20 @@ func (t *dingTalkTransformer) Transform(
 		return nil, nil, errors.New("no account provided")
 	}
 
-	// Build webhook URL
+	// Build webhook URL with signature if secret is provided
+	// https://open.dingtalk.com/document/orgapp/customize-robot-security-settings#title-7fs-kgs-36x
 	webhookURL := fmt.Sprintf("https://oapi.dingtalk.com/robot/send?access_token=%s", account.APIKey)
-
-	// Prepare the request payload
-	payload := map[string]interface{}{
-		"msgtype":                    dingMsg.GetMsgType(),
-		string(dingMsg.GetMsgType()): dingMsg,
+	if account.APISecret != "" {
+		timestamp := time.Now().UnixMilli()
+		stringToSign := fmt.Sprintf("%d\n%s", timestamp, account.APISecret)
+		sign := utils.HMACSHA256Base64(account.APISecret, stringToSign)
+		webhookURL = fmt.Sprintf("%s&timestamp=%d&sign=%s", webhookURL, timestamp, sign)
 	}
 
-	// Convert payload to JSON
-	body, err := json.Marshal(payload)
+	// Convert message to JSON
+	body, err := json.Marshal(dingMsg)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to marshal payload: %w", err)
+		return nil, nil, fmt.Errorf("failed to marshal message: %w", err)
 	}
 
 	// Build request
