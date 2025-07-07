@@ -85,8 +85,3 @@ func (m *Message) Validate() error {
 func (m *Message) MsgID() string {
 	return m.DefaultMessage.MsgID()
 }
-
-// GetSubProvider 实现 SubProviderMessage 接口.
-func (m *Message) GetSubProvider() string {
-	return m.SubProvider
-}

@@ -22,33 +22,21 @@ type RequestTransformer interface {
 	CanTransform(msg core.Message) bool
 }
 
-// webhookTransformer 实现 core.HTTPTransformer[*Endpoint].
+// webhookTransformer implements core.HTTPTransformer[*Endpoint].
 type webhookTransformer struct{}
 
-// 确保 webhookTransformer 实现了 core.HTTPTransformer[*Endpoint].
+// Ensure webhookTransformer implements core.HTTPTransformer[*Endpoint].
 var _ core.HTTPTransformer[*Endpoint] = (*webhookTransformer)(nil)
 
-// newWebhookTransformer constructs a new webhookTransformer.
 func newWebhookTransformer() core.HTTPTransformer[*Endpoint] {
 	return &webhookTransformer{}
 }
 
-// CanTransform 判断是否为 Webhook 消息.
 func (t *webhookTransformer) CanTransform(msg core.Message) bool {
 	return msg.ProviderType() == core.ProviderTypeWebhook
 }
 
-// Transform 构造 Webhook HTTPRequestSpec
-//
-// Parameters:
-//   - ctx: 上下文
-//   - msg: Webhook 消息体
-//   - endpoint: webhook endpoint 配置
-//
-// Returns:
-//   - HTTPRequestSpec: HTTP 请求规范
-//   - ResponseHandler: 响应处理器
-//   - error: 错误信息
+// Transform constructs a Webhook HTTPRequestSpec.
 func (t *webhookTransformer) Transform(
 	_ context.Context,
 	msg core.Message,
@@ -58,7 +46,8 @@ func (t *webhookTransformer) Transform(
 	if !ok {
 		return nil, nil, fmt.Errorf("unsupported message type for webhook transformer: %T", msg)
 	}
-	// 构造URL（支持PathParams/QueryParams）
+
+	// Build URL with PathParams and QueryParams
 	url := endpoint.URL
 	if len(whMsg.PathParams) > 0 || len(whMsg.QueryParams) > 0 {
 		builtURL, err := whMsg.buildURL(endpoint.URL)
@@ -78,7 +67,7 @@ func (t *webhookTransformer) Transform(
 	if _, exists := headers["Content-Type"]; !exists {
 		headers["Content-Type"] = "application/json"
 	}
-	// 选择HTTP方法
+
 	method := endpoint.Method
 	if whMsg.Method != "" {
 		method = whMsg.Method
@@ -86,7 +75,6 @@ func (t *webhookTransformer) Transform(
 	if method == "" {
 		method = http.MethodPost
 	}
-	// Body已经是[]byte，直接使用
 	reqSpec := &core.HTTPRequestSpec{
 		Method:  method,
 		URL:     url,
@@ -96,7 +84,13 @@ func (t *webhookTransformer) Transform(
 	return reqSpec, t.buildResponseHandler(endpoint), nil
 }
 
-// buildResponseHandler 构造响应处理器，支持多种响应校验方式.
+// buildResponseHandler constructs a response handler for the webhook.
+// Supports multiple response validation methods.
+//   - JSON
+//   - Text
+//   - None
+//   - XML
+//   - Raw
 func (t *webhookTransformer) buildResponseHandler(endpoint *Endpoint) core.ResponseHandler {
 	return func(statusCode int, body []byte) error {
 		cfg := endpoint.ResponseConfig

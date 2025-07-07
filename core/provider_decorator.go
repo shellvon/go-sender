@@ -141,6 +141,20 @@ func (pd *ProviderDecorator) processQueueItem(ctx context.Context, item *QueueIt
 		opts = &SendOptions{} // fallback
 		restoredCtx = ctx
 	}
+
+	// If ScheduledAt is set and is in the future, wait until that time
+	if item.ScheduledAt != nil && item.ScheduledAt.After(time.Now()) {
+		pd.logInfo(fmt.Sprintf("Message %s scheduled for future processing, waiting until %s", item.ID, item.ScheduledAt.Format(time.RFC3339)))
+		select {
+		case <-time.After(time.Until(*item.ScheduledAt)):
+			// Waited successfully, continue processing
+		case <-ctx.Done():
+			// Context cancelled while waiting, do not process
+			pd.logWarn(fmt.Sprintf("Message %s processing cancelled during scheduled wait: %v", item.ID, ctx.Err()))
+			return
+		}
+	}
+
 	err = pd.executeWithMiddleware(restoredCtx, item.Message, opts)
 	// Find and invoke callback (only effective for local/in-memory queue)
 	if cb, ok := callbackRegistry.LoadAndDelete(item.Message.MsgID()); ok {
@@ -158,12 +172,13 @@ func (pd *ProviderDecorator) sendAsync(ctx context.Context, message Message, opt
 	}
 
 	item := &QueueItem{
-		ID:        message.MsgID(),
-		Provider:  pd.Provider.Name(),
-		Message:   message,
-		Priority:  opts.Priority,
-		Metadata:  metadata,
-		CreatedAt: time.Now(),
+		ID:          message.MsgID(),
+		Provider:    pd.Provider.Name(),
+		Message:     message,
+		Priority:    opts.Priority,
+		Metadata:    metadata,
+		CreatedAt:   time.Now(),
+		ScheduledAt: opts.DelayUntil,
 	}
 
 	if opts.Callback != nil {
@@ -176,6 +191,19 @@ func (pd *ProviderDecorator) sendAsync(ctx context.Context, message Message, opt
 
 	// Fallback to goroutine if no queue is configured
 	go func() {
+		// If DelayUntil is set, wait until that time
+		if opts.DelayUntil != nil && opts.DelayUntil.After(time.Now()) {
+			select {
+			case <-time.After(time.Until(*opts.DelayUntil)):
+				// Waited successfully
+			case <-context.Background().Done(): // Use background context to prevent premature cancellation
+				// Context cancelled while waiting, do not send
+				if opts.Callback != nil {
+					opts.Callback(context.Background().Err())
+				}
+				return
+			}
+		}
 		errSend := pd.executeSend(context.Background(), message, opts)
 		if opts.Callback != nil {
 			opts.Callback(errSend)
@@ -322,6 +350,12 @@ func (pd *ProviderDecorator) handleDequeueError(err error) bool {
 func (pd *ProviderDecorator) logInfo(msg string) {
 	if pd.logger != nil {
 		_ = pd.logger.Log(LevelInfo, "message", msg)
+	}
+}
+
+func (pd *ProviderDecorator) logWarn(msg string) {
+	if pd.logger != nil {
+		_ = pd.logger.Log(LevelWarn, "message", msg)
 	}
 }
 

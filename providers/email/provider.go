@@ -161,5 +161,3 @@ func (a *Account) GetWeight() int {
 func (a *Account) IsEnabled() bool {
 	return !a.Disabled
 }
-
-// GetType is provided by the embedded core.BaseAccount (no override needed)

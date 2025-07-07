@@ -5,37 +5,39 @@ import (
 	"strings"
 )
 
-// GetSignatureFromContent 从短信内容中提取签名
-// 返回签名内容，如果没有找到签名则返回空字符串
-// 签名格式：以【开头，以】结尾，且】在合理位置（前20个字符内）.
+// GetSignatureFromContent extracts the signature from the SMS content.
+// Returns the signature content, or an empty string if no signature is found.
+// Signature format: starts with 【, ends with 】, and 】 is in a reasonable position (within the first 20 characters).
 func GetSignatureFromContent(content string) string {
 	if content == "" {
 		return ""
 	}
 
-	// 检查是否以【开头
+	// Check if it starts with 【
 	if !strings.HasPrefix(content, "【") {
 		return ""
 	}
 
-	// 查找】的位置
+	// Find the position of 】
 	endIndex := strings.Index(content, "】")
 	if endIndex == -1 || endIndex > 20 || endIndex == 1 {
 		return ""
 	}
 
-	// 提取签名内容（去掉【和】）
+	// Extract the signature content (remove 【 and 】)
 	return content[1:endIndex]
 }
 
-// HasSignature 检查内容是否已经包含签名.
+// HasSignature checks if the content already contains a signature.
 func HasSignature(content string) bool {
 	return GetSignatureFromContent(content) != ""
 }
 
-// AddSignature 为短信内容添加签名
-// 如果内容已经有签名，则直接返回原内容
-// 否则在开头添加【signName】.
+// AddSignature adds the signature to the content.
+//   - If the content already contains a signature, it returns the original content. Otherwise, it adds the signature at the beginning of the content.
+//   - If the signName is empty, it returns the original content.
+//
+// For example, if the content is "Hello, world!" and the signName is "Test", it returns "【Test】Hello, world!".
 func AddSignature(content, signName string) string {
 	if HasSignature(content) || signName == "" {
 		return content
