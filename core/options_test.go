@@ -2,6 +2,7 @@ package core_test
 
 import (
 	"errors"
+	"math"
 	"testing"
 	"time"
 
@@ -41,9 +42,14 @@ func TestRetryPolicy_ShouldRetryAndNextDelay(t *testing.T) {
 	if p.ShouldRetry(2, errors.New("fail")) {
 		t.Error("ShouldRetry should be false if attempts exceeded")
 	}
+
+	// Calculate expected max delay without jitter for attempt 1
+	expectedMaxDelay := time.Duration(float64(p.InitialDelay) * math.Pow(p.BackoffFactor, 1))
 	delay := p.NextDelay(1, nil)
-	if delay != 20 {
-		t.Errorf("NextDelay got %v, want 20", delay)
+
+	// With full jitter, the delay should be between 0 and expectedMaxDelay (inclusive)
+	if delay < 0 || delay > expectedMaxDelay {
+		t.Errorf("NextDelay got %v, expected between 0 and %v", delay, expectedMaxDelay)
 	}
 }
 
@@ -362,23 +368,23 @@ func TestRetryPolicy_EdgeCases(t *testing.T) {
 		t.Error("Expected ShouldRetry false for attempt > MaxAttempts")
 	}
 
-	// 测试NextDelay边界情况 - 注意NextDelay的计算公式
+	// 测试NextDelay边界情况 - 注意NextDelay的计算公式，并检查范围而非固定值
 	delay := policy.NextDelay(1, nil)
-	expectedDelay1 := time.Duration(float64(policy.InitialDelay) * float64(1) * policy.BackoffFactor)
-	if delay != expectedDelay1 {
-		t.Errorf("Expected NextDelay %v for attempt 1, got %v", expectedDelay1, delay)
+	expectedDelay1Max := time.Duration(float64(policy.InitialDelay) * math.Pow(policy.BackoffFactor, 1))
+	if delay < 0 || delay > expectedDelay1Max {
+		t.Errorf("Expected NextDelay for attempt 1 to be between 0 and %v, got %v", expectedDelay1Max, delay)
 	}
 
 	delay = policy.NextDelay(2, nil)
-	expectedDelay2 := time.Duration(float64(policy.InitialDelay) * float64(2) * policy.BackoffFactor)
-	if delay != expectedDelay2 {
-		t.Errorf("Expected NextDelay %v for attempt 2, got %v", expectedDelay2, delay)
+	expectedDelay2Max := time.Duration(float64(policy.InitialDelay) * math.Pow(policy.BackoffFactor, 2))
+	if delay < 0 || delay > expectedDelay2Max {
+		t.Errorf("Expected NextDelay for attempt 2 to be between 0 and %v, got %v", expectedDelay2Max, delay)
 	}
 
 	// 测试延迟超过最大值的情况
 	policy.MaxDelay = 50 * time.Millisecond
 	delay = policy.NextDelay(10, nil)
-	if delay != 50*time.Millisecond {
+	if delay < 0 || delay > policy.MaxDelay {
 		t.Errorf("Expected NextDelay capped at MaxDelay, got %v", delay)
 	}
 }
