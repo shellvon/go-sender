@@ -10,7 +10,7 @@ package telegram
 type DiceBuilder struct {
 	*baseBuilder[*DiceBuilder]
 
-	emoji string
+	emoji DiceEmoji
 }
 
 // Dice returns a new DiceBuilder.
@@ -32,7 +32,7 @@ func Dice() *DiceBuilder {
 //   - ⚽
 //   - 🎳
 //   - 🎰
-func (b *DiceBuilder) Emoji(e string) *DiceBuilder {
+func (b *DiceBuilder) Emoji(e DiceEmoji) *DiceBuilder {
 	b.emoji = e
 	return b
 }

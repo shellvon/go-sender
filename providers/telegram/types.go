@@ -21,6 +21,114 @@ const (
 	TypeDice      MessageType = "dice"
 )
 
+// MessageEntityType represents the type of a message entity
+// Based on Telegram Bot API MessageEntity
+//   - https://core.telegram.org/bots/api#messageentity
+//
+// Type of the entity.
+// Can be one of:
+//   - "mention" (@username)
+//   - "hashtag" (#hashtag)
+//   - "cashtag" ($USD)
+//   - "bot_command" (/start@jobs_bot)
+//   - "url" (https://telegram.org)
+//   - "email" (do-not-reply@telegram.org)
+//   - "phone_number" (+1-212-555-0123)
+//   - "bold" (bold text)
+//   - "italic" (italic text)
+//   - "underline" (underlined text)
+//   - "strikethrough" (strikethrough text)
+//   - "spoiler" (spoiler message)
+//   - "blockquote" (block quotation)
+//   - "expandable_blockquote" (collapsed-by-default block quotation)
+//   - "code" (monowidth string)
+//   - "pre" (monowidth block)
+//   - "text_link" (for clickable text URLs)
+//   - "text_mention" (for users without usernames)
+//   - "custom_emoji" (for inline custom emoji stickers)
+//
+// See https://core.telegram.org/bots/api#messageentity for more details.
+type MessageEntityType string
+
+const (
+	EntityTypeMention              MessageEntityType = "mention"
+	EntityTypeHashtag              MessageEntityType = "hashtag"
+	EntityTypeCashtag              MessageEntityType = "cashtag"
+	EntityTypeBotCommand           MessageEntityType = "bot_command"
+	EntityTypeURL                  MessageEntityType = "url"
+	EntityTypeEmail                MessageEntityType = "email"
+	EntityTypePhoneNumber          MessageEntityType = "phone_number"
+	EntityTypeBold                 MessageEntityType = "bold"
+	EntityTypeItalic               MessageEntityType = "italic"
+	EntityTypeUnderline            MessageEntityType = "underline"
+	EntityTypeStrikethrough        MessageEntityType = "strikethrough"
+	EntityTypeSpoiler              MessageEntityType = "spoiler"
+	EntityTypeBlockquote           MessageEntityType = "blockquote"
+	EntityTypeExpandableBlockquote MessageEntityType = "expandable_blockquote"
+	EntityTypeCode                 MessageEntityType = "code"
+	EntityTypePre                  MessageEntityType = "pre"
+	EntityTypeTextLink             MessageEntityType = "text_link"
+	EntityTypeTextMention          MessageEntityType = "text_mention"
+	EntityTypeCustomEmoji          MessageEntityType = "custom_emoji"
+)
+
+// String implements the Stringer interface.
+func (t MessageEntityType) String() string {
+	return string(t)
+}
+
+// IsValid checks if the entity type is valid.
+func (t MessageEntityType) IsValid() bool {
+	switch t {
+	case EntityTypeMention, EntityTypeHashtag, EntityTypeCashtag, EntityTypeBotCommand,
+		EntityTypeURL, EntityTypeEmail, EntityTypePhoneNumber, EntityTypeBold,
+		EntityTypeItalic, EntityTypeUnderline, EntityTypeStrikethrough, EntityTypeSpoiler,
+		EntityTypeBlockquote, EntityTypeExpandableBlockquote, EntityTypeCode,
+		EntityTypePre, EntityTypeTextLink, EntityTypeTextMention, EntityTypeCustomEmoji:
+		return true
+	default:
+		return false
+	}
+}
+
+// DiceEmoji represents the emoji for dice messages
+// Based on SendDiceParams from Telegram Bot API
+//   - https://core.telegram.org/bots/api#senddice
+//
+// Emoji on which the dice throw animation is based.
+// Must be one of
+//   - 🎲 (default)
+//   - 🎯
+//   - 🏀
+//   - ⚽
+//   - 🎳
+//   - 🎰
+type DiceEmoji string
+
+const (
+	DiceEmojiDice    DiceEmoji = "🎲" // default
+	DiceEmojiTarget  DiceEmoji = "🎯"
+	DiceEmojiBasket  DiceEmoji = "🏀"
+	DiceEmojiSoccer  DiceEmoji = "⚽"
+	DiceEmojiBowling DiceEmoji = "🎳"
+	DiceEmojiSlot    DiceEmoji = "🎰"
+)
+
+// String implements the Stringer interface.
+func (e DiceEmoji) String() string {
+	return string(e)
+}
+
+// IsValid checks if the dice emoji is valid.
+func (e DiceEmoji) IsValid() bool {
+	switch e {
+	case DiceEmojiDice, DiceEmojiTarget, DiceEmojiBasket, DiceEmojiSoccer, DiceEmojiBowling, DiceEmojiSlot:
+		return true
+	default:
+		return false
+	}
+}
+
 // MessageEntity represents a special entity that appears in message text
 // Based on Telegram Bot API MessageEntity
 // https://core.telegram.org/bots/api#messageentity
@@ -46,7 +154,7 @@ type MessageEntity struct {
 	// - "text_link" (for clickable text URLs)
 	// - "text_mention" (for users without usernames)
 	// - "custom_emoji" (for inline custom emoji stickers)
-	Type string `json:"type"`
+	Type MessageEntityType `json:"type"`
 
 	// Offset - Offset in UTF-16 code units to the start of the entity.
 	// Required. Zero-based position where the entity starts in the message text.
@@ -77,6 +185,37 @@ type MessageEntity struct {
 	// Optional. Only used when Type is "custom_emoji".
 	// Must be a valid custom emoji ID.
 	CustomEmojiID string `json:"custom_emoji_id,omitempty"`
+}
+
+// Validate validates the MessageEntity
+func (e *MessageEntity) Validate() error {
+	if !e.Type.IsValid() {
+		return core.NewParamError("invalid entity type: " + string(e.Type))
+	}
+	if e.Offset < 0 {
+		return core.NewParamError("offset cannot be negative")
+	}
+	if e.Length <= 0 {
+		return core.NewParamError("length must be positive")
+	}
+
+	// Validate type-specific fields
+	switch e.Type {
+	case EntityTypeTextLink:
+		if e.URL == "" {
+			return core.NewParamError("URL is required for text_link entities")
+		}
+	case EntityTypeTextMention:
+		if e.User == nil {
+			return core.NewParamError("User is required for text_mention entities")
+		}
+	case EntityTypeCustomEmoji:
+		if e.CustomEmojiID == "" {
+			return core.NewParamError("CustomEmojiID is required for custom_emoji entities")
+		}
+	}
+
+	return nil
 }
 
 // User represents a Telegram user
@@ -419,7 +558,7 @@ type ChatAdministratorRights struct {
 // KeyboardButtonPollType represents the type of poll that is requested to be created
 // Based on Telegram Bot API KeyboardButtonPollType.
 type KeyboardButtonPollType struct {
-	Type string `json:"type,omitempty"`
+	Type PollType `json:"type,omitempty"`
 }
 
 // ReplyKeyboardRemove represents a reply keyboard that is requested to be removed
@@ -453,4 +592,68 @@ type InputPollOption struct {
 type Message interface {
 	core.Message
 	GetMsgType() MessageType
+}
+
+// ParseMode defines the supported parse modes for Telegram messages.
+//   - https://core.telegram.org/bots/api#formatting-options
+//
+// Can be one of:
+//   - "Markdown"
+//   - "MarkdownV2"
+//   - "HTML"
+type ParseMode string
+
+const (
+	// ParseModeMarkdown is the legacy Markdown format (version 1).
+	ParseModeMarkdown ParseMode = "Markdown"
+	// ParseModeMarkdownV2 is the modern Markdown format (version 2).
+	ParseModeMarkdownV2 ParseMode = "MarkdownV2"
+	// ParseModeHTML is the HTML format.
+	ParseModeHTML ParseMode = "HTML"
+)
+
+// String implements the Stringer interface.
+func (p ParseMode) String() string {
+	return string(p)
+}
+
+// IsValid checks if the parse mode is valid.
+func (p ParseMode) IsValid() bool {
+	switch p {
+	case ParseModeMarkdown, ParseModeMarkdownV2, ParseModeHTML:
+		return true
+	default:
+		return false
+	}
+}
+
+// PollType represents the type of a poll
+// Based on Telegram Bot API PollType
+// https://core.telegram.org/bots/api#sendpoll
+//
+// Can be one of:
+//   - "regular" (default)
+//   - "quiz"
+//
+// See https://core.telegram.org/bots/api#sendpoll for more details.
+type PollType string
+
+const (
+	PollTypeRegular PollType = "regular"
+	PollTypeQuiz    PollType = "quiz"
+)
+
+// String implements the Stringer interface.
+func (p PollType) String() string {
+	return string(p)
+}
+
+// IsValid checks if the poll type is valid.
+func (p PollType) IsValid() bool {
+	switch p {
+	case PollTypeRegular, PollTypeQuiz:
+		return true
+	default:
+		return false
+	}
 }

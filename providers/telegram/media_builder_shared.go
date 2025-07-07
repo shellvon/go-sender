@@ -1,46 +1,61 @@
 package telegram
 
-// mediaBuilder 抽象了所有带媒体消息的 Caption 相关公共逻辑。
-// 具体的 XxxBuilder 通过嵌入 *mediaBuilder[*XxxBuilder] 获得统一的
-// Chat / Silent / Protect 等 baseBuilder 方法以及 Caption 等 setter，
-// 避免在每个 builder 中重复编写同样的字段和链式方法。
+// mediaBuilder is an abstract type that encapsulates common logic for media message builders.
+// It provides a uniform interface for setting caption, parse mode, entities, and show caption above media.
+// Concrete builders embed *mediaBuilder[*XxxBuilder] to inherit baseBuilder methods and caption-related setters.
+// This avoids code duplication in each builder and ensures type safety.
 
 type mediaBuilder[T any] struct {
 	*baseBuilder[T]
 
 	caption        string
-	parseMode      string
+	parseMode      ParseMode
 	entities       []MessageEntity
 	showCaptionTop bool
 }
 
-// newMediaBuilder 创建一个带 self 泛型的 mediaBuilder 实例。
-// 该函数会正确设置内部 baseBuilder 的 self 字段，确保链式调用返回具体 builder 类型。
+// newMediaBuilder creates a new mediaBuilder instance with the self type parameter.
+// It correctly sets the self field of the internal baseBuilder to ensure that the chain call returns the specific builder type.
 func newMediaBuilder[T any](self T) *mediaBuilder[T] {
 	return &mediaBuilder[T]{
 		baseBuilder: &baseBuilder[T]{self: self},
 	}
 }
 
-// Caption 设置 Caption 文案。
+// Caption sets the caption field.
 func (b *mediaBuilder[T]) Caption(c string) T {
 	b.caption = c
 	return b.baseBuilder.self
 }
 
-// ParseMode 设置解析模式 (HTML / Markdown / MarkdownV2)。
-func (b *mediaBuilder[T]) ParseMode(mode string) T {
+// WithParseMode sets the parse mode for the text message.
+func (b *mediaBuilder[T]) WithParseMode(mode ParseMode) T {
 	b.parseMode = mode
-	return b.baseBuilder.self
+	return b.self
 }
 
-// Entities 设置 caption_entities。
+// WithMarkdown sets the parse mode to Markdown.
+func (b *mediaBuilder[T]) WithMarkdown() T {
+	return b.WithParseMode(ParseModeMarkdown)
+}
+
+// WithMarkdownV2 sets the parse mode to MarkdownV2.
+func (b *mediaBuilder[T]) WithMarkdownV2() T {
+	return b.WithParseMode(ParseModeMarkdownV2)
+}
+
+// WithHTML sets the parse mode to HTML.
+func (b *mediaBuilder[T]) WithHTML() T {
+	return b.WithParseMode(ParseModeHTML)
+}
+
+// Entities sets the caption_entities field.
 func (b *mediaBuilder[T]) Entities(ents []MessageEntity) T {
 	b.entities = ents
 	return b.baseBuilder.self
 }
 
-// ShowCaptionAboveMedia 决定 caption 是否显示在媒体上方。
+// ShowCaptionAboveMedia sets the show_caption_above_media field.
 func (b *mediaBuilder[T]) ShowCaptionAboveMedia(show bool) T {
 	b.showCaptionTop = show
 	return b.baseBuilder.self

@@ -22,7 +22,7 @@ type PollBuilder struct {
 	questionParseMode    string
 	questionEntities     []MessageEntity
 	isAnonymous          bool
-	pollType             string
+	pollType             PollType
 	allowsMultiple       bool
 	correctOptionID      int
 	explanation          string
@@ -93,7 +93,7 @@ func (b *PollBuilder) IsAnonymous(a bool) *PollBuilder {
 // all types:
 //   - quiz
 //   - regular (default)
-func (b *PollBuilder) Type(t string) *PollBuilder {
+func (b *PollBuilder) Type(t PollType) *PollBuilder {
 	b.pollType = t
 	return b
 }
