@@ -14,23 +14,12 @@ import (
 
 type larkTransformer struct{}
 
-// CanTransform 判断是否为 Lark 消息.
 func (t *larkTransformer) CanTransform(msg core.Message) bool {
 	return msg.ProviderType() == core.ProviderTypeLark
 }
 
-// Transform 构造 Lark HTTPRequestSpec
+// Transform constructs a Lark HTTPRequestSpec.
 //   - API: https://open.feishu.cn/document/client-docs/bot-v3/add-custom-bot
-//
-// 参数:
-//   - ctx: 上下文
-//   - msg: Lark 消息体
-//   - account: 账号配置
-//
-// 返回:
-//   - HTTPRequestSpec: HTTP 请求规范
-//   - ResponseHandler: 响应处理器
-//   - error: 错误信息
 func (t *larkTransformer) Transform(
 	_ context.Context,
 	msg core.Message,
@@ -74,7 +63,7 @@ func (t *larkTransformer) Transform(
 	return reqSpec, t.handleLarkResponse, nil
 }
 
-// handleLarkResponse 处理 Lark API 响应.
+// handleLarkResponse handles the Lark API response.
 func (t *larkTransformer) handleLarkResponse(statusCode int, body []byte) error {
 	if !utils.IsAcceptableStatus(statusCode) {
 		return fmt.Errorf("lark API returned non-OK status: %d", statusCode)
@@ -92,8 +81,6 @@ func (t *larkTransformer) handleLarkResponse(statusCode int, body []byte) error 
 	return nil
 }
 
-// newLarkTransformer 创建 Lark 的 transformer 实例
-// 返回实现 core.HTTPTransformer[*Account] 的 larkTransformer.
 func newLarkTransformer() core.HTTPTransformer[*Account] {
 	return &larkTransformer{}
 }

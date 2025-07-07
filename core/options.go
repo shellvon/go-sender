@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math"
+	"math/rand"
 	"net/http"
 	"sync"
 	"time"
@@ -136,17 +138,39 @@ func EnsureHTTPClient(client *http.Client) *http.Client {
 
 // SendOptions manages all configurations related to sending notifications.
 type SendOptions struct {
-	Async                 bool                   // Whether to send asynchronously.
-	Priority              int                    // Priority (1-10, 10 is highest).
-	DelayUntil            *time.Time             // Time until which sending should be delayed.
-	Timeout               time.Duration          // Send operation timeout.
-	Metadata              map[string]interface{} // Additional metadata.
-	DisableCircuitBreaker bool                   // Disable circuit breaker middleware.
-	DisableRateLimiter    bool                   // Disable rate limiter
-	Callback              func(error)            // Callback executed after message processing (only effective for local/in-memory queue or async goroutine, not called in distributed queue like Redis)
-	RetryPolicy           *RetryPolicy           // Custom retry policy (overrides global), deserializable from queue will lost the filter function.
-	// HTTPClient allows per-send custom HTTP client. Only affects HTTP-based providers; SMTP/email is not affected.
-	HTTPClient *http.Client // Optional: custom HTTP client for this send
+	// Whether to send asynchronously.
+	Async bool
+	// Priority (1-10, 10 is highest).
+	Priority int
+	// Time until which sending should be delayed.
+	// This field is only effective when `Async` is set to `true`.
+	DelayUntil *time.Time
+	// Send operation timeout.
+	Timeout time.Duration
+	// Additional metadata.
+	Metadata map[string]interface{}
+	// Disable circuit breaker middleware.
+	DisableCircuitBreaker bool
+	// Disable rate limiter.
+	DisableRateLimiter bool
+	// Callback is an optional function that will be executed after the message
+	// has been fully processed (either successfully sent or failed after all retries).
+	// This callback is primarily effective for local/in-memory queue processing
+	// or when messages are sent via an asynchronous goroutine.
+	// It is important to note that this callback is generally NOT invoked
+	// when using distributed queues (e.g., Redis, Kafka) because the
+	// message processing might occur in a separate consumer process
+	// where the original context and callback function are no longer available.
+	//
+	// Specifying a Callback also implies that `Async` must be set to `true`
+	// for the callback to be effective, as callbacks are not supported for synchronous sends.
+	Callback func(error)
+	// Custom retry policy (overrides global), deserializable from queue will lost the filter function.
+	RetryPolicy *RetryPolicy
+	// HTTPClient allows per-send custom HTTP client.
+	// Only affects HTTP-based providers; SMTP/email is not affected.
+	// Optional: custom HTTP client for this send.
+	HTTPClient *http.Client
 }
 
 // NotificationMiddleware holds configurations for notification middlewares.
@@ -160,15 +184,14 @@ type NotificationMiddleware struct {
 
 // RetryPolicy manages unified retry settings.
 type RetryPolicy struct {
-	MaxAttempts   int           // Maximum number of retry attempts.
-	InitialDelay  time.Duration // Initial delay before the first retry.
-	MaxDelay      time.Duration // Maximum delay between retries.
-	BackoffFactor float64       // Factor by which the delay increases with each attempt.
-	Filter        RetryFilter   // Custom filter function to determine if retry should occur.
-	// Internal state for managing retry attempts.
-	currentAttempt int
-	mu             sync.RWMutex
-	Jitter         bool
+	MaxAttempts    int           // Maximum number of retry attempts.
+	InitialDelay   time.Duration // Initial delay before the first retry.
+	MaxDelay       time.Duration // Maximum delay between retries.
+	BackoffFactor  float64       // Factor by which the delay increases with each attempt.
+	Filter         RetryFilter   // Custom filter function to determine if retry should occur.
+	currentAttempt int           // Internal state for managing retry attempts.
+	rng            *rand.Rand    // Random number generator.
+	mu             sync.RWMutex  // Mutex for thread safety.
 }
 
 // NewRetryPolicy creates a new RetryPolicy with the given options.
@@ -178,8 +201,8 @@ func NewRetryPolicy(opts ...RetryOption) *RetryPolicy {
 		InitialDelay:  defaultInitialDelay,           // Default to 100ms
 		MaxDelay:      defaultMaxDelay,               // Default to 30 seconds max delay
 		BackoffFactor: defaultBackoffFactor,          // Default to exponential backoff
-		Jitter:        true,                          // Default to jitter enabled
 		Filter:        DefaultRetryFilter(nil, true), // Default to retry on all errors
+		rng:           rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 	for _, opt := range opts {
 		opt(policy)
@@ -213,13 +236,23 @@ func (r *RetryPolicy) ShouldRetry(attempt int, err error) bool {
 	return r.Filter(attempt, err)
 }
 
-// NextDelay calculates the delay before the next retry attempt using exponential backoff.
+// NextDelay calculates the delay before the next retry attempt using exponential backoff with jitter.
+//
+// Exponential backoff calculation:
+//   - The attempt parameter is 0-indexed for the first attempt, 1 for the second, etc.
+//   - For exponential backoff, the factor should be raised to the power of the attempt number.
+//     So, for attempt 0, delay = initialDelay * backoffFactor^0 = initialDelay
+//   - For attempt 1, delay = initialDelay * backoffFactor^1 And so on.
 func (r *RetryPolicy) NextDelay(attempt int, _ error) time.Duration {
-	delay := time.Duration(float64(r.InitialDelay) * float64(attempt) * r.BackoffFactor)
-	if delay > r.MaxDelay {
-		delay = r.MaxDelay
+	calculatedDelay := time.Duration(float64(r.InitialDelay) * math.Pow(r.BackoffFactor, float64(attempt)))
+	if calculatedDelay > 0 {
+		calculatedDelay = time.Duration(r.rng.Int63n(int64(calculatedDelay) + 1))
 	}
-	return delay
+	// Cap the delay at MaxDelay
+	if calculatedDelay > r.MaxDelay {
+		calculatedDelay = r.MaxDelay
+	}
+	return calculatedDelay
 }
 
 // RetryOption is a function type for configuring retry behavior.

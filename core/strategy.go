@@ -31,7 +31,7 @@ type Selectable interface {
 	GetName() string
 	GetWeight() int
 	IsEnabled() bool
-	GetType() string // 获取类型标识，用于过滤（如：aliyun, tencent, emailjs等）
+	GetType() string
 }
 
 // SelectionStrategy defines the selection strategy interface.

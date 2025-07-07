@@ -8,9 +8,11 @@ import (
 type ActionCardContent struct {
 	// Title of the action card
 	Title string `json:"title"`
-	// Content of the action card, 如果需要实现 @ 功能 ，在 text 内容中添加 @ 用户的 userId。比如 @manager7675
+	// Content of the action card
+	// If you need to implement @ functionality, add the user's userId in the text content.
+	// For example, @manager7675
 	Text string `json:"text"`
-	// 按钮排列方式，0：竖向排列，1：横向排列
+	// Button orientation, 0: vertical (default), 1: horizontal
 	//   - 0: vertical (default)
 	//   - 1: horizontal
 	BtnOrientation string `json:"btnOrientation,omitempty"`
@@ -25,9 +27,9 @@ type ActionCardContent struct {
 
 // ActionCardButton represents a button in action card.
 type ActionCardButton struct {
-	// 按钮标题
+	// Button title
 	Title string `json:"title"`
-	// 按钮点击链接
+	// Button click link
 	ActionURL string `json:"actionURL"`
 }
 
