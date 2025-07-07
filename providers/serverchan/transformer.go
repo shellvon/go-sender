@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/shellvon/go-sender/core"
-	"github.com/shellvon/go-sender/utils"
 )
 
 // serverchanTransformer implements core.HTTPTransformer[*Account] for ServerChan messages.
@@ -46,7 +45,12 @@ func (t *serverchanTransformer) Transform(
 		Body:     body,
 		BodyType: core.BodyTypeJSON,
 	}
-	return reqSpec, t.handleServerChanResponse, nil
+	return reqSpec, core.NewResponseHandler(&core.ResponseHandlerConfig{
+		SuccessField:      "code",
+		SuccessValue:      "0",
+		ErrorCodeField:    "code",
+		ErrorMessageField: "message",
+	}), nil
 }
 
 // buildAPIURL 构造 ServerChan API 地址
@@ -65,22 +69,4 @@ func (t *serverchanTransformer) buildAPIURL(key string) string {
 	}
 	// Standard Turbo version
 	return fmt.Sprintf("https://sctapi.ftqq.com/%s.send", key)
-}
-
-// handleServerChanResponse 处理 ServerChan API 响应.
-func (t *serverchanTransformer) handleServerChanResponse(statusCode int, body []byte) error {
-	if !utils.IsAcceptableStatus(statusCode) {
-		return fmt.Errorf("serverchan API returned non-OK status: %d", statusCode)
-	}
-	var result struct {
-		Code    int    `json:"code"`
-		Message string `json:"message"`
-	}
-	if err := json.Unmarshal(body, &result); err != nil {
-		return fmt.Errorf("failed to parse response: %w", err)
-	}
-	if result.Code != 0 {
-		return fmt.Errorf("serverchan error: code=%d, msg=%s", result.Code, result.Message)
-	}
-	return nil
 }

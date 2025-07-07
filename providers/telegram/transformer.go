@@ -96,24 +96,10 @@ func (t *telegramTransformer) Transform(
 		Body:     body,
 		BodyType: core.BodyTypeJSON,
 	}
-	return reqSpec, handleTelegramResponse, nil
-}
-
-// handleTelegramResponse 处理 Telegram API 响应.
-func handleTelegramResponse(statusCode int, body []byte) error {
-	var result struct {
-		OK          bool   `json:"ok"`
-		ErrorCode   int    `json:"error_code,omitempty"`
-		Description string `json:"description,omitempty"`
-	}
-	if err := json.Unmarshal(body, &result); err != nil {
-		return fmt.Errorf("failed to parse telegram response: %w", err)
-	}
-	if !result.OK {
-		if result.ErrorCode != 0 {
-			return fmt.Errorf("telegram API error %d: %s", result.ErrorCode, result.Description)
-		}
-		return fmt.Errorf("telegram API request failed: %s", result.Description)
-	}
-	return nil
+	return reqSpec, core.NewResponseHandler(&core.ResponseHandlerConfig{
+		SuccessField:      "ok",
+		SuccessValue:      "true",
+		ErrorCodeField:    "error_code",
+		ErrorMessageField: "description",
+	}), nil
 }

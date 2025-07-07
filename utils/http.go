@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -41,71 +42,6 @@ type HTTPRequestOptions struct {
 
 	// Client allows custom HTTP client for this request. Only affects HTTP-based providers; SMTP/email is not affected.
 	Client *http.Client // Optional: custom HTTP client (proxy, timeout, etc.)
-
-	// ThrowHTTPErrors: if true, non-2xx/3xx status codes will return error; otherwise, always return body+status.
-	ThrowHTTPErrors bool
-}
-
-// DoRequest performs an HTTP request and returns the response body.
-// It automatically handles data formatting based on the provided fields.
-//
-// Data handling priority:
-//  1. Raw/RawReader (highest priority)
-//  2. JSON
-//  3. Form (multipart)
-//  4. Data (urlencoded)
-//  5. Files
-//
-// Returns:
-//   - []byte: Response body
-//   - int: HTTP status code
-//   - error: Request error
-func DoRequest(ctx context.Context, requestURL string, options HTTPRequestOptions) ([]byte, int, error) {
-	ctx, cancel := prepareContext(ctx, &options)
-	if cancel != nil {
-		defer cancel()
-	}
-
-	reqBody, contentType, err := buildRequestBody(options)
-
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to build request body: %w", err)
-	}
-
-	finalURL, err := buildFinalURL(requestURL, options.Query)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	method := getDefaultMethod(options.Method, reqBody)
-	req, err := http.NewRequestWithContext(ctx, method, finalURL, reqBody)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to create HTTP request: %w", err)
-	}
-
-	setRequestHeaders(req, options.Headers, contentType)
-	client := core.EnsureHTTPClient(options.Client)
-
-	resp, err := sendRequest(client, req)
-	if err != nil {
-		return nil, 0, fmt.Errorf("HTTP request failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	bodyBytes, err := readResponseBody(resp)
-	if err != nil {
-		return nil, resp.StatusCode, fmt.Errorf("failed to read response body: %w", err)
-	}
-
-	if options.ThrowHTTPErrors && !IsAcceptableStatus(resp.StatusCode) {
-		return bodyBytes, resp.StatusCode, fmt.Errorf(
-			"HTTP request failed with status code %d. Response body: %s",
-			resp.StatusCode,
-			string(bodyBytes),
-		)
-	}
-
-	return bodyBytes, resp.StatusCode, nil
 }
 
 func prepareContext(ctx context.Context, options *HTTPRequestOptions) (context.Context, context.CancelFunc) {
@@ -194,18 +130,6 @@ func buildJSONBody(jsonObj interface{}) (io.Reader, string, error) {
 	return bytes.NewReader(jsonData), "application/json", nil
 }
 
-// sendRequest sends the HTTP request using the provided client and returns the response.
-// Returns the HTTP response and any error encountered.
-func sendRequest(client *http.Client, req *http.Request) (*http.Response, error) {
-	return client.Do(req)
-}
-
-// readResponseBody reads and returns the response body as a byte slice.
-// Returns the body and any error encountered.
-func readResponseBody(resp *http.Response) ([]byte, error) {
-	return io.ReadAll(resp.Body)
-}
-
 // IsAcceptableStatus returns true if the status code is 2xx or 3xx.
 func IsAcceptableStatus(statusCode int) bool {
 	return statusCode >= http.StatusOK && statusCode < http.StatusBadRequest
@@ -288,4 +212,57 @@ func addFileToMultipart(writer *multipart.Writer, fieldName, filePath string) er
 	}
 
 	return nil
+}
+
+// SendRequest sends an HTTP request and returns the raw *http.Response.
+// The caller is responsible for closing resp.Body (or delegating to ReadAndClose).
+func SendRequest(ctx context.Context, requestURL string, options HTTPRequestOptions) (*http.Response, error) {
+	ctx, cancel := prepareContext(ctx, &options)
+	if cancel != nil {
+		defer cancel()
+	}
+
+	reqBody, contentType, err := buildRequestBody(options)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build request body: %w", err)
+	}
+
+	finalURL, err := buildFinalURL(requestURL, options.Query)
+	if err != nil {
+		return nil, err
+	}
+
+	method := getDefaultMethod(options.Method, reqBody)
+	req, err := http.NewRequestWithContext(ctx, method, finalURL, reqBody)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
+	}
+	setRequestHeaders(req, options.Headers, contentType)
+	client := core.EnsureHTTPClient(options.Client)
+	return client.Do(req)
+}
+
+// ReadAndClose reads all bytes from resp.Body and then closes it.
+// It does NOT perform any status code validation; callers should decide
+// how to interpret resp.StatusCode. Returns the body bytes and response headers.
+func ReadAndClose(resp *http.Response) ([]byte, http.Header, error) {
+	if resp == nil {
+		return nil, nil, errors.New("response is nil")
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, resp.Header, fmt.Errorf("failed to read response body: %w", err)
+	}
+	return bodyBytes, resp.Header, nil
+}
+
+func DoRequest(ctx context.Context, requestURL string, options HTTPRequestOptions) ([]byte, int, error) {
+	resp, err := SendRequest(ctx, requestURL, options)
+	if err != nil {
+		return nil, 0, err
+	}
+	body, _, readErr := ReadAndClose(resp)
+	return body, resp.StatusCode, readErr
 }

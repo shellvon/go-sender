@@ -59,54 +59,31 @@ const (
 	submailDefaultDomain = "https://api-v4.mysubmail.com"
 )
 
-type submailTransformer struct{}
+type submailTransformer struct {
+	*BaseTransformer
+}
+
+func newSubmailTransformer() *submailTransformer {
+	transformer := &submailTransformer{}
+	transformer.BaseTransformer = NewBaseTransformer(
+		string(core.ProviderTypeSMS),
+		string(SubProviderSubmail),
+		&core.ResponseHandlerConfig{
+			SuccessField:      "status",
+			SuccessValue:      "success",
+			ErrorCodeField:    "code",
+			ErrorMessageField: "msg",
+			ErrorField:        "code",
+		},
+		WithSMSHandler(transformer.transformSMS),
+		WithVoiceHandler(transformer.transformVoice),
+		WithMMSHandler(transformer.transformMMS),
+	)
+	return transformer
+}
 
 func init() {
-	RegisterTransformer(string(SubProviderSubmail), &submailTransformer{})
-}
-
-func (t *submailTransformer) CanTransform(msg core.Message) bool {
-	smsMsg, ok := msg.(*Message)
-	return ok && smsMsg.SubProvider == string(SubProviderSubmail)
-}
-
-func (t *submailTransformer) Transform(
-	_ context.Context,
-	msg core.Message,
-	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
-	smsMsg, ok := msg.(*Message)
-	if !ok {
-		return nil, nil, NewProviderError(
-			string(SubProviderSubmail),
-			"INVALID_MESSAGE_TYPE",
-			fmt.Sprintf("unsupported message type for Submail: %T", msg),
-		)
-	}
-
-	// Apply Submail-specific defaults
-	t.applySubmailDefaults(smsMsg, account)
-
-	switch smsMsg.Type {
-	case SMSText:
-		return t.transformSMS(smsMsg, account)
-	case Voice:
-		return t.transformVoice(smsMsg, account)
-	case MMS:
-		return t.transformMMS(smsMsg, account)
-	default:
-		return nil, nil, NewProviderError(
-			string(SubProviderSubmail),
-			"UNSUPPORTED_MESSAGE_TYPE",
-			fmt.Sprintf("unsupported message type: %v", smsMsg.Type),
-		)
-	}
-}
-
-// applySubmailDefaults applies Submail-specific defaults to the message.
-func (t *submailTransformer) applySubmailDefaults(msg *Message, account *Account) {
-	// Apply common defaults first
-	msg.ApplyCommonDefaults(account)
+	RegisterTransformer(string(SubProviderSubmail), newSubmailTransformer())
 }
 
 // 通用的submail请求构造方法.
@@ -124,7 +101,7 @@ func (t *submailTransformer) buildSubmailRequest(
 		URL:      endpoint,
 		Body:     body,
 		BodyType: core.BodyTypeForm,
-	}, t.handleSubmailResponse, nil
+	}, nil, nil
 }
 
 // transformSMS transforms SMS message to HTTP request
@@ -133,6 +110,7 @@ func (t *submailTransformer) buildSubmailRequest(
 //   - 模板短信: https://www.mysubmail.com/documents/OOVyh
 //   - 群发: https://www.mysubmail.com/documents/AzD4Z4
 func (t *submailTransformer) transformSMS(
+	_ context.Context,
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
@@ -199,6 +177,7 @@ func (t *submailTransformer) getSMSPath(msg *Message) string {
 //   - 语音: https://www.mysubmail.com/documents/meE3C1
 //   - 语音模板: https://www.mysubmail.com/documents/KbG03
 func (t *submailTransformer) transformVoice(
+	_ context.Context,
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
@@ -236,6 +215,7 @@ func (t *submailTransformer) getVoicePath(msg *Message) string {
 // transformMMS transforms MMS message to HTTP request
 //   - 彩信: https://www.mysubmail.com/documents/N6ktR
 func (t *submailTransformer) transformMMS(
+	_ context.Context,
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
@@ -402,25 +382,4 @@ func (t *submailTransformer) encodeParams(params map[string]string) []byte {
 		values.Set(k, v)
 	}
 	return []byte(values.Encode())
-}
-
-func (t *submailTransformer) handleSubmailResponse(statusCode int, body []byte) error {
-	if !utils.IsAcceptableStatus(statusCode) {
-		return NewProviderError(string(ProviderTypeSubmail), strconv.Itoa(statusCode), string(body))
-	}
-
-	var response map[string]interface{}
-	if err := json.Unmarshal(body, &response); err != nil {
-		return NewProviderError(string(ProviderTypeSubmail), "PARSE_ERROR", err.Error())
-	}
-
-	if response["status"] != "success" {
-		return &Error{
-			Code:     response["code"].(string),
-			Message:  response["msg"].(string),
-			Provider: string(ProviderTypeSubmail),
-		}
-	}
-
-	return nil
 }

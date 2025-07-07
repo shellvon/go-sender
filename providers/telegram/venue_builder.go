@@ -43,6 +43,17 @@ func (b *VenueBuilder) Latitude(lat float64) *VenueBuilder { b.latitude = lat; r
 // Longitude of the location.
 func (b *VenueBuilder) Longitude(lon float64) *VenueBuilder { b.longitude = lon; return b }
 
+// Coordinates sets the coordinates of the venue.
+// Based on SendVenueParams from Telegram Bot API
+// https://core.telegram.org/bots/api#sendvenue
+// Coordinates of the location.
+// Same as Latitude and Longitude.
+func (b *VenueBuilder) Coordinates(lat, lon float64) *VenueBuilder {
+	b.latitude = lat
+	b.longitude = lon
+	return b
+}
+
 // Title sets the title of the venue.
 // Based on SendVenueParams from Telegram Bot API
 // https://core.telegram.org/bots/api#sendvenue

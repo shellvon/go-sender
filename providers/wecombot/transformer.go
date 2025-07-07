@@ -8,7 +8,6 @@ import (
 	"net/http"
 
 	"github.com/shellvon/go-sender/core"
-	"github.com/shellvon/go-sender/utils"
 )
 
 // wecombotTransformer implements core.HTTPTransformer[*Account] for WeCom Bot.
@@ -57,27 +56,10 @@ func (t *wecombotTransformer) Transform(
 		BodyType: core.BodyTypeJSON,
 	}
 
-	return reqSpec, t.handleWecombotResponse, nil
-}
-
-// handleWecombotResponse handles WeCom Bot API response.
-func (t *wecombotTransformer) handleWecombotResponse(statusCode int, body []byte) error {
-	if !utils.IsAcceptableStatus(statusCode) {
-		return fmt.Errorf("wecom API returned non-OK status: %d", statusCode)
-	}
-
-	var result struct {
-		ErrCode int    `json:"errcode"`
-		ErrMsg  string `json:"errmsg"`
-	}
-
-	if err := json.Unmarshal(body, &result); err != nil {
-		return fmt.Errorf("failed to parse response: %w", err)
-	}
-
-	if result.ErrCode != 0 {
-		return fmt.Errorf("wecom error: code=%d, msg=%s", result.ErrCode, result.ErrMsg)
-	}
-
-	return nil
+	return reqSpec, core.NewResponseHandler(&core.ResponseHandlerConfig{
+		SuccessField:      "errcode",
+		SuccessValue:      "0",
+		ErrorCodeField:    "errcode",
+		ErrorMessageField: "errmsg",
+	}), nil
 }

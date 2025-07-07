@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 
 	"github.com/shellvon/go-sender/core"
@@ -36,55 +35,32 @@ const (
 // smsbaoTransformer implements HTTPRequestTransformer for Smsbao
 // 统一风格实现
 
-type smsbaoTransformer struct{}
+type smsbaoTransformer struct {
+	*BaseTransformer
+}
+
+func newSmsbaoTransformer() *smsbaoTransformer {
+	transformer := &smsbaoTransformer{}
+	transformer.BaseTransformer = NewBaseTransformer(
+		string(core.ProviderTypeSMS),
+		string(SubProviderSmsbao),
+		nil,
+		WithSMSHandler(transformer.transformSMS),
+		WithVoiceHandler(transformer.transformVoice),
+	)
+	return transformer
+}
 
 // init 自动注册 Smsbao transformer.
 func init() {
-	RegisterTransformer(string(SubProviderSmsbao), &smsbaoTransformer{})
-}
-
-// CanTransform 判断是否为短信宝消息.
-func (t *smsbaoTransformer) CanTransform(msg core.Message) bool {
-	smsMsg, ok := msg.(*Message)
-	return ok && smsMsg.SubProvider == string(SubProviderSmsbao)
-}
-
-// Transform converts a Smsbao SMS message to HTTP request specification.
-func (t *smsbaoTransformer) Transform(
-	_ context.Context,
-	msg core.Message,
-	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
-	smsMsg, ok := msg.(*Message)
-	if !ok {
-		return nil, nil, fmt.Errorf("unsupported message type for Smsbao: %T", msg)
-	}
-
-	// Apply Smsbao-specific defaults
-	t.applySmsbaoDefaults(smsMsg, account)
-
-	switch smsMsg.Type {
-	case SMSText:
-		return t.transformSMS(smsMsg, account)
-	case Voice:
-		return t.transformVoice(smsMsg, account)
-	case MMS:
-		return nil, nil, fmt.Errorf("unsupported message type: %v", smsMsg.Type)
-	default:
-		return nil, nil, fmt.Errorf("unsupported message type: %v", smsMsg.Type)
-	}
-}
-
-// applySmsbaoDefaults applies Smsbao-specific defaults to the message.
-func (t *smsbaoTransformer) applySmsbaoDefaults(msg *Message, account *Account) {
-	// Apply common defaults first
-	msg.ApplyCommonDefaults(account)
+	RegisterTransformer(string(SubProviderSmsbao), newSmsbaoTransformer())
 }
 
 // transformSMS transforms SMS message to HTTP request
 //   - 国内短信: https://www.smsbao.com/openapi/213.html
 //   - 国际短信: https://www.smsbao.com/openapi/299.html
 func (t *smsbaoTransformer) transformSMS(
+	_ context.Context,
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
@@ -120,7 +96,7 @@ func (t *smsbaoTransformer) transformSMS(
 		Method:      http.MethodGet,
 		URL:         fmt.Sprintf("%s%s", smsbaoDefaultBaseURI, apiPath),
 		QueryParams: queryParams,
-	}, handleSMSBaoResponse, nil
+	}, t.handleSMSBaoResponse, nil
 }
 
 // transformVoice transforms voice message to HTTP request
@@ -129,6 +105,7 @@ func (t *smsbaoTransformer) transformSMS(
 // 能力说明:
 //   - 语音验证码：仅支持国内、仅验证码类型、仅单号码。
 func (t *smsbaoTransformer) transformVoice(
+	_ context.Context,
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
@@ -175,29 +152,27 @@ func (t *smsbaoTransformer) transformVoice(
 		Method:      http.MethodGet,
 		URL:         fmt.Sprintf("%s/voice", smsbaoDefaultBaseURI),
 		QueryParams: queryParams,
-	}, handleSMSBaoResponse, nil
+	}, t.handleSMSBaoResponse, nil
 }
 
 // handleSMSBaoResponse 处理短信宝 API 响应.
-func handleSMSBaoResponse(statusCode int, body []byte) error {
-	if !utils.IsAcceptableStatus(statusCode) {
-		return NewProviderError(string(ProviderTypeSmsbao), strconv.Itoa(statusCode), string(body))
+func (t *smsbaoTransformer) handleSMSBaoResponse(resp *http.Response) error {
+	body, _, err := utils.ReadAndClose(resp)
+	if err != nil {
+		return NewProviderError(string(ProviderTypeSmsbao), "READ_ERROR", err.Error())
 	}
-
+	var smsBaoErrorMap = map[string]string{
+		"30": "password error",
+		"40": "account does not exist",
+		"41": "insufficient balance",
+		"42": "account expired",
+		"43": "IP address restriction",
+		"50": "content contains sensitive words",
+		"51": "incorrect mobile number",
+	}
 	code := string(body)
 	if code != "0" {
 		return NewProviderError(string(ProviderTypeSmsbao), code, smsBaoErrorMap[code])
 	}
-
 	return nil
-}
-
-var smsBaoErrorMap = map[string]string{
-	"30": "password error",
-	"40": "account does not exist",
-	"41": "insufficient balance",
-	"42": "account expired",
-	"43": "IP address restriction",
-	"50": "content contains sensitive words",
-	"51": "incorrect mobile number",
 }

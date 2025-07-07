@@ -3,8 +3,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"crypto/md5"
-	"encoding/base64"
 	"flag"
 	"fmt"
 	"image"
@@ -22,12 +20,22 @@ import (
 	"github.com/shellvon/go-sender/providers/sms"
 	"github.com/shellvon/go-sender/providers/telegram"
 	"github.com/shellvon/go-sender/providers/wecombot"
+	"github.com/shellvon/go-sender/utils"
+)
+
+const (
+	defaultDelay             = 3 * time.Second
+	aspectRatio              = 1.8
+	imgWidth                 = 100
+	imgHeight                = 100
+	defaultLocationLatitude  = 40.7128
+	defaultLocationLongitude = -74.0060
 )
 
 // createEmptyImage creates a 100x100 transparent PNG image and returns its base64 and MD5.
 func createEmptyImage() (string, string, error) {
 	// Create a new 100x100 image
-	img := image.NewRGBA(image.Rect(0, 0, 100, 100))
+	img := image.NewRGBA(image.Rect(0, 0, imgWidth, imgHeight))
 
 	// Encode to PNG
 	var buf bytes.Buffer
@@ -35,15 +43,9 @@ func createEmptyImage() (string, string, error) {
 		return "", "", fmt.Errorf("failed to encode PNG: %w", err)
 	}
 
-	// Calculate MD5 of the raw image data
-	hash := md5.New()
-	if _, err := hash.Write(buf.Bytes()); err != nil {
-		return "", "", fmt.Errorf("failed to calculate MD5: %w", err)
-	}
-	imgMD5 := fmt.Sprintf("%x", hash.Sum(nil))
+	imgMD5 := utils.MD5Hex(buf.String())
 
-	// Convert to base64
-	imgBase64 := base64.StdEncoding.EncodeToString(buf.Bytes())
+	imgBase64 := utils.Base64Encode(buf.String())
 
 	return imgBase64, imgMD5, nil
 }
@@ -122,7 +124,6 @@ func runTelegramDemo() {
 		log.Println("Init telegram provider failed:", err)
 		return
 	}
-
 	// Test all message types
 	messages := []struct {
 		name string
@@ -190,7 +191,7 @@ func runTelegramDemo() {
 			name: "Location Message",
 			msg: telegram.Location().
 				Chat(chatID).
-				Coordinates(40.7128, -74.0060).
+				Coordinates(defaultLocationLatitude, defaultLocationLongitude).
 				Build(),
 		},
 		{
@@ -228,8 +229,7 @@ func runTelegramDemo() {
 			name: "Venue Message",
 			msg: telegram.Venue().
 				Chat(chatID).
-				Latitude(40.7128).
-				Longitude(-74.0060).
+				Coordinates(defaultLocationLatitude, defaultLocationLongitude).
 				Title("New York City").
 				Address("New York, NY, USA").
 				Build(),
@@ -247,11 +247,7 @@ func runTelegramDemo() {
 		} else {
 			log.Printf("Successfully sent %s!", m.name)
 		}
-		// Sleep for 3 seconds between messages to avoid hitting rate limits
-		// Telegram limits:
-		// - 30 messages per second to different chats
-		// - 20 messages per minute to the same chat
-		time.Sleep(3 * time.Second)
+		time.Sleep(defaultDelay)
 	}
 }
 
@@ -296,7 +292,6 @@ func runWecombotDemo() {
 		log.Println("Init wecom bot provider failed:", err)
 		return
 	}
-
 	// Test all message types
 	messages := []struct {
 		name string
@@ -312,9 +307,9 @@ func runWecombotDemo() {
 		{
 			name: "Image Message",
 			msg: func() core.Message {
-				base64Img, imgMD5, err := createEmptyImage()
-				if err != nil {
-					log.Printf("Failed to create empty image: %v", err)
+				base64Img, imgMD5, createImageErr := createEmptyImage()
+				if createImageErr != nil {
+					log.Printf("Failed to create empty image: %v", createImageErr)
 					return nil
 				}
 				return wecombot.Image().
@@ -333,38 +328,11 @@ func runWecombotDemo() {
 		{
 			name: "Markdown Message (V2)",
 			msg: wecombot.Markdown().
-				Content("# 一、标题\n" +
-					"## 二级标题\n" +
-					"### 三级标题\n\n" +
-					"# 二、字体\n" +
-					"*斜体*\n" +
-					"**加粗**\n\n" +
-					"# 三、列表 \n" +
-					"- 无序列表 1 \n" +
-					"- 无序列表 2\n" +
-					"  - 无序列表 2.1\n" +
-					"  - 无序列表 2.2\n" +
-					"1. 有序列表 1\n" +
-					"2. 有序列表 2\n\n" +
-					"# 四、引用\n" +
-					"> 一级引用\n" +
-					">> 二级引用\n" +
-					">>> 三级引用\n\n" +
-					"# 五、链接\n" +
-					"[这是一个链接](https://work.weixin.qq.com/api/doc)\n" +
-					"![](https://res.mail.qq.com/node/ww/wwopenmng/images/independent/doc/test_pic_msg1.png)\n\n" +
-					"# 六、分割线\n" +
-					"---\n\n" +
-					"# 七、代码\n" +
-					"`这是行内代码`\n" +
-					"```\n" +
-					"这是独立代码块\n" +
-					"```\n\n" +
-					"# 八、表格\n" +
+				Content(
 					"| 姓名 | 文化衫尺寸 | 收货地址 |\n" +
-					"| :--- | :---: | ---: |\n" +
-					"| 张三 | S | 广州 |\n" +
-					"| 李四 | L | 深圳 |",
+						"| :--- | :---: | ---: |\n" +
+						"| 张三 | S | 广州 |\n" +
+						"| 李四 | L | 深圳 |",
 				).
 				Version(wecombot.MarkdownVersionV2).
 				Build(),
@@ -404,7 +372,7 @@ func runWecombotDemo() {
 			name: "Template Card (News Notice)",
 			msg: wecombot.Card(wecombot.CardTypeNewsNotice).
 				MainTitle("Go-Sender News", "Important Updates").
-				CardImage("https://golang.org/lib/godoc/images/go-logo-blue.svg", 1.8).
+				CardImage("https://golang.org/lib/godoc/images/go-logo-blue.svg", aspectRatio).
 				ImageTextArea(
 					"Latest Release",
 					"Check out our new features and improvements",
@@ -429,8 +397,7 @@ func runWecombotDemo() {
 		} else {
 			log.Printf("Successfully sent %s!", m.name)
 		}
-		// Sleep for 2 seconds between messages to avoid hitting rate limits
-		time.Sleep(2 * time.Second)
+		time.Sleep(defaultDelay)
 	}
 }
 
@@ -791,7 +758,7 @@ func runDingTalkDemo() {
 		} else {
 			log.Printf("%s success!\n", demo.name)
 		}
-		time.Sleep(3 * time.Second) // 限流保护
+		time.Sleep(defaultDelay)
 	}
 }
 
@@ -907,6 +874,6 @@ func runServerChanDemo() {
 		} else {
 			log.Printf("%s success!\n", demo.name)
 		}
-		time.Sleep(3 * time.Second) // 限流保护
+		time.Sleep(defaultDelay)
 	}
 }

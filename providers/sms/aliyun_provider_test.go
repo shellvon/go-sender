@@ -10,6 +10,7 @@ import (
 	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/providers"
 	"github.com/shellvon/go-sender/providers/sms"
+	"github.com/shellvon/go-sender/utils"
 )
 
 func TestAliyunProvider_Send_Success(t *testing.T) {
@@ -63,7 +64,12 @@ func (f *fakeAliyunTransformer) Transform(
 			Headers:  map[string]string{},
 			Body:     []byte("{}"),
 			BodyType: core.BodyTypeJSON,
-		}, func(status int, body []byte) error {
+		}, func(resp *http.Response) error {
+			body, _, err := utils.ReadAndClose(resp)
+			if err != nil {
+				return err
+			}
+			status := resp.StatusCode
 			if status < 200 || status >= 300 {
 				return fmt.Errorf("HTTP request failed with status %d: %s", status, string(body))
 			}

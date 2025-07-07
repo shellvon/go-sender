@@ -11,6 +11,7 @@ import (
 
 	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/providers"
+	"github.com/shellvon/go-sender/utils"
 )
 
 type mockSelectable struct {
@@ -104,8 +105,8 @@ func TestHTTPProvider_Send_SingleConfig(t *testing.T) {
 
 	transformer := &mockTransformer{
 		reqSpec: reqSpec,
-		handler: func(statusCode int, _ []byte) error {
-			if statusCode != http.StatusOK {
+		handler: func(resp *http.Response) error {
+			if resp.StatusCode != http.StatusOK {
 				return errors.New("unexpected status code")
 			}
 			return nil
@@ -258,10 +259,14 @@ func TestHTTPProvider_ExecuteHTTPRequest_CustomHandler(t *testing.T) {
 	defer ts.Close()
 
 	customHandlerCalled := false
-	customHandler := func(statusCode int, body []byte) error {
+	customHandler := func(resp *http.Response) error {
 		customHandlerCalled = true
-		if statusCode != http.StatusOK {
+		if resp.StatusCode != http.StatusOK {
 			return errors.New("unexpected status code")
+		}
+		body, _, err := utils.ReadAndClose(resp)
+		if err != nil {
+			return err
 		}
 		if string(body) != `{"custom": "response"}` {
 			return errors.New("unexpected response body")

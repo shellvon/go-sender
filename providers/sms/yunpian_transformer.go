@@ -2,7 +2,6 @@ package sms
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -26,50 +25,41 @@ import (
 //
 // transformer 支持 text（国内/国际/模板/非模板/群发）、voice（语音验证码）、mms（超级短信）类型。
 
-type yunpianTransformer struct{}
+type yunpianTransformer struct {
+	*BaseTransformer
+}
+
+func newYunpianTransformer() *yunpianTransformer {
+	transformer := &yunpianTransformer{}
+	transformer.BaseTransformer = NewBaseTransformer(
+		string(core.ProviderTypeSMS),
+		string(SubProviderYunpian),
+		nil,
+	)
+	transformer.BaseTransformer = NewBaseTransformer(
+		string(core.ProviderTypeSMS),
+		string(SubProviderYunpian),
+		&core.ResponseHandlerConfig{
+			SuccessField:      "code",
+			SuccessValue:      "0",
+			ErrorCodeField:    "code",
+			ErrorMessageField: "msg",
+			ErrorField:        "code",
+		},
+		WithSMSHandler(transformer.transformSMS),
+		WithVoiceHandler(transformer.transformVoice),
+		WithMMSHandler(transformer.transformMMS),
+	)
+	return transformer
+}
 
 func init() {
-	RegisterTransformer(string(SubProviderYunpian), &yunpianTransformer{})
-}
-
-func (t *yunpianTransformer) CanTransform(msg core.Message) bool {
-	smsMsg, ok := msg.(*Message)
-	return ok && smsMsg.SubProvider == string(SubProviderYunpian)
-}
-
-func (t *yunpianTransformer) Transform(
-	_ context.Context,
-	msg core.Message,
-	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
-	smsMsg, ok := msg.(*Message)
-	if !ok {
-		return nil, nil, fmt.Errorf("unsupported message type for Yunpian: %T", msg)
-	}
-
-	// Apply Yunpian-specific defaults
-	t.applyYunpianDefaults(smsMsg, account)
-
-	switch smsMsg.Type {
-	case SMSText:
-		return t.transformSMS(smsMsg, account)
-	case Voice:
-		return t.transformVoice(smsMsg, account)
-	case MMS:
-		return t.transformMMS(smsMsg, account)
-	default:
-		return nil, nil, fmt.Errorf("unsupported message type: %v", smsMsg.Type)
-	}
-}
-
-// applyYunpianDefaults applies Yunpian-specific defaults to the message.
-func (t *yunpianTransformer) applyYunpianDefaults(msg *Message, account *Account) {
-	// Apply common defaults first
-	msg.ApplyCommonDefaults(account)
+	RegisterTransformer(string(SubProviderYunpian), newYunpianTransformer())
 }
 
 // transformSMS transforms SMS message to HTTP request.
 func (t *yunpianTransformer) transformSMS(
+	_ context.Context,
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
@@ -197,6 +187,7 @@ func (t *yunpianTransformer) transformIntlSMS(
 
 // transformVoice transforms voice message to HTTP request.
 func (t *yunpianTransformer) transformVoice(
+	_ context.Context,
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
@@ -222,6 +213,7 @@ func (t *yunpianTransformer) transformVoice(
 
 // transformMMS transforms MMS message to HTTP request.
 func (t *yunpianTransformer) transformMMS(
+	_ context.Context,
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
@@ -268,7 +260,7 @@ func (t *yunpianTransformer) buildRequest(
 		URL:      endpoint,
 		Body:     body,
 		BodyType: core.BodyTypeForm,
-	}, t.handleYunpianResponse, nil
+	}, nil, nil
 }
 
 // buildTemplateValue 构建模板参数值.
@@ -285,26 +277,4 @@ func (t *yunpianTransformer) buildTemplateValue(params map[string]string) string
 	}
 	sort.Strings(pairs) // Sort for consistent ordering
 	return strings.Join(pairs, "&")
-}
-
-// handleYunpianResponse 处理云片API响应.
-func (t *yunpianTransformer) handleYunpianResponse(statusCode int, body []byte) error {
-	if !utils.IsAcceptableStatus(statusCode) {
-		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
-	}
-
-	var response map[string]interface{}
-	if err := json.Unmarshal(body, &response); err != nil {
-		return NewProviderError(string(ProviderTypeYunpian), "PARSE_ERROR", err.Error())
-	}
-
-	if response["code"] != float64(0) {
-		return &Error{
-			Code:     strconv.FormatFloat(response["code"].(float64), 'f', -1, 64),
-			Message:  response["msg"].(string),
-			Provider: string(ProviderTypeYunpian),
-		}
-	}
-
-	return nil
 }

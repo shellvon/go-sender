@@ -14,6 +14,10 @@ import (
 
 type larkTransformer struct{}
 
+func newLarkTransformer() *larkTransformer {
+	return &larkTransformer{}
+}
+
 func (t *larkTransformer) CanTransform(msg core.Message) bool {
 	return msg.ProviderType() == core.ProviderTypeLark
 }
@@ -60,27 +64,10 @@ func (t *larkTransformer) Transform(
 		Body:     body,
 		BodyType: core.BodyTypeJSON,
 	}
-	return reqSpec, t.handleLarkResponse, nil
-}
-
-// handleLarkResponse handles the Lark API response.
-func (t *larkTransformer) handleLarkResponse(statusCode int, body []byte) error {
-	if !utils.IsAcceptableStatus(statusCode) {
-		return fmt.Errorf("lark API returned non-OK status: %d", statusCode)
-	}
-	var result struct {
-		Code    int    `json:"code"`
-		Message string `json:"msg"`
-	}
-	if err := json.Unmarshal(body, &result); err != nil {
-		return fmt.Errorf("failed to parse lark response: %w", err)
-	}
-	if result.Code != 0 {
-		return fmt.Errorf("lark error: code=%d, msg=%s", result.Code, result.Message)
-	}
-	return nil
-}
-
-func newLarkTransformer() core.HTTPTransformer[*Account] {
-	return &larkTransformer{}
+	return reqSpec, core.NewResponseHandler(&core.ResponseHandlerConfig{
+		SuccessField:      "code",
+		SuccessValue:      "0",
+		ErrorCodeField:    "code",
+		ErrorMessageField: "msg",
+	}), nil
 }

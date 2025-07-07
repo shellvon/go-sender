@@ -58,13 +58,9 @@ func TestAliyun_Integration_SendTextSMS(t *testing.T) {
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		t.Fatalf("client.Do failed: %v", err)
+		t.Fatalf("DoRequest failed: %v", err)
 	}
-	defer resp.Body.Close()
-	// 读取响应体
-	body := make([]byte, resp.ContentLength)
-	resp.Body.Read(body)
-	if handleErr := handler(resp.StatusCode, body); handleErr != nil {
+	if handleErr := handler(resp); handleErr != nil {
 		t.Errorf("handler failed: %v", handleErr)
 	}
 }

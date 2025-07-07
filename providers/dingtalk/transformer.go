@@ -71,31 +71,10 @@ func (t *dingTalkTransformer) Transform(
 		BodyType: core.BodyTypeJSON,
 	}
 
-	return reqSpec, t.handleDingTalkResponse, nil
-}
-
-// handleDingTalkResponse handles DingTalk API response.
-func (t *dingTalkTransformer) handleDingTalkResponse(statusCode int, body []byte) error {
-	if !utils.IsAcceptableStatus(statusCode) {
-		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
-	}
-
-	var response map[string]interface{}
-	if err := json.Unmarshal(body, &response); err != nil {
-		return fmt.Errorf("failed to parse response: %w", err)
-	}
-
-	// Check for DingTalk specific response format
-	if errCode, ok := response["errcode"].(float64); ok {
-		if errCode == 0 {
-			return nil
-		}
-		errMsg := "unknown error"
-		if msg, okMsg := response["errmsg"].(string); okMsg {
-			errMsg = msg
-		}
-		return fmt.Errorf("dingtalk API error: code=%v, message=%s", errCode, errMsg)
-	}
-
-	return nil
+	return reqSpec, core.NewResponseHandler(&core.ResponseHandlerConfig{
+		SuccessField:      "errcode",
+		SuccessValue:      "0",
+		ErrorCodeField:    "errcode",
+		ErrorMessageField: "errmsg",
+	}), nil
 }

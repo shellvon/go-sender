@@ -3,7 +3,6 @@ package sms
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -39,7 +38,7 @@ import (
 
 // init automatically registers the Aliyun transformer.
 func init() {
-	RegisterTransformer(string(SubProviderAliyun), &aliyunTransformer{})
+	RegisterTransformer(string(SubProviderAliyun), newAliyunTransformer())
 }
 
 const (
@@ -53,41 +52,34 @@ const (
 )
 
 // aliyunTransformer implements HTTPTransformer[*Account] for Aliyun SMS.
-type aliyunTransformer struct{}
-
-// CanTransform checks if this transformer can handle the given message.
-func (t *aliyunTransformer) CanTransform(msg core.Message) bool {
-	smsMsg, ok := msg.(*Message)
-	if !ok {
-		return false
-	}
-	return smsMsg.SubProvider == string(SubProviderAliyun)
+type aliyunTransformer struct {
+	*BaseTransformer
 }
 
-// Transform converts an Aliyun SMS message to HTTP request specification.
-func (t *aliyunTransformer) Transform(
-	_ context.Context,
-	msg core.Message,
-	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
-	smsMsg, ok := msg.(*Message)
-	if !ok {
-		return nil, nil, fmt.Errorf("unsupported message type for Aliyun: %T", msg)
-	}
-
-	// Apply Aliyun-specific defaults
-	t.applyAliyunDefaults(smsMsg, account)
-
-	switch smsMsg.Type {
-	case SMSText:
-		return t.transformSMS(smsMsg, account)
-	case Voice:
-		return t.transformVoice(smsMsg, account)
-	case MMS:
-		return t.transformCardSMS(smsMsg, account)
-	default:
-		return nil, nil, fmt.Errorf("unsupported message type: %v", smsMsg.Type)
-	}
+func newAliyunTransformer() *aliyunTransformer {
+	transformer := &aliyunTransformer{}
+	transformer.BaseTransformer = NewBaseTransformer(
+		string(core.ProviderTypeSMS),
+		string(SubProviderCl253),
+		&core.ResponseHandlerConfig{
+			SuccessField:      "Code",
+			SuccessValue:      "OK",
+			ErrorCodeField:    "Code",
+			ErrorMessageField: "Message",
+			ErrorField:        "Code",
+			MessageField:      "Message",
+			ResponseType:      core.BodyTypeJSON,
+			ValidateResponse:  true,
+		},
+		WithBeforeHook(func(_ context.Context, msg *Message, account *Account) error {
+			transformer.applyAliyunDefaults(msg, account)
+			return nil
+		}),
+		WithSMSHandler(transformer.transformSMS),
+		WithVoiceHandler(transformer.transformVoice),
+		WithMMSHandler(transformer.transformCardSMS),
+	)
+	return transformer
 }
 
 // https://help.aliyun.com/zh/sdk/product-overview/v3-request-structure-and-signature
@@ -165,6 +157,7 @@ func (t *aliyunTransformer) signAliyunRequest(params aliyunSignParams) map[strin
 //
 // 短信模板即具体发送的短信内容，模板类型支持验证码、通知短信和推广短信。模板由模板变量和模板内容构成，您需要遵守模板内容规范和变量规范。
 func (t *aliyunTransformer) transformSMS(
+	_ context.Context,
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
@@ -203,7 +196,7 @@ func (t *aliyunTransformer) transformSMS(
 		QueryParams: urlVals,
 	}
 
-	return reqSpec, t.handleAliyunResponse, nil
+	return reqSpec, nil, nil
 }
 
 // getEndpointByRegion returns the correct endpoint for the given message type and region.
@@ -223,6 +216,7 @@ func (t *aliyunTransformer) getEndpointByRegion(msgType MessageType, region stri
 // TODO: API documentation not understood, temporarily not implemented
 //   - 文档地址: https://help.aliyun.com/zh/sms/developer-reference/api-dysmsapi-2017-05-25-sendcardsms
 func (t *aliyunTransformer) transformCardSMS(
+	_ context.Context,
 	_ *Message,
 	_ *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
@@ -233,6 +227,7 @@ func (t *aliyunTransformer) transformCardSMS(
 //   - 语音验证码API: https://help.aliyun.com/zh/vms/developer-reference/api-dyvmsapi-2017-05-25-singlecallbytts
 //   - 语音通知API: https://help.aliyun.com/zh/vms/developer-reference/api-dyvmsapi-2017-05-25-singlecallbyvoice
 func (t *aliyunTransformer) transformVoice(
+	_ context.Context,
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
@@ -296,32 +291,7 @@ func (t *aliyunTransformer) transformVoice(
 		BodyType:    core.BodyTypeRaw,
 	}
 
-	return reqSpec, t.handleAliyunResponse, nil
-}
-
-// handleAliyunResponse handles Aliyun API response.
-func (t *aliyunTransformer) handleAliyunResponse(statusCode int, body []byte) error {
-	if !utils.IsAcceptableStatus(statusCode) {
-		return NewProviderError(string(SubProviderAliyun), strconv.Itoa(statusCode), string(body))
-	}
-
-	var response map[string]interface{}
-	if err := json.Unmarshal(body, &response); err != nil {
-		return NewProviderError(string(SubProviderAliyun), "PARSE_ERROR", err.Error())
-	}
-
-	// Check for Aliyun specific response format
-	if code, ok := response["Code"].(string); ok {
-		if code == "OK" {
-			return nil
-		}
-		if msg, okMsg := response["Message"].(string); okMsg {
-			return NewProviderError(string(SubProviderAliyun), code, msg)
-		}
-		return NewProviderError(string(SubProviderAliyun), code, "unknown error")
-	}
-
-	return nil
+	return reqSpec, nil, nil
 }
 
 // formatPhoneNumber formats phone number for Aliyun SMS API

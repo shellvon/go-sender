@@ -2,11 +2,9 @@ package sms
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
 
@@ -28,80 +26,30 @@ const (
 	luosimaoVoiceDefaultBaseURI = "https://voice-api.luosimao.com"
 )
 
-type luosimaoTransformer struct{}
+type luosimaoTransformer struct {
+	*BaseTransformer
+}
+
+func newLuosimaoTransformer() *luosimaoTransformer {
+	transformer := &luosimaoTransformer{}
+	transformer.BaseTransformer = NewBaseTransformer(
+		string(core.ProviderTypeSMS),
+		string(SubProviderLuosimao),
+		&core.ResponseHandlerConfig{
+			SuccessField:      "errorno",
+			SuccessValue:      "0",
+			ErrorCodeField:    "errorno",
+			ErrorMessageField: "msg",
+			ErrorField:        "errorno",
+		},
+		WithSMSHandler(transformer.transformSMS),
+		WithVoiceHandler(transformer.transformVoice),
+	)
+	return transformer
+}
 
 func init() {
-	RegisterTransformer(string(SubProviderLuosimao), &luosimaoTransformer{})
-}
-
-func (t *luosimaoTransformer) CanTransform(msg core.Message) bool {
-	smsMsg, ok := msg.(*Message)
-	if !ok {
-		return false
-	}
-	return smsMsg.SubProvider == string(SubProviderLuosimao)
-}
-
-// Transform 构造螺丝帽短信/语音 HTTP 请求
-//   - 短信单发: https://luosimao.com/docs/api#send
-//   - 短信批量: https://luosimao.com/docs/api#send_batch
-//   - 语音验证码: https://luosimao.com/docs/api/51
-//
-// 规则:
-//   - type==Voice 且 category==CategoryVerification：走语音接口（仅支持单发）
-//   - type==SMSText：手机号数量大于1走批量，否则单发
-//   - endpoint 只用域名，transformer 拼接协议和路径
-//
-// 参数:
-//   - ctx: 上下文
-//   - msg: 消息体
-//   - account: 账号配置
-//
-// 返回:
-//   - HTTPRequestSpec: HTTP 请求规范
-//   - ResponseHandler: 响应处理器
-//   - error: 错误信息
-func (t *luosimaoTransformer) Transform(
-	_ context.Context,
-	msg core.Message,
-	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
-	smsMsg, ok := msg.(*Message)
-	if !ok {
-		return nil, nil, NewProviderError(
-			string(SubProviderLuosimao),
-			"INVALID_MESSAGE_TYPE",
-			fmt.Sprintf("unsupported message type for Luosimao: %T", msg),
-		)
-	}
-
-	// Apply Luosimao-specific defaults
-	t.applyLuosimaoDefaults(smsMsg, account)
-
-	switch smsMsg.Type {
-	case SMSText:
-		return t.transformSMS(smsMsg, account)
-	case Voice:
-		return t.transformVoice(smsMsg, account)
-	case MMS:
-		return nil, nil, NewProviderError(
-			string(SubProviderLuosimao),
-			"UNSUPPORTED_MESSAGE_TYPE",
-			fmt.Sprintf("unsupported message type: %v", smsMsg.Type),
-		)
-	default:
-		return nil, nil, NewProviderError(
-			string(SubProviderLuosimao),
-			"UNSUPPORTED_MESSAGE_TYPE",
-			fmt.Sprintf("unsupported message type: %v", smsMsg.Type),
-		)
-	}
-}
-
-// applyLuosimaoDefaults applies Luosimao-specific defaults to the message.
-func (t *luosimaoTransformer) applyLuosimaoDefaults(msg *Message, account *Account) {
-	// Apply common defaults first
-	msg.ApplyCommonDefaults(account)
+	RegisterTransformer(string(SubProviderLuosimao), newLuosimaoTransformer())
 }
 
 // buildLuosimaoRequestSpec 构造 Luosimao HTTPRequestSpec
@@ -131,7 +79,7 @@ func (t *luosimaoTransformer) buildLuosimaoRequestSpec(
 		Body:     body,
 		BodyType: core.BodyTypeForm,
 	}
-	return reqSpec, t.handleLuosimaoResponse, nil
+	return reqSpec, nil, nil
 }
 
 // transformSMS transforms SMS message to HTTP request
@@ -141,6 +89,7 @@ func (t *luosimaoTransformer) buildLuosimaoRequestSpec(
 //
 // 对于批量多发或者只有一个手机号但指定了定时发送的任务的，都采用批量发送，否则使用单个发送API.
 func (t *luosimaoTransformer) transformSMS(
+	_ context.Context,
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
@@ -172,6 +121,7 @@ func (t *luosimaoTransformer) transformSMS(
 // 目前语音短信仅支持验证码，即检查category是否为CategoryVerification
 //   - API: https://luosimao.com/docs/api/51
 func (t *luosimaoTransformer) transformVoice(
+	_ context.Context,
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
@@ -190,24 +140,4 @@ func (t *luosimaoTransformer) transformVoice(
 		fmt.Sprintf("%s/v1/verify.json", luosimaoVoiceDefaultBaseURI),
 		account,
 	)
-}
-
-// handleLuosimaoResponse 处理螺丝帽 API 响应
-//   - 统一处理单发、批量、语音接口返回
-func (t *luosimaoTransformer) handleLuosimaoResponse(statusCode int, body []byte) error {
-	if !utils.IsAcceptableStatus(statusCode) {
-		return NewProviderError(string(SubProviderLuosimao), strconv.Itoa(statusCode), string(body))
-	}
-	var response map[string]interface{}
-	if err := json.Unmarshal(body, &response); err != nil {
-		return NewProviderError(string(SubProviderLuosimao), "PARSE_ERROR", err.Error())
-	}
-	if response["errorno"] != float64(0) {
-		return NewProviderError(
-			string(SubProviderLuosimao),
-			strconv.Itoa(int(response["errorno"].(float64))),
-			response["msg"].(string),
-		)
-	}
-	return nil
 }

@@ -5,11 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/shellvon/go-sender/core"
-	"github.com/shellvon/go-sender/utils"
 )
 
 // @ProviderName: UCP / 云之讯
@@ -34,61 +32,35 @@ const (
 	ucpBatchAPI       = "templatesms"
 )
 
-type ucpTransformer struct{}
+type ucpTransformer struct {
+	*BaseTransformer
+}
+
+func newUcpTransformer() *ucpTransformer {
+	transformer := &ucpTransformer{}
+	transformer.BaseTransformer = NewBaseTransformer(
+		string(core.ProviderTypeSMS),
+		string(SubProviderUcp),
+		&core.ResponseHandlerConfig{
+			SuccessField:      "code",
+			SuccessValue:      "000000",
+			ErrorCodeField:    "code",
+			ErrorMessageField: "msg",
+			ErrorField:        "code",
+		},
+		WithSMSHandler(transformer.transformSMS),
+	)
+	return transformer
+}
 
 func init() {
-	RegisterTransformer(string(SubProviderUcp), &ucpTransformer{})
-}
-
-func (t *ucpTransformer) CanTransform(msg core.Message) bool {
-	smsMsg, ok := msg.(*Message)
-	return ok && smsMsg.SubProvider == string(SubProviderUcp)
-}
-
-func (t *ucpTransformer) Transform(
-	_ context.Context,
-	msg core.Message,
-	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
-	smsMsg, ok := msg.(*Message)
-	if !ok {
-		return nil, nil, NewProviderError(
-			string(SubProviderUcp),
-			"INVALID_MESSAGE_TYPE",
-			fmt.Sprintf("unsupported message type for UCP: %T", msg),
-		)
-	}
-
-	// Apply UCP-specific defaults
-	t.applyUcpDefaults(smsMsg, account)
-
-	switch smsMsg.Type {
-	case SMSText:
-		return t.transformSMS(smsMsg, account)
-	case Voice, MMS:
-		return nil, nil, NewProviderError(
-			string(SubProviderUcp),
-			"UNSUPPORTED_MESSAGE_TYPE",
-			fmt.Sprintf("unsupported message type: %v", smsMsg.Type),
-		)
-	default:
-		return nil, nil, NewProviderError(
-			string(SubProviderUcp),
-			"UNSUPPORTED_MESSAGE_TYPE",
-			fmt.Sprintf("unsupported message type: %v", smsMsg.Type),
-		)
-	}
-}
-
-// applyUcpDefaults applies UCP-specific defaults to the message.
-func (t *ucpTransformer) applyUcpDefaults(msg *Message, account *Account) {
-	// Apply common defaults first
-	msg.ApplyCommonDefaults(account)
+	RegisterTransformer(string(SubProviderUcp), newUcpTransformer())
 }
 
 // transformSMS transforms SMS message to HTTP request
 //   - 短信API: http://docs.ucpaas.com/doku.php?id=%E7%9F%AD%E4%BF%A1:about_sms
 func (t *ucpTransformer) transformSMS(
+	_ context.Context,
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
@@ -132,26 +104,5 @@ func (t *ucpTransformer) transformSMS(
 		URL:      fmt.Sprintf("%s/%s", ucpDefaultBaseURI, apiPath),
 		Body:     bodyData,
 		BodyType: core.BodyTypeJSON,
-	}, t.handleUcpResponse, nil
-}
-
-// handleUcpResponse 处理云之讯API响应.
-func (t *ucpTransformer) handleUcpResponse(statusCode int, body []byte) error {
-	if !utils.IsAcceptableStatus(statusCode) {
-		return NewProviderError(string(ProviderTypeUcp), strconv.Itoa(statusCode), string(body))
-	}
-
-	var response map[string]interface{}
-	if err := json.Unmarshal(body, &response); err != nil {
-		return NewProviderError(string(ProviderTypeUcp), "PARSE_ERROR", err.Error())
-	}
-
-	if response["code"] != "000000" {
-		return &Error{
-			Code:     strconv.Itoa(int(response["code"].(float64))),
-			Message:  response["msg"].(string),
-			Provider: string(ProviderTypeUcp),
-		}
-	}
-	return nil
+	}, nil, nil
 }

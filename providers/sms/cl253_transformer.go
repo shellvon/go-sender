@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/shellvon/go-sender/core"
@@ -29,7 +28,7 @@ import (
 
 // init automatically registers the CL253 transformer.
 func init() {
-	RegisterTransformer(string(SubProviderCl253), &cl253Transformer{})
+	RegisterTransformer(string(SubProviderCl253), newCL253Transformer())
 }
 
 const (
@@ -44,68 +43,40 @@ const (
 )
 
 // cl253Transformer implements HTTPRequestTransformer for CL253 SMS.
-type cl253Transformer struct{}
+type cl253Transformer struct {
+	*BaseTransformer
+}
+
+func newCL253Transformer() *cl253Transformer {
+	transformer := &cl253Transformer{}
+	transformer.BaseTransformer = NewBaseTransformer(
+		string(core.ProviderTypeSMS),
+		string(SubProviderCl253),
+		&core.ResponseHandlerConfig{
+			SuccessField:      "code",
+			SuccessValue:      "0",
+			ErrorCodeField:    "code",
+			ErrorMessageField: "message",
+			ErrorField:        "errorMsg",
+			MessageField:      "message",
+			ResponseType:      core.BodyTypeJSON,
+			ValidateResponse:  true,
+		},
+		WithBeforeHook(func(_ context.Context, msg *Message, _ *Account) error {
+			return transformer.validateMessage(msg)
+		}),
+		WithSMSHandler(transformer.transformSMS),
+	)
+	return transformer
+}
 
 // CanTransform checks if this transformer can handle the given message.
-func (t *cl253Transformer) CanTransform(msg core.Message) bool {
-	smsMsg, ok := msg.(*Message)
-	if !ok {
-		return false
-	}
-	return smsMsg.SubProvider == string(SubProviderCl253)
-}
+// Inherited CanTransform from *BaseTransformer.
 
 // Transform converts a CL253 SMS message to HTTP request specification
 //   - 国内短信 API: https://doc.chuanglan.com/document/HAQYSZKH9HT5Z50L
 //   - 国际短信 API: https://doc.chuanglan.com/document/O58743GF76M7754H
-func (t *cl253Transformer) Transform(
-	_ context.Context,
-	msg core.Message,
-	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
-	smsMsg, ok := msg.(*Message)
-	if !ok {
-		return nil, nil, NewProviderError(
-			string(SubProviderCl253),
-			"INVALID_MESSAGE_TYPE",
-			fmt.Sprintf("unsupported message type for CL253: %T", msg),
-		)
-	}
-
-	// Apply CL253-specific defaults
-	t.applyCl253Defaults(smsMsg, account)
-
-	if err := t.validateMessage(smsMsg); err != nil {
-		return nil, nil, NewProviderError(
-			string(SubProviderCl253),
-			"VALIDATION_FAILED",
-			fmt.Sprintf("message validation failed: %v", err),
-		)
-	}
-
-	switch smsMsg.Type {
-	case SMSText:
-		return t.transformSMS(smsMsg, account)
-	case Voice:
-		return nil, nil, NewProviderError(
-			string(SubProviderCl253),
-			"UNSUPPORTED_MESSAGE_TYPE",
-			"CL253 does not support voice messages",
-		)
-	case MMS:
-		return nil, nil, NewProviderError(
-			string(SubProviderCl253),
-			"UNSUPPORTED_MESSAGE_TYPE",
-			"CL253 does not support MMS messages",
-		)
-	default:
-		return nil, nil, NewProviderError(
-			string(SubProviderCl253),
-			"UNSUPPORTED_MESSAGE_TYPE",
-			fmt.Sprintf("unsupported message type: %v", smsMsg.Type),
-		)
-	}
-}
+// Transform method is inherited from *BaseTransformer; no need to redeclare.
 
 // validateMessage validates the message for CL253.
 func (t *cl253Transformer) validateMessage(msg *Message) error {
@@ -133,6 +104,7 @@ func (t *cl253Transformer) validateMessage(msg *Message) error {
 //   - 国内短信 API: https://doc.chuanglan.com/document/HAQYSZKH9HT5Z50L
 //   - 国际短信 API: https://doc.chuanglan.com/document/O58743GF76M7754H
 func (t *cl253Transformer) transformSMS(
+	_ context.Context,
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
@@ -170,7 +142,8 @@ func (t *cl253Transformer) transformSMS(
 		Body:     body,
 		BodyType: core.BodyTypeJSON,
 	}
-	return reqSpec, t.handleCl253Response, nil
+
+	return reqSpec, nil, nil
 }
 
 // buildRequestURI 根据区域和是否国际获取最终的短信请求API.
@@ -185,30 +158,4 @@ func (t *cl253Transformer) buildRequestURI(msg *Message, account *Account) strin
 	}
 	// 国内短信
 	return fmt.Sprintf("https://%s%s", cl253DomesticEndpoint, cl253DomesticAPIPath)
-}
-
-// handleCl253Response 处理 CL253 API 响应.
-func (t *cl253Transformer) handleCl253Response(statusCode int, body []byte) error {
-	if !utils.IsAcceptableStatus(statusCode) {
-		return NewProviderError(string(SubProviderCl253), strconv.Itoa(statusCode), string(body))
-	}
-	var result struct {
-		Code     string `json:"code"`
-		MsgID    string `json:"msgId"`
-		RespTime string `json:"time"`
-		ErrorMsg string `json:"errorMsg"`
-		Message  string `json:"message"`
-	}
-	if err := json.Unmarshal(body, &result); err != nil {
-		return NewProviderError(string(SubProviderCl253), "PARSE_ERROR", err.Error())
-	}
-	if result.Code != "0" {
-		return NewProviderError(string(SubProviderCl253), result.Code, result.ErrorMsg+result.Message)
-	}
-	return nil
-}
-
-// applyCl253Defaults applies CL253-specific defaults to the message.
-func (t *cl253Transformer) applyCl253Defaults(msg *Message, account *Account) {
-	msg.ApplyCommonDefaults(account)
 }

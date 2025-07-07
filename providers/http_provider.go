@@ -103,26 +103,12 @@ func (p *HTTPProvider[T]) executeHTTPRequest(
 	if ct := reqSpec.BodyType.ContentType(); ct != "" {
 		httpOpts.Headers["Content-Type"] = ct
 	}
-
-	// Execute request
-	body, statusCode, err := utils.DoRequest(ctx, reqSpec.URL, httpOpts)
+	resp, err := utils.SendRequest(ctx, reqSpec.URL, httpOpts)
 	if err != nil {
 		return fmt.Errorf("HTTP request failed: %w", err)
 	}
-
-	// Use custom handler to process response
 	if handler != nil {
-		return handler(statusCode, body)
+		handler = core.NewResponseHandler(&core.ResponseHandlerConfig{ValidateResponse: false})
 	}
-
-	// Default response handling
-	return p.defaultResponseHandler(statusCode, body)
-}
-
-// defaultResponseHandler is the default response handler.
-func (p *HTTPProvider[T]) defaultResponseHandler(statusCode int, body []byte) error {
-	if !utils.IsAcceptableStatus(statusCode) {
-		return fmt.Errorf("HTTP request failed with status code %d. Response body: %s", statusCode, string(body))
-	}
-	return nil
+	return handler(resp)
 }

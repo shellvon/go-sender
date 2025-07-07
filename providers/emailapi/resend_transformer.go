@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/shellvon/go-sender/core"
-	"github.com/shellvon/go-sender/utils"
 )
 
 // @ProviderName: Resend
@@ -128,27 +127,5 @@ func (t *resendTransformer) transformEmail(
 		Headers:  headers,
 		Body:     bodyData,
 		BodyType: core.BodyTypeJSON,
-	}, t.handleResendResponse, nil
-}
-
-// handleResendResponse handles Resend API response.
-func (t *resendTransformer) handleResendResponse(statusCode int, body []byte) error {
-	if !utils.IsAcceptableStatus(statusCode) {
-		return fmt.Errorf("HTTP request failed with status %d: %s", statusCode, string(body))
-	}
-
-	// Parse response to check for data field
-	var resp struct {
-		Data []map[string]interface{} `json:"data"`
-	}
-	if err := json.Unmarshal(body, &resp); err != nil {
-		return fmt.Errorf("failed to parse Resend response: %w", err)
-	}
-
-	// Check if data field exists and is not empty
-	if len(resp.Data) == 0 {
-		return errors.New("resend response contains no data")
-	}
-
-	return nil
+	}, core.NewResponseHandler(&core.ResponseHandlerConfig{}), nil
 }

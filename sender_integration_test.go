@@ -25,8 +25,7 @@ func (l *testLogger) Log(level core.Level, keyvals ...interface{}) error {
 	return nil
 }
 
-func (l *testLogger) With(keyvals ...interface{}) core.Logger {
-	_ = keyvals // nolint: revive // test logger ignores extra fields
+func (l *testLogger) With(_ ...interface{}) core.Logger {
 	return l
 }
 

@@ -8,7 +8,7 @@ import (
 
 const maxMarkdownContentLength = 4096
 
-// MarkdownVersion represents the version of markdown format
+// MarkdownVersion represents the version of markdown format.
 type MarkdownVersion string
 
 const (
@@ -16,7 +16,7 @@ const (
 	MarkdownVersionLegacy MarkdownVersion = "legacy"
 	// MarkdownVersionV2 is the new version of markdown format.
 	// It is recommended to use the latest client version to experience the message.
-	// only available on client version 4.1.36 or higher (Android 4.1.38 or higher), lower version will be treated as plain text
+	// only available on client version 4.1.36 or higher (Android 4.1.38 or higher), lower version will be treated as plain text.
 	MarkdownVersionV2 MarkdownVersion = "v2"
 )
 
