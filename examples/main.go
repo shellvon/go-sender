@@ -18,6 +18,7 @@ import (
 	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/providers/dingtalk"
 	"github.com/shellvon/go-sender/providers/email"
+	"github.com/shellvon/go-sender/providers/serverchan"
 	"github.com/shellvon/go-sender/providers/sms"
 	"github.com/shellvon/go-sender/providers/telegram"
 	"github.com/shellvon/go-sender/providers/wecombot"
@@ -61,10 +62,11 @@ func newLoggingHTTPClient() *http.Client {
 //	go run main.go --provider=telegram  # Test telegram bot
 //	go run main.go --provider=sms       # Test SMS (aliyun/tencent/cl253)
 //	go run main.go --provider=lark      # Test lark (TODO)
+//	go run main.go --provider=serverchan # Test ServerChan
 //
 // Each demo requires you to set the corresponding environment variables.
 func main() {
-	provider := flag.String("provider", "", "Provider to demo: telegram, lark, email, sms, dingtalk")
+	provider := flag.String("provider", "", "Provider to demo: telegram, lark, email, sms, dingtalk, serverchan")
 	flag.Parse()
 
 	switch *provider {
@@ -80,9 +82,10 @@ func main() {
 		runSMSDemo()
 	case "dingtalk":
 		runDingTalkDemo()
-		os.Exit(0)
+	case "serverchan":
+		runServerChanDemo()
 	default:
-		log.Println("Usage: go run main.go --provider=[telegram|lark|email|sms|dingtalk]")
+		log.Println("Usage: go run main.go --provider=[telegram|lark|email|sms|dingtalk|serverchan]")
 		os.Exit(1)
 	}
 }
@@ -775,6 +778,122 @@ func runDingTalkDemo() {
 					"https://www.dingtalk.com/doc",
 					"https://img.alicdn.com/tfs/TB1NwmBEL9TBuNjy1zbXXXpepXa-2400-1218.png",
 				).
+				Build(),
+		},
+	}
+
+	for _, demo := range demos {
+		log.Printf("Testing %s...\n", demo.name)
+		if err := prov.Send(context.Background(), demo.msg, &core.ProviderSendOptions{
+			HTTPClient: newLoggingHTTPClient(),
+		}); err != nil {
+			log.Printf("%s failed: %v\n", demo.name, err)
+		} else {
+			log.Printf("%s success!\n", demo.name)
+		}
+		time.Sleep(3 * time.Second) // 限流保护
+	}
+}
+
+// runServerChanDemo demonstrates how to send messages using the ServerChan provider.
+// Required environment variable:
+//
+//	SERVERCHAN_KEY - ServerChan key
+//
+// This demo will send various types of messages to the specified ServerChan group.
+func runServerChanDemo() {
+	log.Println("[DEMO] ServerChan provider")
+	key := os.Getenv("SERVERCHAN_KEY")
+	if key == "" {
+		log.Println("Please set SERVERCHAN_KEY environment variable.")
+		return
+	}
+
+	cfg := serverchan.Config{
+		ProviderMeta: core.ProviderMeta{
+			Strategy: core.StrategyRoundRobin,
+		},
+		Items: []*serverchan.Account{{
+			BaseAccount: core.BaseAccount{
+				AccountMeta: core.AccountMeta{
+					Name: "default",
+				},
+				Credentials: core.Credentials{
+					APIKey: key,
+				},
+			},
+		}},
+	}
+
+	prov, _ := serverchan.New(&cfg)
+	demos := []struct {
+		name string
+		msg  core.Message
+	}{
+		{
+			name: "Simple Text Message",
+			msg: serverchan.Text().
+				Title("服务器告警").
+				Content("CPU 使用率超过 90%，请及时处理！").
+				Build(),
+		},
+		{
+			name: "Rich Markdown Message",
+			msg: serverchan.Text().
+				Title("每日系统报告").
+				Content("# 系统状态\n\n" +
+					"## 资源使用情况\n" +
+					"- CPU: 45%\n" +
+					"- 内存: 60%\n" +
+					"- 磁盘: 75%\n\n" +
+					"## 服务状态\n" +
+					"| 服务名称 | 状态 | 运行时间 |\n" +
+					"|---------|------|----------|\n" +
+					"| nginx   | ✅    | 7天      |\n" +
+					"| mysql   | ✅    | 15天     |\n" +
+					"| redis   | ✅    | 3天      |\n\n" +
+					"## 最近告警\n" +
+					"> 过去24小时内无重要告警\n\n" +
+					"详细信息请查看 [监控面板](https://monitor.example.com)").
+				Build(),
+		},
+		{
+			name: "Message with Channel (WeCom)",
+			msg: serverchan.Text().
+				Title("紧急通知").
+				Content("数据库连接异常，请立即检查！").
+				Channel("wecom"). // 发送到企业微信
+				Build(),
+		},
+		{
+			name: "Message with Channel (DingTalk)",
+			msg: serverchan.Text().
+				Title("服务更新通知").
+				Content("系统将在今晚 23:00 进行例行维护，预计耗时 30 分钟。").
+				Channel("dingtalk"). // 发送到钉钉
+				Build(),
+		},
+		{
+			name: "Message with Multiple Channels",
+			msg: serverchan.Text().
+				Title("重要：安全漏洞修复").
+				Content("发现并修复了一个严重的安全漏洞，请所有开发人员关注。\n" +
+					"影响范围：所有生产服务器\n" +
+					"修复状态：已修复\n" +
+								"所需操作：请更新生产环境").
+				Channel("wecom|dingtalk"). // 同时发送到企业微信和钉钉
+				Build(),
+		},
+		{
+			name: "Message with Short Summary",
+			msg: serverchan.Text().
+				Title("性能监控报告").
+				Content("## 接口性能报告\n" +
+					"1. 登录接口: 95% < 100ms\n" +
+					"2. 搜索接口: 95% < 200ms\n" +
+					"3. 订单接口: 95% < 300ms\n\n" +
+							"所有接口响应时间都在正常范围内。").
+				Short("接口性能正常"). // 设置简短摘要
 				Build(),
 		},
 	}
