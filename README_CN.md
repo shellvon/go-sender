@@ -4,6 +4,7 @@
 
 > 🚀 Go 语言下最简单、灵活的多渠道消息推送库。
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/shellvon/go-sender)
 [English](./README.md) | [文档](./docs/getting-started.md)
 
 ---

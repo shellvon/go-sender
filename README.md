@@ -4,6 +4,7 @@
 
 > 🚀 The easiest way to send SMS, Email, IM, and Webhook notifications in Go.
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/shellvon/go-sender)
 [中文文档](./README_CN.md) | [Docs](./docs/getting-started.md)
 
 ---
