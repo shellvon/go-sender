@@ -107,7 +107,7 @@ func (p *HTTPProvider[T]) executeHTTPRequest(
 	if err != nil {
 		return fmt.Errorf("HTTP request failed: %w", err)
 	}
-	if handler != nil {
+	if handler == nil {
 		handler = core.NewResponseHandler(&core.ResponseHandlerConfig{ValidateResponse: false})
 	}
 	return handler(resp)

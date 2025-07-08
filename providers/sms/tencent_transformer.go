@@ -339,7 +339,7 @@ func (t *tencentTransformer) hmacSha256(key, data []byte) []byte {
 func (t *tencentTransformer) handleTencentResponse(resp *http.Response) error {
 	body, _, err := utils.ReadAndClose(resp)
 	if err != nil {
-		return NewProviderError(string(ProviderTypeTencent), "READ_ERROR", err.Error())
+		return NewProviderError(t.subProvider, "READ_ERROR", err.Error())
 	}
 
 	// Tencent 返回有两种结构：
@@ -361,20 +361,20 @@ func (t *tencentTransformer) handleTencentResponse(resp *http.Response) error {
 	}
 
 	if decodeErr := json.Unmarshal(body, &response); decodeErr != nil {
-		return NewProviderError(string(ProviderTypeTencent), "PARSE_ERROR", decodeErr.Error())
+		return NewProviderError(t.subProvider, "PARSE_ERROR", decodeErr.Error())
 	}
 
 	if response.Response.Error != nil {
 		return &Error{
 			Code:     response.Response.Error.Code,
 			Message:  response.Response.Error.Message,
-			Provider: string(ProviderTypeTencent),
+			Provider: t.subProvider,
 		}
 	}
 
 	if len(response.Response.SendStatusSet) == 0 {
 		return NewProviderError(
-			string(ProviderTypeTencent),
+			t.subProvider,
 			"NO_STATUS_SET",
 			"tencent API returned success but no SendStatusSet",
 		)
@@ -385,7 +385,7 @@ func (t *tencentTransformer) handleTencentResponse(resp *http.Response) error {
 			return &Error{
 				Code:     status.Code,
 				Message:  status.Message,
-				Provider: string(ProviderTypeTencent),
+				Provider: t.subProvider,
 			}
 		}
 	}
