@@ -66,7 +66,7 @@ func (t *smsbaoTransformer) transformSMS(
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	if account == nil || account.APIKey == "" || account.APISecret == "" {
 		return nil, nil, NewProviderError(
-			string(ProviderTypeSmsbao),
+			t.subProvider,
 			"AUTH_ERROR",
 			"smsbao account Key(username) and Secret(password) are required",
 		)
@@ -112,21 +112,21 @@ func (t *smsbaoTransformer) transformVoice(
 	// 检查语音短信的限制
 	if msg.IsIntl() {
 		return nil, nil, NewProviderError(
-			string(ProviderTypeSmsbao),
+			t.subProvider,
 			"UNSUPPORTED_COUNTRY",
 			"voice sms only supports domestic mobile",
 		)
 	}
 	if len(msg.Mobiles) != 1 {
 		return nil, nil, NewProviderError(
-			string(ProviderTypeSmsbao),
+			t.subProvider,
 			"INVALID_MOBILE_NUMBER",
 			fmt.Sprintf("smsbao voice only supports single mobile, got %d", len(msg.Mobiles)),
 		)
 	}
 	if len(msg.Mobiles[0]) != 11 || msg.Mobiles[0][0] != '1' {
 		return nil, nil, NewProviderError(
-			string(ProviderTypeSmsbao),
+			t.subProvider,
 			"INVALID_MOBILE_FORMAT",
 			"only support domestic mobile for voice sms",
 		)
@@ -134,7 +134,7 @@ func (t *smsbaoTransformer) transformVoice(
 
 	if account == nil || account.APIKey == "" || account.APISecret == "" {
 		return nil, nil, NewProviderError(
-			string(ProviderTypeSmsbao),
+			t.subProvider,
 			"AUTH_ERROR",
 			"smsbao account Key(username) and Secret(password) are required",
 		)
@@ -159,7 +159,7 @@ func (t *smsbaoTransformer) transformVoice(
 func (t *smsbaoTransformer) handleSMSBaoResponse(resp *http.Response) error {
 	body, _, err := utils.ReadAndClose(resp)
 	if err != nil {
-		return NewProviderError(string(ProviderTypeSmsbao), "READ_ERROR", err.Error())
+		return NewProviderError(t.subProvider, "READ_ERROR", err.Error())
 	}
 	var smsBaoErrorMap = map[string]string{
 		"30": "password error",
@@ -172,7 +172,7 @@ func (t *smsbaoTransformer) handleSMSBaoResponse(resp *http.Response) error {
 	}
 	code := string(body)
 	if code != "0" {
-		return NewProviderError(string(ProviderTypeSmsbao), code, smsBaoErrorMap[code])
+		return NewProviderError(t.subProvider, code, smsBaoErrorMap[code])
 	}
 	return nil
 }

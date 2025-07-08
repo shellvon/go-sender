@@ -560,6 +560,7 @@ func runSMSDemo() {
 	from := os.Getenv("SMS_SIGN")
 	phone := os.Getenv("SMS_PHONE")
 	templateID := os.Getenv("SMS_TEMPLATE_ID")
+	appID := os.Getenv("SMS_APP_ID")
 	if providerType == "" || key == "" || phone == "" {
 		log.Println(
 			"Please set SMS_PROVIDER_TYPE, SMS_KEY, SMS_PHONE (and optionally SMS_SECRET, SMS_SIGN) environment variables.",
@@ -574,6 +575,7 @@ func runSMSDemo() {
 					SubType: providerType,
 				},
 				Credentials: core.Credentials{
+					AppID:     appID,
 					APIKey:    key,
 					APISecret: secret,
 				},

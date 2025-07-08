@@ -60,7 +60,7 @@ func newAliyunTransformer() *aliyunTransformer {
 	transformer := &aliyunTransformer{}
 	transformer.BaseTransformer = NewBaseTransformer(
 		string(core.ProviderTypeSMS),
-		string(SubProviderCl253),
+		string(SubProviderAliyun),
 		&core.ResponseHandlerConfig{
 			SuccessField:      "Code",
 			SuccessValue:      "OK",
@@ -233,7 +233,7 @@ func (t *aliyunTransformer) transformVoice(
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	// 只支持国内
 	if msg.IsIntl() {
-		return nil, nil, NewUnsupportedInternationalError(string(ProviderTypeAliyun), "voice call")
+		return nil, nil, NewUnsupportedInternationalError(t.subProvider, "voice call")
 	}
 	// 只支持单号码
 	if msg.HasMultipleRecipients() {
