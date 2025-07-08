@@ -11,21 +11,15 @@ import (
 	"github.com/shellvon/go-sender/utils"
 )
 
-// @ProviderName: Smsbao / 短信宝
-// @Website: https://www.smsbao.com
-// @APIDoc: https://www.smsbao.com/openapi
+// smsbaoTransformer implements HTTPRequestTransformer for Smsbao SMS.
+// It supports sending text message and voice message.
 //
-// 官方文档:
-//   - 国内短信: https://www.smsbao.com/openapi/213.html
-//   - 国际短信: https://www.smsbao.com/openapi/299.html
-//   - 语音验证码: https://www.smsbao.com/openapi/214.html
-//
-// 能力说明:
-//   - 国内短信：支持单发和群发，最多99个号码/次。
-//   - 国际短信：支持单发和群发，最多99个号码/次。
-//   - 语音验证码：仅支持国内、仅验证码类型、仅单号码。
-//
-// transformer 支持文本短信（国内/国际）和语音验证码。
+// Reference:
+//   - Official Website: https://www.smsbao.com
+//   - API Docs: https://www.smsbao.com/openapi
+//   - SMS API(Domestic): https://www.smsbao.com/openapi/213.html
+//   - SMS API(International): https://www.smsbao.com/openapi/299.html
+//   - Voice API: https://www.smsbao.com/openapi/214.html
 
 const (
 	smsbaoDefaultBaseURI = "https://api.smsbao.com"
@@ -42,9 +36,9 @@ type smsbaoTransformer struct {
 func newSmsbaoTransformer() *smsbaoTransformer {
 	transformer := &smsbaoTransformer{}
 	transformer.BaseTransformer = NewBaseTransformer(
-		string(core.ProviderTypeSMS),
 		string(SubProviderSmsbao),
 		nil,
+		HTTPOptions(nil),
 		WithSMSHandler(transformer.transformSMS),
 		WithVoiceHandler(transformer.transformVoice),
 	)
@@ -66,7 +60,7 @@ func (t *smsbaoTransformer) transformSMS(
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	if account == nil || account.APIKey == "" || account.APISecret == "" {
 		return nil, nil, NewProviderError(
-			t.subProvider,
+			string(SubProviderSmsbao),
 			"AUTH_ERROR",
 			"smsbao account Key(username) and Secret(password) are required",
 		)
@@ -109,24 +103,25 @@ func (t *smsbaoTransformer) transformVoice(
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+	subProvider := string(SubProviderSmsbao)
 	// 检查语音短信的限制
 	if msg.IsIntl() {
 		return nil, nil, NewProviderError(
-			t.subProvider,
+			subProvider,
 			"UNSUPPORTED_COUNTRY",
 			"voice sms only supports domestic mobile",
 		)
 	}
 	if len(msg.Mobiles) != 1 {
 		return nil, nil, NewProviderError(
-			t.subProvider,
+			subProvider,
 			"INVALID_MOBILE_NUMBER",
 			fmt.Sprintf("smsbao voice only supports single mobile, got %d", len(msg.Mobiles)),
 		)
 	}
 	if len(msg.Mobiles[0]) != 11 || msg.Mobiles[0][0] != '1' {
 		return nil, nil, NewProviderError(
-			t.subProvider,
+			subProvider,
 			"INVALID_MOBILE_FORMAT",
 			"only support domestic mobile for voice sms",
 		)
@@ -134,7 +129,7 @@ func (t *smsbaoTransformer) transformVoice(
 
 	if account == nil || account.APIKey == "" || account.APISecret == "" {
 		return nil, nil, NewProviderError(
-			t.subProvider,
+			subProvider,
 			"AUTH_ERROR",
 			"smsbao account Key(username) and Secret(password) are required",
 		)
@@ -158,8 +153,9 @@ func (t *smsbaoTransformer) transformVoice(
 // handleSMSBaoResponse 处理短信宝 API 响应.
 func (t *smsbaoTransformer) handleSMSBaoResponse(resp *http.Response) error {
 	body, _, err := utils.ReadAndClose(resp)
+	subProvider := string(SubProviderSmsbao)
 	if err != nil {
-		return NewProviderError(t.subProvider, "READ_ERROR", err.Error())
+		return NewProviderError(subProvider, "READ_ERROR", err.Error())
 	}
 	var smsBaoErrorMap = map[string]string{
 		"30": "password error",
@@ -172,7 +168,7 @@ func (t *smsbaoTransformer) handleSMSBaoResponse(resp *http.Response) error {
 	}
 	code := string(body)
 	if code != "0" {
-		return NewProviderError(t.subProvider, code, smsBaoErrorMap[code])
+		return NewProviderError(subProvider, code, smsBaoErrorMap[code])
 	}
 	return nil
 }

@@ -6,60 +6,70 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 
 	"github.com/shellvon/go-sender/core"
+	"github.com/shellvon/go-sender/transformer"
 )
 
-// wecombotTransformer implements core.HTTPTransformer[*Account] for WeCom Bot.
-type wecombotTransformer struct{}
+// WeComBot is a message provider for WeCom Bot.
+// It supports sending text, image, file, markdown, news, and other types of messages.
+// It also supports sending messages to different departments and users.
+//
+// Reference:
+//   - Official Website: https://work.weixin.qq.com/
+//   - API Docs: https://developer.work.weixin.qq.com/document/path/91770
 
-// newWecombotTransformer creates a new WeCom Bot transformer (stateless).
-func newWecombotTransformer() core.HTTPTransformer[*Account] {
-	return &wecombotTransformer{}
+const wecombotAPIURL = "https://qyapi.weixin.qq.com/cgi-bin/webhook/send"
+
+// wecombotTransformer leverages the shared BaseHTTPTransformer for WeCom Bot.
+type wecombotTransformer struct {
+	*transformer.BaseHTTPTransformer[Message, *Account]
 }
 
-// CanTransform checks if this transformer can handle the given message.
-func (t *wecombotTransformer) CanTransform(msg core.Message) bool {
-	return msg.ProviderType() == core.ProviderTypeWecombot
-}
-
-// Transform converts a WeCom Bot message to HTTP request specification.
-func (t *wecombotTransformer) Transform(
+// transform builds the HTTPRequestSpec for a WeCom Bot message.
+func (wt *wecombotTransformer) transform(
 	_ context.Context,
-	msg core.Message,
+	msg Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
-	wecomMsg, ok := msg.(Message)
-	if !ok {
-		return nil, nil, fmt.Errorf("unsupported message type for wecombot transformer: %T", msg)
-	}
 	if account == nil {
 		return nil, nil, errors.New("no account provided")
 	}
-	if err := wecomMsg.Validate(); err != nil {
-		return nil, nil, err
-	}
 
-	// Build webhook URL
-	webhookURL := fmt.Sprintf("https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=%s", account.APIKey)
-
-	// Marshal message to JSON
-	body, err := json.Marshal(wecomMsg)
+	body, err := json.Marshal(msg)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to marshal wecombot message: %w", err)
 	}
 
-	reqSpec := &core.HTTPRequestSpec{
-		Method:   http.MethodPost,
-		URL:      webhookURL,
+	return &core.HTTPRequestSpec{
+		Method: http.MethodPost,
+		URL:    wecombotAPIURL,
+		QueryParams: url.Values{
+			"key": {account.APIKey},
+		},
 		Body:     body,
 		BodyType: core.BodyTypeJSON,
+	}, nil, nil
+}
+
+// newWecombotTransformer creates a new transformer instance.
+func newWecombotTransformer() core.HTTPTransformer[*Account] {
+	respCfg := &core.ResponseHandlerConfig{
+		BodyType:  core.BodyTypeJSON,
+		CheckBody: true,
+		Path:      "errcode",
+		Expect:    "0",
+		Mode:      core.MatchEq,
 	}
 
-	return reqSpec, core.NewResponseHandler(&core.ResponseHandlerConfig{
-		SuccessField:      "errcode",
-		SuccessValue:      "0",
-		ErrorCodeField:    "errcode",
-		ErrorMessageField: "errmsg",
-	}), nil
+	wt := &wecombotTransformer{}
+	wt.BaseHTTPTransformer = transformer.NewSimpleHTTPTransformer(
+		core.ProviderTypeWecombot,
+		"",
+		respCfg,
+		wt.transform,
+	)
+
+	return wt
 }

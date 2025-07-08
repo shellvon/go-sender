@@ -5,52 +5,46 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
 	"github.com/shellvon/go-sender/core"
+	"github.com/shellvon/go-sender/transformer"
 	"github.com/shellvon/go-sender/utils"
 )
 
-type larkTransformer struct{}
+// larkTransformer implements HTTPRequestTransformer for Lark.
+// It supports sending text, image, file, markdown, news, and other types of messages.
+//
+// Reference:
+//   - Official Website: https://open.feishu.cn
+//   - API Docs: https://open.feishu.cn/document/client-docs/bot-v3/add-custom-bot
 
-func newLarkTransformer() *larkTransformer {
-	return &larkTransformer{}
+const (
+	larkWebhookURLTemplate = "https://open.feishu.cn/open-apis/bot/v2/hook/%s"
+)
+
+type larkTransformer struct {
+	*transformer.BaseHTTPTransformer[Message, *Account]
 }
 
-func (t *larkTransformer) CanTransform(msg core.Message) bool {
-	return msg.ProviderType() == core.ProviderTypeLark
-}
-
-// Transform constructs a Lark HTTPRequestSpec.
-//   - API: https://open.feishu.cn/document/client-docs/bot-v3/add-custom-bot
-func (t *larkTransformer) Transform(
+func (lt *larkTransformer) transform(
 	_ context.Context,
-	msg core.Message,
+	msg Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
-	larkMsg, ok := msg.(Message)
-	if !ok {
-		return nil, nil, fmt.Errorf("unsupported message type for lark transformer: %T", msg)
-	}
-
-	var webhookURL = fmt.Sprintf("https://open.feishu.cn/open-apis/bot/v2/hook/%s", account.APIKey)
-	var timestamp, sign string
-
-	// https://open.feishu.cn/document/client-docs/bot-v3/add-custom-bot#3c6592d6
+	qs := url.Values{}
 	if account.APISecret != "" {
-		timestamp = strconv.FormatInt(time.Now().Unix(), 10)
-		sign = utils.HMACSHA256Base64(account.APISecret, timestamp+"\n"+account.APISecret)
+		ts := strconv.FormatInt(time.Now().Unix(), 10)
+		sign := utils.HMACSHA256Base64(account.APISecret, ts+"\n"+account.APISecret)
+		qs.Add("timestamp", ts)
+		qs.Add("sign", sign)
 	}
 
-	// 构造 payload
 	payload := map[string]interface{}{
-		"msg_type": larkMsg.GetMsgType(),
-		"content":  larkMsg,
-	}
-	if timestamp != "" && sign != "" {
-		payload["timestamp"] = timestamp
-		payload["sign"] = sign
+		"msg_type": msg.GetMsgType(),
+		"content":  msg,
 	}
 
 	body, err := json.Marshal(payload)
@@ -58,16 +52,30 @@ func (t *larkTransformer) Transform(
 		return nil, nil, fmt.Errorf("failed to marshal lark payload: %w", err)
 	}
 
-	reqSpec := &core.HTTPRequestSpec{
-		Method:   http.MethodPost,
-		URL:      webhookURL,
-		Body:     body,
-		BodyType: core.BodyTypeJSON,
+	return &core.HTTPRequestSpec{
+		Method:      http.MethodPost,
+		URL:         fmt.Sprintf(larkWebhookURLTemplate, account.APIKey),
+		QueryParams: qs,
+		Body:        body,
+		BodyType:    core.BodyTypeJSON,
+	}, nil, nil
+}
+
+func newLarkTransformer() *larkTransformer {
+	respCfg := &core.ResponseHandlerConfig{
+		BodyType:  core.BodyTypeJSON,
+		CheckBody: true,
+		Path:      "code",
+		Expect:    "0",
+		Mode:      core.MatchEq,
 	}
-	return reqSpec, core.NewResponseHandler(&core.ResponseHandlerConfig{
-		SuccessField:      "code",
-		SuccessValue:      "0",
-		ErrorCodeField:    "code",
-		ErrorMessageField: "msg",
-	}), nil
+
+	lt := &larkTransformer{}
+	lt.BaseHTTPTransformer = transformer.NewSimpleHTTPTransformer(
+		core.ProviderTypeLark,
+		"",
+		respCfg,
+		lt.transform,
+	)
+	return lt
 }

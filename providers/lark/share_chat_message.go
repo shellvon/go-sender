@@ -7,6 +7,17 @@ type ShareChatMessage struct {
 	Content ShareChatContent `json:"content"`
 }
 
+// NewShareChatMessage creates a new ShareChatMessage.
+// chatID is the id of the chat to share.
+// See https://open.feishu.cn/document/client-docs/bot-v3/add-custom-bot#897b5321
+func NewShareChatMessage(chatID string) *ShareChatMessage {
+	return ShareChat().ChatID(chatID).Build()
+}
+
+func (m *ShareChatMessage) GetMsgType() MessageType {
+	return TypeShareChat
+}
+
 // ShareChatContent represents the content of a share chat message.
 type ShareChatContent struct {
 	ChatID string `json:"share_chat_id"`
@@ -15,13 +26,6 @@ type ShareChatContent struct {
 // ShareChatMsgBuilder provides a fluent API to construct Lark share chat messages.
 type ShareChatMsgBuilder struct {
 	chatID string
-}
-
-// NewShareChatMessage creates a new ShareChatMessage.
-// chatID is the id of the chat to share.
-// See https://open.feishu.cn/document/client-docs/bot-v3/add-custom-bot#897b5321
-func NewShareChatMessage(chatID string) *ShareChatMessage {
-	return ShareChat().ChatID(chatID).Build()
 }
 
 // ShareChat creates a new ShareChatMsgBuilder instance.

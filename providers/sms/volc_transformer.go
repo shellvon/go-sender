@@ -15,14 +15,14 @@ import (
 	"github.com/shellvon/go-sender/utils"
 )
 
-// @ProviderName: Volc / 火山引擎
-// @Website: https://www.volcengine.com
-// @APIDoc: https://www.volcengine.com/docs/6361/67380
+// volcTransformer implements HTTPRequestTransformer for VolcEngine SMS.
+// It supports sending text message.
 //
-// 官方文档:
-//   - 短信API: https://www.volcengine.com/docs/6361/67380
-//
-// transformer 仅支持 text（普通短信）类型。
+// Reference:
+//   - Official Website: https://www.volcengine.com/
+//   - API Docs: https://www.volcengine.com/docs/6361/67380
+//   - SMS API: https://www.volcengine.com/docs/6361/67380
+
 const (
 	volcDefaultSmsEndpoint = "sms.volcengineapi.com"
 	volcDefaultSmsAction   = "SendSms"
@@ -42,15 +42,15 @@ func init() {
 func newVolcTransformer() *volcTransformer {
 	transformer := &volcTransformer{}
 	transformer.BaseTransformer = NewBaseTransformer(
-		string(core.ProviderTypeSMS),
 		string(SubProviderVolc),
 		&core.ResponseHandlerConfig{
-			SuccessField:      "code",
-			SuccessValue:      "0",
-			ErrorCodeField:    "code",
-			ErrorMessageField: "message",
-			ErrorField:        "code",
+			BodyType:  core.BodyTypeJSON,
+			CheckBody: true,
+			Path:      "code",
+			Expect:    "0",
+			Mode:      core.MatchEq,
 		},
+		nil,
 		WithSMSHandler(transformer.transformSMS),
 	)
 	return transformer

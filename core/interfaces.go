@@ -92,6 +92,10 @@ type Message interface {
 	Validate() error
 	// ProviderType returns the type of provider this message is intended for.
 	ProviderType() ProviderType
+
+	// GetSubProvider returns the sub-provider name (empty when not applicable).
+	GetSubProvider() string
+
 	// MsgID returns a unique id for this message (default: uuid, overridable)
 	MsgID() string
 }
@@ -105,11 +109,6 @@ type DefaultMessage struct {
 // LoggerAware is implemented by types that can set a logger.
 type LoggerAware interface {
 	SetLogger(Logger)
-}
-
-// NewDefaultMessage creates a DefaultMessage with a new uuid.
-func NewDefaultMessage() DefaultMessage {
-	return DefaultMessage{}
 }
 
 // MsgID returns the unique id of the message.
@@ -449,4 +448,8 @@ func (m *DefaultMessage) GetExtraFloatOrDefault(key string, defaultValue float64
 		return value
 	}
 	return defaultValue
+}
+
+func (m *DefaultMessage) GetSubProvider() string {
+	return ""
 }

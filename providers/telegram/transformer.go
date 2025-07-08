@@ -7,7 +7,16 @@ import (
 	"net/http"
 
 	"github.com/shellvon/go-sender/core"
+	"github.com/shellvon/go-sender/transformer"
 )
+
+// Telegram is a message provider for Telegram.
+// It supports sending text, image, audio, video, document, location, contact, poll, dice, venue, and other types of messages.
+// It also supports sending messages to different channels and groups.
+//
+// Reference:
+//   - Official Website: https://telegram.org/
+//   - API Docs: https://core.telegram.org/bots/api
 
 const (
 	endpointSendMessage   = "sendMessage"
@@ -25,35 +34,19 @@ const (
 	endpointSendVenue     = "sendVenue"
 )
 
-// telegramTransformer 实现 providers.HTTPTransformer[*Account].
-type telegramTransformer struct{}
+const telegramAPIURLTemplate = "https://api.telegram.org/bot%s/%s"
 
-// newTelegramTransformer creates a new Telegram transformer instance.
-func newTelegramTransformer() core.HTTPTransformer[*Account] {
-	return &telegramTransformer{}
+type telegramTransformer struct {
+	*transformer.BaseHTTPTransformer[Message, *Account]
 }
 
-// CanTransform 判断是否为 Telegram 消息.
-func (t *telegramTransformer) CanTransform(msg core.Message) bool {
-	return msg.ProviderType() == core.ProviderTypeTelegram
-}
-
-// Transform 构造 Telegram HTTPRequestSpec
-// 参数:
-//   - ctx: 上下文
-//   - msg: Telegram 消息体
-//   - account: 账号配置
-//
-// 返回:
-//   - HTTPRequestSpec: HTTP 请求规范
-//   - ResponseHandler: 响应处理器
-//   - error: 错误信息
-func (t *telegramTransformer) Transform(
+func (tt *telegramTransformer) transform(
 	_ context.Context,
-	msg core.Message,
+	msg Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	var endpoint string
+
 	switch msg.(type) {
 	case *TextMessage:
 		endpoint = endpointSendMessage
@@ -85,21 +78,39 @@ func (t *telegramTransformer) Transform(
 		return nil, nil, fmt.Errorf("unsupported message type for telegram transformer: %T", msg)
 	}
 
-	apiURL := fmt.Sprintf("https://api.telegram.org/bot%s/%s", account.APIKey, endpoint)
+	apiURL := fmt.Sprintf(telegramAPIURLTemplate, account.APIKey, endpoint)
+
 	body, err := json.Marshal(msg)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to marshal telegram payload: %w", err)
 	}
-	reqSpec := &core.HTTPRequestSpec{
+
+	return &core.HTTPRequestSpec{
 		Method:   http.MethodPost,
 		URL:      apiURL,
 		Body:     body,
 		BodyType: core.BodyTypeJSON,
+	}, nil, nil
+}
+
+// newTelegramTransformer creates a new Telegram transformer instance.
+func newTelegramTransformer() core.HTTPTransformer[*Account] {
+	respCfg := &core.ResponseHandlerConfig{
+		BodyType:  core.BodyTypeJSON,
+		CheckBody: true,
+		Path:      "ok",
+		Expect:    "true",
+		MsgPath:   "description",
+		Mode:      core.MatchEq,
 	}
-	return reqSpec, core.NewResponseHandler(&core.ResponseHandlerConfig{
-		SuccessField:      "ok",
-		SuccessValue:      "true",
-		ErrorCodeField:    "error_code",
-		ErrorMessageField: "description",
-	}), nil
+
+	tt := &telegramTransformer{}
+	tt.BaseHTTPTransformer = transformer.NewSimpleHTTPTransformer(
+		core.ProviderTypeTelegram,
+		"",
+		respCfg,
+		tt.transform,
+	)
+
+	return tt
 }

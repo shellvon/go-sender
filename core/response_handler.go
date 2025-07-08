@@ -2,65 +2,59 @@ package core
 
 import (
 	"encoding/json"
-	"encoding/xml"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
-	// "github.com/shellvon/go-sender/utils".
 )
 
-// ResponseHandlerConfig describes how to validate an HTTP response.
-// The same config can be reused by any HTTP-based provider (webhook, SMS, etc.).
-//
-// Key fields:
-//   - SuccessStatusCodes  – Optional whitelist of HTTP status codes considered successful.
-//   - ValidateResponse   – If false, only the status code is checked.
-//   - ResponseType       – Expected body type (json/text/xml/raw/none/form).
-//
-// JSON responses (ResponseType == BodyTypeJSON):
-//   - SuccessField / SuccessValue – Pair that marks a successful result when equal.
-//   - ErrorCodeField              – Field holding a platform-specific error code.
-//   - ErrorField / MessageField   – Fields holding the error / info message.
-//   - ErrorCodeMap                – Map error code ➜ human-friendly message.
-//
-// Text responses (ResponseType == BodyTypeText):
-//   - SuccessPattern / ErrorPattern – Regexes applied to plain-text body.
-//
-// You can extend this struct without breaking existing providers; unrecognised
-// fields are simply ignored by the validation logic.
-type ResponseHandlerConfig struct {
-	// Explicit list of HTTP status codes that should be treated as success.
-	SuccessStatusCodes []int `json:"success_status_codes,omitempty"`
+// ---------------- New minimal config -------------------------------------
 
-	// When false only the HTTP status code is validated.
-	ValidateResponse bool `json:"validate_response,omitempty"`
+// MatchMode defines comparison types.
+type MatchMode string
 
-	// Expected body format.
-	ResponseType BodyType `json:"response_type,omitempty"`
+const (
+	MatchEq       MatchMode = "eq"
+	MatchContains MatchMode = "contains"
+	MatchRegex    MatchMode = "regex"
+	MatchGt       MatchMode = "gt"
+	MatchGte      MatchMode = "gte"
+	MatchLt       MatchMode = "lt"
+	MatchLte      MatchMode = "lte"
+)
 
-	// JSON-specific fields.
-	SuccessField      string            `json:"success_field,omitempty"`
-	SuccessValue      string            `json:"success_value,omitempty"`
-	ErrorCodeField    string            `json:"error_code_field,omitempty"`
-	ErrorField        string            `json:"error_field,omitempty"`   // Kept for webhook backward-compat.
-	MessageField      string            `json:"message_field,omitempty"` // Kept for webhook backward-compat.
-	ErrorMessageField string            `json:"error_message_field,omitempty"`
-	ErrorCodeMap      map[string]string `json:"error_code_map,omitempty"`
-
-	// Text-specific fields.
-	SuccessPattern string `json:"success_pattern,omitempty"`
-	ErrorPattern   string `json:"error_pattern,omitempty"`
+// MatchRule defines how to evaluate success.
+type MatchRule struct {
+	Path  []string  `json:"path,omitempty"` // e.g. ["Response","Data","0","Code"]. Empty means whole body.
+	Mode  MatchMode `json:"mode,omitempty"` // default eq
+	Value string    `json:"value,omitempty"`
 }
 
-// NewResponseHandler builds a ResponseHandler using the supplied configuration.
-// If cfg is nil, it returns a ResponseHandler that only validates status code.
+// ResponseHandlerConfig – simplified version.
+type ResponseHandlerConfig struct {
+	AcceptStatus []int    `json:"accept_status,omitempty"`
+	CheckBody    bool     `json:"check_body,omitempty"`
+	BodyType     BodyType `json:"body_type,omitempty"`
+
+	Path   string    `json:"path"`
+	Expect string    `json:"expect"`
+	Mode   MatchMode `json:"mode,omitempty"`
+
+	CodePath string            `json:"code_path,omitempty"`
+	MsgPath  string            `json:"msg_path,omitempty"`
+	CodeMap  map[string]string `json:"code_map,omitempty"`
+}
+
+// ---------------- Core handler -------------------------------------------
+
+// NewResponseHandler builds a ResponseHandler based on cfg.
 func NewResponseHandler(cfg *ResponseHandlerConfig) ResponseHandler {
 	if cfg == nil {
-		cfg = &ResponseHandlerConfig{ValidateResponse: false}
+		cfg = &ResponseHandlerConfig{CheckBody: false}
 	}
 
 	return func(resp *http.Response) error {
@@ -68,184 +62,243 @@ func NewResponseHandler(cfg *ResponseHandlerConfig) ResponseHandler {
 			return errors.New("response is nil")
 		}
 
-		// Read body & close
-		body, err := io.ReadAll(resp.Body)
+		bodyBytes, err := io.ReadAll(resp.Body)
 		if err != nil {
-			return fmt.Errorf("failed to read response body: %w", err)
+			return fmt.Errorf("failed to read body: %w", err)
 		}
 		defer resp.Body.Close()
-		// 1) Check HTTP status code.
-		if !cfg.isStatusOK(resp.StatusCode) {
+
+		// 1. HTTP status
+		if !isStatusOK(cfg.AcceptStatus, resp.StatusCode) {
 			return fmt.Errorf("HTTP status %d not acceptable", resp.StatusCode)
 		}
-
-		// 2) Optionally validate response body.
-		if !cfg.ValidateResponse {
+		if !cfg.CheckBody {
 			return nil
 		}
 
-		// Determine the effective body type.
-		effectiveType := cfg.ResponseType
-		if effectiveType == BodyTypeNone {
-			effectiveType = detectBodyType(resp.Header.Get("Content-Type"))
+		// Determine body type
+		bType := cfg.BodyType
+		if bType == BodyTypeNone {
+			bType = detectBodyType(resp.Header.Get("Content-Type"))
 		}
 
-		switch effectiveType {
-		case BodyTypeJSON:
-			return cfg.handleJSON(body)
-		case BodyTypeText:
-			return cfg.handleText(body)
-		case BodyTypeXML:
-			return cfg.handleXML(body)
-		case BodyTypeForm, BodyTypeRaw:
-			return fmt.Errorf("unsupported response body type: %s", effectiveType.String())
-		case BodyTypeNone:
-			// do nothing
-			return nil
-		default:
-			// Fallback treat as text
-			return cfg.handleText(body)
+		success, evalErr := evaluateSuccessSimple(cfg, bType, bodyBytes)
+		if evalErr != nil {
+			return evalErr
 		}
-	}
-}
-
-// isStatusOK returns true if the given status code is considered successful.
-// If SuccessStatusCodes is empty, it returns true for 2xx/3xx status codes.
-// otherwise, it returns true if the status code is in SuccessStatusCodes.
-func (cfg *ResponseHandlerConfig) isStatusOK(statusCode int) bool {
-	if len(cfg.SuccessStatusCodes) > 0 {
-		return slices.Contains(cfg.SuccessStatusCodes, statusCode)
-	}
-	return statusCode >= http.StatusOK && statusCode < http.StatusBadRequest
-}
-
-// handleJSON validates a JSON response body according to the config.
-func (cfg *ResponseHandlerConfig) handleJSON(body []byte) error {
-	if len(body) == 0 {
-		return nil
-	}
-	var resp map[string]interface{}
-	if err := json.Unmarshal(body, &resp); err != nil {
-		return fmt.Errorf("failed to parse JSON response: %w", err)
-	}
-	if cfg.SuccessField != "" {
-		if v, ok := resp[cfg.SuccessField]; ok && fmt.Sprintf("%v", v) == cfg.SuccessValue {
+		if success {
 			return nil
 		}
-	}
-	errCode := extractStringField(resp, cfg.ErrorCodeField)
-	if errCode == "" {
-		errCode = extractStringField(resp, "code")
-	}
-	errMsg := extractFirstNonEmpty(
-		extractStringField(resp, cfg.ErrorField),
-		extractStringField(resp, cfg.MessageField),
-		extractStringField(resp, cfg.ErrorMessageField),
-		"unknown error",
-	)
-	if cfg.ErrorCodeMap != nil {
-		if mapped, ok := cfg.ErrorCodeMap[errCode]; ok {
-			errMsg = mapped
+
+		// Failure – build error message
+		code := extractValue(splitDotPath(cfg.CodePath), bType, bodyBytes)
+		msg := extractValue(splitDotPath(cfg.MsgPath), bType, bodyBytes)
+		if mapped, ok := cfg.CodeMap[code]; ok {
+			msg = mapped
 		}
+		if msg == "" {
+			msg = "unknown error"
+		}
+		return fmt.Errorf("api error: %s (code=%s)", msg, code)
 	}
-	return fmt.Errorf("api returned error: %s (code=%s)", errMsg, errCode)
 }
 
-// handleText validates a plain-text response body according to the config.
-func (cfg *ResponseHandlerConfig) handleText(body []byte) error {
-	text := string(body)
-	if cfg.ErrorPattern != "" {
-		if matched, _ := regexp.MatchString(cfg.ErrorPattern, text); matched {
-			return fmt.Errorf("api returned error response: %s", text)
-		}
+func isStatusOK(white []int, code int) bool {
+	if len(white) > 0 {
+		return slices.Contains(white, code)
 	}
-	if cfg.SuccessPattern != "" {
-		if matched, _ := regexp.MatchString(cfg.SuccessPattern, text); !matched {
-			return fmt.Errorf("response does not match success pattern: %s", text)
-		}
-	}
-	return nil
+	return code >= http.StatusOK && code < http.StatusBadRequest
 }
 
-// extractXMLField returns the character data of the first element whose name matches field.
-func extractXMLField(body []byte, field string) string {
-	if field == "" {
+func evaluateSuccessSimple(cfg *ResponseHandlerConfig, bType BodyType, body []byte) (bool, error) {
+	val := extractValue(splitDotPath(cfg.Path), bType, body)
+	mode := cfg.Mode
+	switch mode {
+	case "", MatchEq:
+		return val == cfg.Expect, nil
+	case MatchContains:
+		return strings.Contains(val, cfg.Expect), nil
+	case MatchRegex:
+		matched, err := regexp.MatchString(cfg.Expect, val)
+		return matched, err
+	case MatchGt, MatchGte, MatchLt, MatchLte:
+		f1, err1 := strconv.ParseFloat(val, 64)
+		f2, err2 := strconv.ParseFloat(cfg.Expect, 64)
+		if err1 != nil || err2 != nil {
+			return false, fmt.Errorf("non-numeric compare for %s", mode)
+		}
+		//nolint:exhaustive // only 4 cases.
+		switch mode {
+		case MatchGt:
+			return f1 > f2, nil
+		case MatchGte:
+			return f1 >= f2, nil
+		case MatchLt:
+			return f1 < f2, nil
+		case MatchLte:
+			return f1 <= f2, nil
+		}
+	default:
+		return false, fmt.Errorf("unknown match mode %s", mode)
+	}
+	return false, nil
+}
+
+// extractValue returns string per path.
+func extractValue(path []string, bType BodyType, body []byte) string {
+	if len(path) == 0 {
+		return string(body)
+	}
+	switch bType {
+	case BodyTypeJSON:
+		return extractJSONPath(body, path)
+	case BodyTypeXML:
+		return extractXMLPath(body, path)
+	case BodyTypeText:
+		return extractTextRegex(body, path)
+	case BodyTypeNone:
+		return string(body)
+	case BodyTypeRaw:
+		return string(body)
+	case BodyTypeForm:
+		return string(body)
+	default:
 		return ""
 	}
-	decoder := xml.NewDecoder(strings.NewReader(string(body)))
-	for {
-		tok, err := decoder.Token()
-		if err != nil {
-			break
+}
+
+// Very simple dot/array JSON path extractor.
+//
+//nolint:gocognit // simple implementation.
+func extractJSONPath(body []byte, path []string) string {
+	var data interface{}
+	if err := json.Unmarshal(body, &data); err != nil {
+		return ""
+	}
+
+	curr := data
+
+	for _, seg := range path {
+		if seg == "" {
+			continue
 		}
 
-		//nolint:gocritic // just for xml decoding
-		switch se := tok.(type) {
-		case xml.StartElement:
-			if se.Name.Local == field {
-				var val string
-				if decodeErr := decoder.DecodeElement(&val, &se); decodeErr == nil {
-					return val
+		// helper to drill into map
+		drillMap := func(key string) bool {
+			if m, ok := curr.(map[string]interface{}); ok {
+				curr = m[key]
+				return true
+			}
+			return false
+		}
+
+		// iterate through segment parts: key and [index]...
+		i := 0
+		for i < len(seg) {
+			switch seg[i] {
+			case '[':
+				// array index token here (no preceding key)
+				end := strings.IndexByte(seg[i:], ']')
+				if end == -1 {
+					return ""
 				}
+				idxStr := seg[i+1 : i+end]
+				idx, err := strconv.Atoi(idxStr)
+				if err != nil {
+					return ""
+				}
+				if arr, ok := curr.([]interface{}); ok {
+					if idx < 0 || idx >= len(arr) {
+						return ""
+					}
+					curr = arr[idx]
+				} else {
+					return ""
+				}
+				i += end + 1 // move past ]
+			default:
+				// parse key until next '[' or end
+				j := i
+				for j < len(seg) && seg[j] != '[' {
+					j++
+				}
+				key := seg[i:j]
+				if !drillMap(key) {
+					// when current is array and key is digits (e.g., "0")
+					if arr, ok := curr.([]interface{}); ok {
+						idx, err := strconv.Atoi(key)
+						if err != nil || idx < 0 || idx >= len(arr) {
+							return ""
+						}
+						curr = arr[idx]
+					} else {
+						return ""
+					}
+				}
+				i = j
 			}
 		}
 	}
-	return ""
+	return fmt.Sprintf("%v", curr)
 }
 
-// handleXML validates XML body – currently basic well-formedness check.
-func (cfg *ResponseHandlerConfig) handleXML(body []byte) error {
-	if len(body) == 0 {
-		return nil
-	}
-	if err := xml.Unmarshal(body, new(interface{})); err != nil {
-		return fmt.Errorf("failed to parse XML response: %w", err)
+func extractXMLPath(body []byte, path []string) string {
+	seg := string(body)
+
+	for _, raw := range path {
+		if raw == "" {
+			continue
+		}
+
+		// support item[1] syntax
+		tag := raw
+		idx := 0
+		if strings.HasSuffix(raw, "]") {
+			if l := strings.Index(raw, "["); l != -1 {
+				tag = raw[:l]
+				idxStr := raw[l+1 : len(raw)-1]
+				if v, err := strconv.Atoi(idxStr); err == nil {
+					idx = v
+				}
+			}
+		}
+
+		openTag := "<" + tag + ">"
+		closeTag := "</" + tag + ">"
+
+		// iterate to the idx-th occurrence
+		searchPos := 0
+		for i := 0; i <= idx; i++ {
+			pos := strings.Index(seg[searchPos:], openTag)
+			if pos == -1 {
+				return ""
+			}
+			searchPos += pos + len(openTag)
+		}
+
+		end := strings.Index(seg[searchPos:], closeTag)
+		if end == -1 {
+			return ""
+		}
+
+		seg = seg[searchPos : searchPos+end]
 	}
 
-	// Success detection similar to JSON.
-	if cfg.SuccessField != "" {
-		if val := extractXMLField(body, cfg.SuccessField); val == cfg.SuccessValue {
-			return nil
-		}
-	}
-
-	errCode := extractXMLField(body, cfg.ErrorCodeField)
-	errMsg := extractFirstNonEmpty(
-		extractXMLField(body, cfg.ErrorField),
-		extractXMLField(body, cfg.MessageField),
-		extractXMLField(body, cfg.ErrorMessageField),
-	)
-	if errCode == "" {
-		errCode = "UNKNOWN"
-	}
-	if cfg.ErrorCodeMap != nil {
-		if mapped, ok := cfg.ErrorCodeMap[errCode]; ok {
-			errMsg = mapped
-		}
-	}
-	if errMsg == "" {
-		errMsg = "unknown error"
-	}
-	return fmt.Errorf("api returned error: %s (code=%s)", errMsg, errCode)
+	return seg
 }
 
-// extractStringField returns resp[field] converted to string (empty if missing).
-func extractStringField(resp map[string]interface{}, field string) string {
-	if field == "" {
-		return ""
+func extractTextRegex(body []byte, pattern []string) string {
+	if len(pattern) == 0 || (len(pattern) == 1 && pattern[0] == "") {
+		return string(body)
 	}
-	if v, ok := resp[field]; ok {
-		return fmt.Sprintf("%v", v)
+	re := regexp.MustCompile(strings.Join(pattern, ""))
+	match := re.FindSubmatch(body)
+	if len(match) > 1 {
+		return string(match[1])
 	}
-	return ""
-}
-
-// extractFirstNonEmpty returns the first non-empty string.
-func extractFirstNonEmpty(vals ...string) string {
-	for _, v := range vals {
-		if v != "" {
-			return v
-		}
+	// if no capture group, but matches, return whole
+	if len(match) > 0 {
+		return string(match[0])
 	}
 	return ""
 }
@@ -260,11 +313,33 @@ func detectBodyType(ct string) BodyType {
 		return BodyTypeXML
 	case strings.Contains(ct, "text/") || strings.Contains(ct, "plain"):
 		return BodyTypeText
-	case strings.Contains(ct, "x-www-form-urlencoded"):
-		return BodyTypeForm
-	case strings.Contains(ct, "octet-stream"):
-		return BodyTypeRaw
 	default:
 		return BodyTypeText
 	}
+}
+
+// splitDotPath parses a dot-notation path into segments, supporting escaped '\\.' .
+func splitDotPath(p string) []string {
+	if p == "" {
+		return nil
+	}
+	var segs []string
+	var curr strings.Builder
+	esc := false
+	for _, r := range p {
+		switch {
+		case esc:
+			curr.WriteRune(r)
+			esc = false
+		case r == '\\':
+			esc = true
+		case r == '.':
+			segs = append(segs, curr.String())
+			curr.Reset()
+		default:
+			curr.WriteRune(r)
+		}
+	}
+	segs = append(segs, curr.String())
+	return segs
 }

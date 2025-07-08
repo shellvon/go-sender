@@ -8,15 +8,16 @@ import (
 	"net/http"
 
 	"github.com/shellvon/go-sender/core"
+	"github.com/shellvon/go-sender/transformer"
 )
 
-// @ProviderName: EmailJS
-// @Website: https://www.emailjs.com/
-// @APIDoc: https://www.emailjs.com/docs/rest-api/send/
+// emailJSTransformer implements HTTPRequestTransformer for EmailJS.
+// You need to activate API requests through [Account:Security](https://dashboard.emailjs.com/admin/account/security)
 //
-// You need to activate API requests through [Account:Security](https://dashboard.emailjs.com/admin/account/security) for non-browser applications.
+// Reference:
+//   - Official Website: https://www.emailjs.com/
+//   - API Docs: https://www.emailjs.com/docs/rest-api/send/
 
-// init automatically registers the EmailJS transformer.
 func init() {
 	RegisterTransformer(string(SubProviderEmailJS), newEmailJSTransformer())
 }
@@ -26,72 +27,49 @@ const (
 	defaultEmailjsServiceID = "default_service"
 )
 
-// emailJSTransformer implements HTTPRequestTransformer for EmailJS.
-type emailJSTransformer struct{}
-
-// newEmailJSTransformer creates a new EmailJS transformer.
-func newEmailJSTransformer() core.HTTPTransformer[*Account] {
-	return &emailJSTransformer{}
+// emailJSTransformer utilises BaseHTTPTransformer for EmailJS.
+type emailJSTransformer struct {
+	*transformer.BaseHTTPTransformer[*Message, *Account]
 }
 
-// CanTransform checks if this transformer can handle the given message.
-func (t *emailJSTransformer) CanTransform(message core.Message) bool {
-	if emailMsg, ok := message.(*Message); ok {
-		return ok && emailMsg.SubProvider == string(SubProviderEmailJS)
+func newEmailJSTransformer() *emailJSTransformer {
+	et := &emailJSTransformer{}
+
+	cfg := &core.ResponseHandlerConfig{
+		BodyType:  core.BodyTypeText,
+		CheckBody: true,
+		Path:      "",
+		Expect:    "OK",
+		Mode:      core.MatchEq,
 	}
-	return false
+
+	et.BaseHTTPTransformer = transformer.NewSimpleHTTPTransformer(
+		core.ProviderTypeEmailAPI,
+		string(SubProviderEmailJS),
+		cfg,
+		et.transform,
+		transformer.AddBeforeHook(func(_ context.Context, msg *Message, account *Account) error {
+			return et.validate(msg, account)
+		}),
+	)
+	return et
 }
 
-// Transform converts an EmailJS message to HTTP request specification.
-func (t *emailJSTransformer) Transform(
-	ctx context.Context,
-	msg core.Message,
-	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
-	emailMsg, ok := msg.(*Message)
-	if !ok {
-		return nil, nil, fmt.Errorf("unsupported message type for EmailJS: %T", msg)
-	}
-
-	if err := t.validateMessage(emailMsg); err != nil {
-		return nil, nil, fmt.Errorf("message validation failed: %w", err)
-	}
-
-	return t.transformEmail(ctx, emailMsg, account)
-}
-
-// validateMessage validates the message for EmailJS.
-func (t *emailJSTransformer) validateMessage(msg *Message) error {
-	if msg.TemplateID == "" {
-		return errors.New("template_id is required for EmailJS")
-	}
-	return nil
-}
-
-// transformEmail transforms email message to HTTP request.
-func (t *emailJSTransformer) transformEmail(
+// transform builds HTTPRequestSpec for EmailJS.
+func (et *emailJSTransformer) transform(
 	_ context.Context,
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	// Get required parameters
 	serviceID := msg.From
-	userID := account.APIKey
-	accessToken := account.APISecret
-
 	if serviceID == "" {
 		serviceID = defaultEmailjsServiceID
 	}
-	if userID == "" {
-		return nil, nil, errors.New("EmailJS: user_id (APIKey) is required")
-	}
-	if accessToken == "" {
-		return nil, nil, errors.New("EmailJS: accessToken (APISecret) is required")
-	}
+	userID := account.APIKey
+	accessToken := account.APISecret
+	templateData := et.prepareTemplateData(msg)
 
-	// Prepare template data with smart field merging
-	templateData := t.prepareTemplateData(msg)
-	// Build request parameters
 	params := map[string]interface{}{
 		"service_id":      serviceID,
 		"template_id":     msg.TemplateID,
@@ -100,26 +78,36 @@ func (t *emailJSTransformer) transformEmail(
 		"template_params": templateData,
 	}
 
-	// Convert to JSON
 	bodyData, err := json.Marshal(params)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to marshal EmailJS request body: %w", err)
 	}
+
 	return &core.HTTPRequestSpec{
-			Method:   http.MethodPost,
-			URL:      defaultEmailjsAPIPath,
-			Body:     bodyData,
-			BodyType: core.BodyTypeJSON,
-		}, core.NewResponseHandler(&core.ResponseHandlerConfig{
-			ResponseType:   core.BodyTypeText,
-			SuccessPattern: "OK",
-		}), nil
+		Method:   http.MethodPost,
+		URL:      defaultEmailjsAPIPath,
+		Body:     bodyData,
+		BodyType: core.BodyTypeJSON,
+	}, nil, nil
 }
 
-// prepareTemplateData intelligently merges message fields with template data
-// EmailJS is special - recipients, sender, subject can come from template variables
-// We prioritize user's template data, only adding message fields if they don't exist in template.
-func (t *emailJSTransformer) prepareTemplateData(msg *Message) map[string]interface{} {
+func (et *emailJSTransformer) validate(msg *Message, account *Account) error {
+	userID := account.APIKey
+	accessToken := account.APISecret
+	if userID == "" {
+		return errors.New("EmailJS: user_id (APIKey) is required")
+	}
+	if accessToken == "" {
+		return errors.New("EmailJS: accessToken (APISecret) is required")
+	}
+	if msg.TemplateID == "" {
+		return errors.New("template_id is required for EmailJS")
+	}
+	return nil
+}
+
+// prepareTemplateData intelligently merges message fields with template data.
+func (et *emailJSTransformer) prepareTemplateData(msg *Message) map[string]interface{} {
 	// Start with user's template data if provided
 	templateData := make(map[string]interface{})
 	if msg.TemplateData != nil {

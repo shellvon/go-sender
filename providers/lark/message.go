@@ -37,7 +37,6 @@ type BaseMessage struct {
 	MsgType MessageType `json:"msg_type"`
 }
 
-// GetMsgType implements the Message interface.
 func (m *BaseMessage) GetMsgType() MessageType {
 	return m.MsgType
 }

@@ -8,45 +8,6 @@ import (
 	"github.com/shellvon/go-sender/core"
 )
 
-func TestDefaultMessage_MsgIDAndExtras(t *testing.T) {
-	m := core.NewDefaultMessage()
-	id1 := m.MsgID()
-	id2 := m.MsgID()
-	if id1 != id2 || id1 == "" {
-		t.Errorf("MsgID should be stable and non-empty")
-	}
-	m.Extras = map[string]interface{}{
-		"str":   "v",
-		"int":   1,
-		"float": 1.5,
-		"bool":  true,
-	}
-	if v, ok := m.GetExtraString("str"); !ok || v != "v" {
-		t.Error("GetExtraString failed")
-	}
-	if v := m.GetExtraStringOrDefault("none", "d"); v != "d" {
-		t.Error("GetExtraStringOrDefault failed")
-	}
-	if v, ok := m.GetExtraInt("int"); !ok || v != 1 {
-		t.Error("GetExtraInt failed")
-	}
-	if v := m.GetExtraIntOrDefault("none", 2); v != 2 {
-		t.Error("GetExtraIntOrDefault failed")
-	}
-	if v, ok := m.GetExtraBool("bool"); !ok || !v {
-		t.Error("GetExtraBool failed")
-	}
-	if v := m.GetExtraBoolOrDefault("none", true); !v {
-		t.Error("GetExtraBoolOrDefault failed")
-	}
-	if v, ok := m.GetExtraFloat("float"); !ok || v != 1.5 {
-		t.Error("GetExtraFloat failed")
-	}
-	if v := m.GetExtraFloatOrDefault("none", 2.5); v != 2.5 {
-		t.Error("GetExtraFloatOrDefault failed")
-	}
-}
-
 type fakeHealth struct{}
 
 func (f *fakeHealth) HealthCheck(_ context.Context) *core.HealthCheck {

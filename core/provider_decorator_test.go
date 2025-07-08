@@ -24,6 +24,8 @@ type fakeMessage struct{}
 func (f *fakeMessage) Validate() error                 { return nil }
 func (f *fakeMessage) ProviderType() core.ProviderType { return core.ProviderTypeSMS }
 func (f *fakeMessage) MsgID() string                   { return "id" }
+func (f *fakeMessage) GetMsgType() string              { return "" }
+func (f *fakeMessage) GetSubProvider() string          { return "" }
 
 func TestNewProviderDecorator(t *testing.T) {
 	p := &fakeProvider{name: "p1"}

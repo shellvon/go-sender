@@ -110,15 +110,15 @@ func TestEndpoint_GetType(t *testing.T) {
 func TestResponseConfig_Validation(t *testing.T) {
 	// Test that ResponseConfig can be created without issues
 	config := &webhook.ResponseConfig{
-		SuccessStatusCodes: []int{200, 201},
-		ValidateResponse:   true,
+		AcceptStatus: []int{200, 201},
+		CheckBody:    true,
 	}
 
 	// Verify the config was created with expected values
-	if config.SuccessStatusCodes[0] != 200 {
-		t.Error("Expected first success status code to be 200")
+	if config.AcceptStatus[0] != 200 {
+		t.Error("Expected first accept status code to be 200")
 	}
-	if !config.ValidateResponse {
-		t.Error("Expected ValidateResponse to be true")
+	if !config.CheckBody {
+		t.Error("Expected CheckBody to be true")
 	}
 }

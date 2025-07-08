@@ -12,21 +12,20 @@ import (
 	"github.com/shellvon/go-sender/utils"
 )
 
+// Yuntongxun is a message provider for Yuntongxun.
+// It supports sending text, voice message
+//
+// Reference:
+//   - Official Website: https://www.yuntongxun.com/
+//   - API Docs: https://www.yuntongxun.com/developer-center
+//   - SMS China Mainland: https://doc.yuntongxun.com/pe/5a533de33b8496dd00dce07c
+//   - SMS International: https://doc.yuntongxun.com/pe/604f29eda80948a1006e928d
+
 const (
 	cloopenEndpoint      = "app.cloopen.com:8883"
 	cloopenHKEndpoint    = "hksms.cloopen.com:8883"
 	cloopenDefaultRegion = "cn"
 )
-
-// @ProviderName: Yuntongxun / 云讯通
-// @Website: https://www.yuntongxun.com
-// @APIDoc: https://www.yuntongxun.com/developer-center
-//
-// 官方文档:
-//   - 国内短信: https://doc.yuntongxun.com/pe/5a533de33b8496dd00dce07c
-//   - 国际短信: https://doc.yuntongxun.com/pe/604f29eda80948a1006e928d
-//
-// transformer 支持 text（国内/国际，国内模板，国际内容）和 voice（仅国内）类型。
 
 type yuntongxunTransformer struct {
 	*BaseTransformer
@@ -35,20 +34,16 @@ type yuntongxunTransformer struct {
 func newYuntongxunTransformer() *yuntongxunTransformer {
 	transformer := &yuntongxunTransformer{}
 	transformer.BaseTransformer = NewBaseTransformer(
-		string(core.ProviderTypeSMS),
-		string(SubProviderYunpian),
-		nil,
-	)
-	transformer.BaseTransformer = NewBaseTransformer(
-		string(core.ProviderTypeSMS),
 		string(SubProviderYunpian),
 		&core.ResponseHandlerConfig{
-			SuccessField:      "statusCode",
-			SuccessValue:      "000000",
-			ErrorCodeField:    "statusCode",
-			ErrorMessageField: "statusMsg",
-			ErrorField:        "statusCode",
+			BodyType:  core.BodyTypeJSON,
+			CheckBody: true,
+			Path:      "statusCode",
+			Expect:    "000000",
+			MsgPath:   "statusMsg",
+			Mode:      core.MatchEq,
 		},
+		nil,
 		WithSMSHandler(transformer.transformSMS),
 		WithVoiceHandler(transformer.transformVoice),
 	)

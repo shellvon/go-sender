@@ -70,14 +70,8 @@ func (m *Message) ProviderType() core.ProviderType {
 
 // Validate checks if the Message is valid.
 func (m *Message) Validate() error {
-	if len(m.To) == 0 {
-		return core.NewParamError("to recipients cannot be empty")
-	}
 	if m.SubProvider == "" {
 		return core.NewParamError("sub_provider must be specified for EmailAPI messages (e.g., emailjs, resend)")
-	}
-	if m.Subject == "" && m.TemplateID == "" {
-		return core.NewParamError("either subject or template_id must be specified")
 	}
 	return nil
 }

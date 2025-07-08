@@ -1,11 +1,10 @@
-//nolint:depguard // intentional use of math/rand for compatibility or legacy reasons
 package sms
 
 import (
 	"context"
 	"errors"
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
 	"net/http"
 	"net/url"
 	"sort"
@@ -17,24 +16,18 @@ import (
 	"github.com/shellvon/go-sender/utils"
 )
 
-// @ProviderName: Aliyun / 阿里云
-// @Website: https://www.aliyun.com
+// aliyunTransformer implements HTTPRequestTransformer for Aliyun SMS.
+// It supports sending text message, voice message, and mms message.
 //
-// 官方文档:
-// - 短信模板即具体发送的短信内容，模板类型支持验证码、通知短信和推广短信。模板由模板变量和模板内容构成，您需要遵守模板内容规范和变量规范。
-// - SMS API(国内/国外/单发/群发): https://help.aliyun.com/zh/sms/developer-reference/api-dysmsapi-2017-05-25-sendsms
-//
-// 阿里云支持多媒体彩信:
-//   - 多媒体彩信: https://help.aliyun.com/zh/sms/user-guide/what-is-multimedia-sms
-//   - 定价: 卡片短信默认定价是0.2元/条,数字短信默认定价为0.4元/条
-//     https://help.aliyun.com/zh/sms/user-guide/multimedia-sms-pricing
-//
-// 阿里云支持语音短信:
-//   - 语音API文档: https://help.aliyun.com/zh/vms/getting-started/through-the-api-or-sdk-using-voice-notification-or-audio-captcha
-//   - 语音验证码API: https://help.aliyun.com/zh/vms/developer-reference/api-dyvmsapi-2017-05-25-singlecallbytts
-//   - 语音通知API: https://help.aliyun.com/zh/vms/developer-reference/api-dyvmsapi-2017-05-25-singlecallbyvoice
-//   - 语音短信支持国内单发，支持验证码和通知类型，需开通语音服务。
-// 对于目前，使用语音发送短信时，当发送验证码时，会使用 TTS 接口，当发送通知时，会使用 Voice 接口。
+// Reference:
+//   - Official Website: https://www.aliyun.com
+//   - API Docs: https://help.aliyun.com/zh/sms/developer-reference/api-dysmsapi-2017-05-25-sendsms
+//   - SMS API(Domestic): https://help.aliyun.com/zh/sms/developer-reference/api-dysmsapi-2017-05-25-sendsms
+//   - SMS API(International): https://help.aliyun.com/zh/sms/developer-reference/api-dysmsapi-2017-05-25-sendsms
+//   - MMS API: https://help.aliyun.com/zh/sms/developer-reference/api-dysmsapi-2017-05-25-sendcardsms
+//   - TTS API: https://help.aliyun.com/zh/vms/developer-reference/api-dyvmsapi-2017-05-25-singlecallbytts
+//   - Voice API: https://help.aliyun.com/zh/vms/developer-reference/api-dyvmsapi-2017-05-25-singlecallbyvoice
+// Currently, when sending SMS with voice, when sending verification code, the TTS interface will be used, and when sending notification, the Voice interface will be used.
 
 // init automatically registers the Aliyun transformer.
 func init() {
@@ -59,22 +52,20 @@ type aliyunTransformer struct {
 func newAliyunTransformer() *aliyunTransformer {
 	transformer := &aliyunTransformer{}
 	transformer.BaseTransformer = NewBaseTransformer(
-		string(core.ProviderTypeSMS),
 		string(SubProviderAliyun),
 		&core.ResponseHandlerConfig{
-			SuccessField:      "Code",
-			SuccessValue:      "OK",
-			ErrorCodeField:    "Code",
-			ErrorMessageField: "Message",
-			ErrorField:        "Code",
-			MessageField:      "Message",
-			ResponseType:      core.BodyTypeJSON,
-			ValidateResponse:  true,
+			BodyType:  core.BodyTypeJSON,
+			CheckBody: true,
+			Path:      "Code",
+			Expect:    "OK",
+			Mode:      core.MatchEq,
 		},
-		WithBeforeHook(func(_ context.Context, msg *Message, account *Account) error {
-			transformer.applyAliyunDefaults(msg, account)
-			return nil
-		}),
+		HTTPOptions{
+			AddBeforeHook(func(_ context.Context, msg *Message, account *Account) error {
+				transformer.applyAliyunDefaults(msg, account)
+				return nil
+			}),
+		},
 		WithSMSHandler(transformer.transformSMS),
 		WithVoiceHandler(transformer.transformVoice),
 		WithMMSHandler(transformer.transformCardSMS),
@@ -100,7 +91,7 @@ type aliyunSignParams struct {
 func (t *aliyunTransformer) signAliyunRequest(params aliyunSignParams) map[string]string {
 	const algorithm = "ACS3-HMAC-SHA256"
 	//nolint:gosec // Reason: not used for security, only for client nonce generation
-	xAcsSignatureNonce := fmt.Sprintf("%x", rand.Int63())
+	xAcsSignatureNonce := fmt.Sprintf("%x", rand.Int64())
 	xAcsDate := time.Now().UTC().Format(time.RFC3339)
 	// 计算请求体哈希
 	var hashedRequestPayload string
@@ -233,7 +224,7 @@ func (t *aliyunTransformer) transformVoice(
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
 	// 只支持国内
 	if msg.IsIntl() {
-		return nil, nil, NewUnsupportedInternationalError(t.subProvider, "voice call")
+		return nil, nil, NewUnsupportedInternationalError(string(SubProviderAliyun), "voice call")
 	}
 	// 只支持单号码
 	if msg.HasMultipleRecipients() {
