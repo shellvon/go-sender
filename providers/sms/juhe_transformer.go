@@ -11,17 +11,15 @@ import (
 	"github.com/shellvon/go-sender/core"
 )
 
-// @ProviderName: Juhe / 聚合数据
-// @Website: https://www.juhe.cn
-// @APIDoc: https://www.juhe.cn/docs/api/id/54
+// juheTransformer implements HTTPRequestTransformer for Juhe SMS.
+// It supports sending text message, voice message, and mms message.
 //
-// 官方文档:
-//   - 短信API文档: https://www.juhe.cn/docs/api/id/54
-//   - 国内短信API: https://www.juhe.cn/docs/api/id/54
-//   - 国际短信API: https://www.juhe.cn/docs/api/id/357
-//   - 视频短信API: https://www.juhe.cn/docs/api/id/363
-//
-// transformer 支持国内短信、国际短信、彩信/视频短信。
+// Reference:
+//   - Official Website: https://www.juhe.cn
+//   - API Docs: https://www.juhe.cn/docs/api/id/54
+//   - SMS API(Domestic): https://www.juhe.cn/docs/api/id/54
+//   - SMS API(International): https://www.juhe.cn/docs/api/id/357
+//   - MMS API: https://www.juhe.cn/docs/api/id/363
 
 const (
 	juheDefaultBaseURI = "https//v.juhe.cn"
@@ -40,14 +38,14 @@ func newJuheTransformer() *juheTransformer {
 	transformer := &juheTransformer{}
 	transformer.BaseTransformer = NewBaseTransformer(
 		string(core.ProviderTypeSMS),
-		string(SubProviderJuhe),
 		&core.ResponseHandlerConfig{
-			SuccessField:      "error_code",
-			SuccessValue:      "0",
-			ErrorCodeField:    "error_code",
-			ErrorMessageField: "reason",
-			ErrorField:        "error_code",
+			BodyType:  core.BodyTypeJSON,
+			CheckBody: true,
+			Path:      "error_code",
+			Expect:    "0",
+			Mode:      core.MatchEq,
 		},
+		nil,
 		WithSMSHandler(transformer.transformSMS),
 		WithMMSHandler(transformer.transformMMS),
 	)

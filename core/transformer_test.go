@@ -1,7 +1,6 @@
 package core_test
 
 import (
-	"errors"
 	"net/http"
 	"net/url"
 	"testing"
@@ -26,20 +25,5 @@ func TestHTTPRequestSpecFields(t *testing.T) {
 		spec.BodyType != core.BodyTypeJSON ||
 		spec.Timeout != 2*time.Second {
 		t.Errorf("HTTPRequestSpec fields not set correctly: %+v", spec)
-	}
-}
-
-func TestResponseHandler(t *testing.T) {
-	h := func(status int, body []byte) error {
-		if status != 200 || string(body) != "ok" {
-			return errors.New("bad response")
-		}
-		return nil
-	}
-	if err := h(200, []byte("ok")); err != nil {
-		t.Errorf("ResponseHandler should succeed: %v", err)
-	}
-	if err := h(500, []byte("fail")); err == nil {
-		t.Error("ResponseHandler should fail on bad input")
 	}
 }

@@ -11,21 +11,17 @@ import (
 	"github.com/shellvon/go-sender/utils"
 )
 
-// @ProviderName: Cl253 (Chuanglan) / 创蓝253
-// @Website: https://www.253.com
-// @APIDoc: https://www.253.com/api
+// cl253Transformer implements HTTPRequestTransformer for CL253 SMS.
+// It supports sending text message, voice message, and mms message.
 //
-// 官方文档:
-//   - 国内短信 API: https://doc.chuanglan.com/document/HAQYSZKH9HT5Z50L
-//   - 国际短信 API: https://doc.chuanglan.com/document/O58743GF76M7754H
+// Reference:
+//   - Official Website: https://www.253.com
+//   - API Docs: https://www.253.com/api
+//   - SMS API(Domestic): https://doc.chuanglan.com/document/HAQYSZKH9HT5Z50L
+//   - SMS API(International): https://doc.chuanglan.com/document/O58743GF76M7754H
 //
-// CL253 支持能力:
-//   - 国内短信：支持验证码、通知、营销，单发/群发，签名自动拼接，需遵守工信部规范。
-//   - 国际短信：支持验证码、通知、营销，仅单发，需带国际区号，内容需以签名开头。
-//   - 彩信/语音短信：暂不支持。
+// Signature will be automatically added to the content.
 //
-// 签名和营销短信的结尾是拼接在内容里的，签名本实现会自动增加。
-
 // init automatically registers the CL253 transformer.
 func init() {
 	RegisterTransformer(string(SubProviderCl253), newCL253Transformer())
@@ -50,21 +46,19 @@ type cl253Transformer struct {
 func newCL253Transformer() *cl253Transformer {
 	transformer := &cl253Transformer{}
 	transformer.BaseTransformer = NewBaseTransformer(
-		string(core.ProviderTypeSMS),
 		string(SubProviderCl253),
 		&core.ResponseHandlerConfig{
-			SuccessField:      "code",
-			SuccessValue:      "0",
-			ErrorCodeField:    "code",
-			ErrorMessageField: "message",
-			ErrorField:        "errorMsg",
-			MessageField:      "message",
-			ResponseType:      core.BodyTypeJSON,
-			ValidateResponse:  true,
+			BodyType:  core.BodyTypeJSON,
+			CheckBody: true,
+			Path:      "status",
+			Expect:    "0",
+			Mode:      core.MatchEq,
 		},
-		WithBeforeHook(func(_ context.Context, msg *Message, _ *Account) error {
-			return transformer.validateMessage(msg)
-		}),
+		HTTPOptions{
+			AddBeforeHook(func(_ context.Context, msg *Message, _ *Account) error {
+				return transformer.validateMessage(msg)
+			}),
+		},
 		WithSMSHandler(transformer.transformSMS),
 	)
 	return transformer

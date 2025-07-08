@@ -249,6 +249,11 @@ func (m *Message) GetSubProvider() string {
 	return m.SubProvider
 }
 
+// GetMsgType returns the string representation of Message.Type.
+func (m *Message) GetMsgType() string {
+	return m.Type.String()
+}
+
 // ApplyCommonDefaults applies common default values from account to message.
 // This method handles the common defaults that are shared across all SMS providers:
 // - SignName: use message's SignName if present, otherwise extract from content, otherwise use account's default

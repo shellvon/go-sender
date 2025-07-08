@@ -3,78 +3,74 @@ package dingtalk
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strconv"
 	"time"
 
 	"github.com/shellvon/go-sender/core"
+	"github.com/shellvon/go-sender/transformer"
 	"github.com/shellvon/go-sender/utils"
 )
 
-// dingTalkTransformer implements core.HTTPTransformer[*Account] for DingTalk
-// It is stateless and does not hold any config.
-type dingTalkTransformer struct{}
+// dingTalkTransformer implements HTTPRequestTransformer for DingTalk.
+// It supports sending text, image, file, markdown, news, and other types of messages.
+//
+// Reference:
+//   - Official Website: https://dingtalk.com/
+//   - API Docs: https://open.dingtalk.com/document/robots/custom-robot-access
 
-// newDingTalkTransformer creates a new DingTalk transformer (stateless).
-func newDingTalkTransformer() core.HTTPTransformer[*Account] {
-	return &dingTalkTransformer{}
+const dingtalkRobotURL = "https://oapi.dingtalk.com/robot/send"
+
+type dingTalkTransformer struct {
+	*transformer.BaseHTTPTransformer[Message, *Account]
 }
 
-// CanTransform checks if this transformer can handle the given message.
-func (t *dingTalkTransformer) CanTransform(msg core.Message) bool {
-	return msg.ProviderType() == core.ProviderTypeDingtalk
-}
-
-// Transform converts a DingTalk message to HTTP request specification.
-//   - https://open.dingtalk.com/document/orgapp/custom-bot-send-message-type
-//   - https://open.dingtalk.com/document/orgapp/customize-robot-security-settings#title-7fs-kgs-36x
-func (t *dingTalkTransformer) Transform(
+func (dt *dingTalkTransformer) transform(
 	_ context.Context,
-	msg core.Message,
+	msg Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
-	dingMsg, ok := msg.(Message)
-	if !ok {
-		return nil, nil, fmt.Errorf("unsupported message type for DingTalk: %T", msg)
-	}
+	qs := url.Values{}
+	qs.Add("access_token", account.APIKey)
 
-	if err := dingMsg.Validate(); err != nil {
-		return nil, nil, err
-	}
-
-	if account == nil {
-		return nil, nil, errors.New("no account provided")
-	}
-
-	// Build webhook URL with signature if secret is provided
-	// https://open.dingtalk.com/document/orgapp/customize-robot-security-settings#title-7fs-kgs-36x
-	webhookURL := fmt.Sprintf("https://oapi.dingtalk.com/robot/send?access_token=%s", account.APIKey)
 	if account.APISecret != "" {
-		timestamp := time.Now().UnixMilli()
-		stringToSign := fmt.Sprintf("%d\n%s", timestamp, account.APISecret)
+		ts := time.Now().UnixMilli()
+		stringToSign := fmt.Sprintf("%d\n%s", ts, account.APISecret)
 		sign := utils.HMACSHA256Base64(account.APISecret, stringToSign)
-		webhookURL = fmt.Sprintf("%s&timestamp=%d&sign=%s", webhookURL, timestamp, sign)
+		qs.Add("timestamp", strconv.FormatInt(ts, 10))
+		qs.Add("sign", sign)
 	}
-
-	// Convert message to JSON
-	body, err := json.Marshal(dingMsg)
+	body, err := json.Marshal(msg)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to marshal message: %w", err)
 	}
 
-	// Build request
-	reqSpec := &core.HTTPRequestSpec{
-		Method:   http.MethodPost,
-		URL:      webhookURL,
-		Body:     body,
-		BodyType: core.BodyTypeJSON,
+	return &core.HTTPRequestSpec{
+		Method:      http.MethodPost,
+		URL:         dingtalkRobotURL,
+		QueryParams: qs,
+		Body:        body,
+		BodyType:    core.BodyTypeJSON,
+	}, nil, nil
+}
+
+func newDingTalkTransformer() *dingTalkTransformer {
+	respCfg := &core.ResponseHandlerConfig{
+		BodyType:  core.BodyTypeJSON,
+		CheckBody: true,
+		Path:      "errcode",
+		Expect:    "0",
+		Mode:      core.MatchEq,
 	}
 
-	return reqSpec, core.NewResponseHandler(&core.ResponseHandlerConfig{
-		SuccessField:      "errcode",
-		SuccessValue:      "0",
-		ErrorCodeField:    "errcode",
-		ErrorMessageField: "errmsg",
-	}), nil
+	dt := &dingTalkTransformer{}
+	dt.BaseHTTPTransformer = transformer.NewSimpleHTTPTransformer(
+		core.ProviderTypeDingtalk,
+		"",
+		respCfg,
+		dt.transform,
+	)
+	return dt
 }

@@ -12,15 +12,13 @@ import (
 	"github.com/shellvon/go-sender/utils"
 )
 
-// @ProviderName: Luosimao / 螺丝帽
-// @Website: https://luosimao.com
-// @APIDoc: https://luosimao.com/docs/api
+// luosimaoTransformer implements HTTPRequestTransformer for Luosimao SMS.
+// It only supports sending text message.
 //
-// 官方文档:
-//   - 短信API: https://luosimao.com/docs/api
-//
-// transformer 仅支持 text（普通短信）类型。
-
+// Reference:
+//   - Official Website: https://luosimao.com
+//   - API Docs: https://luosimao.com/docs/api
+//   - SMS API: https://luosimao.com/docs/api#send
 const (
 	luosimaoSmsDefaultBaseURI   = "https://sms-api.luosimao.com"
 	luosimaoVoiceDefaultBaseURI = "https://voice-api.luosimao.com"
@@ -33,15 +31,15 @@ type luosimaoTransformer struct {
 func newLuosimaoTransformer() *luosimaoTransformer {
 	transformer := &luosimaoTransformer{}
 	transformer.BaseTransformer = NewBaseTransformer(
-		string(core.ProviderTypeSMS),
 		string(SubProviderLuosimao),
 		&core.ResponseHandlerConfig{
-			SuccessField:      "errorno",
-			SuccessValue:      "0",
-			ErrorCodeField:    "errorno",
-			ErrorMessageField: "msg",
-			ErrorField:        "errorno",
+			BodyType:  core.BodyTypeJSON,
+			CheckBody: true,
+			Path:      "errorno",
+			Expect:    "0",
+			Mode:      core.MatchEq,
 		},
+		nil,
 		WithSMSHandler(transformer.transformSMS),
 		WithVoiceHandler(transformer.transformVoice),
 	)

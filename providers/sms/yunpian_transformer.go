@@ -14,16 +14,15 @@ import (
 	"github.com/shellvon/go-sender/utils"
 )
 
-// @ProviderName: Yunpian / 云片
-// @Website: https://www.yunpian.com
-// @APIDoc: https://www.yunpian.com/dev-doc
+// yunpianTransformer implements HTTPRequestTransformer for Yunpian SMS.
+// It supports sending text, voice message, and mms message.
 //
-// 官方文档:
-//   - 短信API: https://www.yunpian.com/official/document/sms/zh_CN/domestic_list
-//   - 语音API: https://www.yunpian.com/official/document/sms/zh_CN/voice_send
-//   - 超级短信API: https://www.yunpian.com/official/document/sms/zh_CN/super_sms_send
-//
-// transformer 支持 text（国内/国际/模板/非模板/群发）、voice（语音验证码）、mms（超级短信）类型。
+// Reference:
+//   - Official Website: https://www.yunpian.com/
+//   - API Docs: https://www.yunpian.com/dev-doc
+//   - SMS API: https://www.yunpian.com/official/document/sms/zh_CN/domestic_list
+//   - Voice API: https://www.yunpian.com/official/document/sms/zh_CN/voice_send
+//   - MMS API: https://www.yunpian.com/official/document/sms/zh_CN/super_sms_send
 
 type yunpianTransformer struct {
 	*BaseTransformer
@@ -32,20 +31,16 @@ type yunpianTransformer struct {
 func newYunpianTransformer() *yunpianTransformer {
 	transformer := &yunpianTransformer{}
 	transformer.BaseTransformer = NewBaseTransformer(
-		string(core.ProviderTypeSMS),
-		string(SubProviderYunpian),
-		nil,
-	)
-	transformer.BaseTransformer = NewBaseTransformer(
-		string(core.ProviderTypeSMS),
 		string(SubProviderYunpian),
 		&core.ResponseHandlerConfig{
-			SuccessField:      "code",
-			SuccessValue:      "0",
-			ErrorCodeField:    "code",
-			ErrorMessageField: "msg",
-			ErrorField:        "code",
+			BodyType:  core.BodyTypeJSON,
+			CheckBody: true,
+			Path:      "code",
+			Expect:    "0",
+			MsgPath:   "msg",
+			Mode:      core.MatchEq,
 		},
+		nil,
 		WithSMSHandler(transformer.transformSMS),
 		WithVoiceHandler(transformer.transformVoice),
 		WithMMSHandler(transformer.transformMMS),

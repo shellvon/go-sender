@@ -10,21 +10,15 @@ import (
 	"github.com/shellvon/go-sender/core"
 )
 
-// @ProviderName: UCP / 云之讯
-// @Website: https://www.ucpaas.com
-// @APIDoc: http://docs.ucpaas.com
+// ucpTransformer implements HTTPRequestTransformer for UCP SMS.
+// It supports sending text message.
 //
-// 官方文档:
-//   - 短信API文档: http://docs.ucpaas.com/doku.php?id=%E7%9F%AD%E4%BF%A1:about_sms
-//   - 国内外指定模版单发: http://docs.ucpaas.com/doku.php?id=%E7%9F%AD%E4%BF%A1:sendsms
-//   - 国内外指定模版群发: http://docs.ucpaas.com/doku.php?id=%E7%9F%AD%E4%BF%A1:sendsms_batch
-//
-// 能力说明:
-//   - 国内短信：支持单发和群发，需模板ID。
-//   - 国际短信：支持单发和群发，需模板ID。
-//   - 彩信/语音：暂不支持。
-//
-// 注意：支持国内外手机号码，需模板ID。
+// Reference:
+//   - Official Website: https://www.ucpaas.com
+//   - API Docs: http://docs.ucpaas.com
+//   - SMS API: http://docs.ucpaas.com/doku.php?id=%E7%9F%AD%E4%BF%A1:about_sms
+//   - SMS With Template Single: http://docs.ucpaas.com/doku.php?id=%E7%9F%AD%E4%BF%A1:sendsms
+//   - SMS With Template Batch: http://docs.ucpaas.com/doku.php?id=%E7%9F%AD%E4%BF%A1:sendsms_batch
 
 const (
 	ucpDefaultBaseURI = "http://open2.ucpaas.com/sms-server"
@@ -39,15 +33,15 @@ type ucpTransformer struct {
 func newUcpTransformer() *ucpTransformer {
 	transformer := &ucpTransformer{}
 	transformer.BaseTransformer = NewBaseTransformer(
-		string(core.ProviderTypeSMS),
 		string(SubProviderUcp),
 		&core.ResponseHandlerConfig{
-			SuccessField:      "code",
-			SuccessValue:      "000000",
-			ErrorCodeField:    "code",
-			ErrorMessageField: "msg",
-			ErrorField:        "code",
+			BodyType:  core.BodyTypeJSON,
+			CheckBody: true,
+			Path:      "code",
+			Expect:    "000000",
+			Mode:      core.MatchEq,
 		},
+		nil,
 		WithSMSHandler(transformer.transformSMS),
 	)
 	return transformer

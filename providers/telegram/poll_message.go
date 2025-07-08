@@ -63,14 +63,7 @@ type PollMessage struct {
 // https://core.telegram.org/bots/api#sendpoll
 //   - Only chat_id and question/options are required.
 func NewPollMessage(chatID string, question string, options []InputPollOption) *PollMessage {
-	return &PollMessage{
-		BaseMessage: BaseMessage{
-			MsgType: TypePoll,
-			ChatID:  chatID,
-		},
-		Question: question,
-		Options:  options,
-	}
+	return Poll().Chat(chatID).Question(question).Options(options...).Build()
 }
 
 func (m *PollMessage) Validate() error {
@@ -85,5 +78,3 @@ func (m *PollMessage) Validate() error {
 	}
 	return nil
 }
-
-// Option helpers removed – use PollBuilder instead.

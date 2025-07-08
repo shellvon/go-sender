@@ -16,16 +16,15 @@ import (
 	"github.com/shellvon/go-sender/utils"
 )
 
-// @ProviderName: Tencent / 腾讯云
-// @Website: https://cloud.tencent.com
-// @APIDoc: https://cloud.tencent.com/document/product/382/55981
+// tencentTransformer implements HTTPRequestTransformer for Tencent SMS.
+// It supports sending text message and voice message.
 //
-// 官方文档:
-//   - 短信API: https://cloud.tencent.com/document/product/382/55981
-//   - 语音API: https://cloud.tencent.com/document/product/1128/51559
-//   - 签名算法: https://github.com/TencentCloud/signature-process-demo/blob/main/services/sms/signature-v3/golang/demo.go
-
-// transformer 支持 text（普通短信）和 voice（语音短信）类型。
+// Reference:
+//   - Official Website: https://cloud.tencent.com
+//   - API Docs: https://cloud.tencent.com/document/product/382/55981
+//   - SMS API: https://cloud.tencent.com/document/product/382/55981
+//   - Voice API: https://cloud.tencent.com/document/product/1128/51559
+//   - Signature Algorithm: https://github.com/TencentCloud/signature-process-demo/blob/main/services/sms/signature-v3/golang/demo.go
 
 const (
 	tencentAPIDomain         = "tencentcloudapi.com"
@@ -43,10 +42,11 @@ type tencentTransformer struct {
 func newTencentTransformer() *tencentTransformer {
 	transformer := &tencentTransformer{}
 	transformer.BaseTransformer = NewBaseTransformer(
-		string(core.ProviderTypeSMS),
 		string(SubProviderTencent),
 		nil,
-		WithBeforeHook(transformer.beforeSend),
+		HTTPOptions{
+			AddBeforeHook(transformer.beforeSend),
+		},
 		WithSMSHandler(transformer.transformSMS),
 		WithVoiceHandler(transformer.transformVoice),
 	)
@@ -338,8 +338,9 @@ func (t *tencentTransformer) hmacSha256(key, data []byte) []byte {
 // handleTencentResponse 处理腾讯云API响应.
 func (t *tencentTransformer) handleTencentResponse(resp *http.Response) error {
 	body, _, err := utils.ReadAndClose(resp)
+	subProvider := string(SubProviderSmsbao)
 	if err != nil {
-		return NewProviderError(t.subProvider, "READ_ERROR", err.Error())
+		return NewProviderError(subProvider, "READ_ERROR", err.Error())
 	}
 
 	// Tencent 返回有两种结构：
@@ -361,20 +362,20 @@ func (t *tencentTransformer) handleTencentResponse(resp *http.Response) error {
 	}
 
 	if decodeErr := json.Unmarshal(body, &response); decodeErr != nil {
-		return NewProviderError(t.subProvider, "PARSE_ERROR", decodeErr.Error())
+		return NewProviderError(subProvider, "PARSE_ERROR", decodeErr.Error())
 	}
 
 	if response.Response.Error != nil {
 		return &Error{
 			Code:     response.Response.Error.Code,
 			Message:  response.Response.Error.Message,
-			Provider: t.subProvider,
+			Provider: subProvider,
 		}
 	}
 
 	if len(response.Response.SendStatusSet) == 0 {
 		return NewProviderError(
-			t.subProvider,
+			subProvider,
 			"NO_STATUS_SET",
 			"tencent API returned success but no SendStatusSet",
 		)
@@ -385,7 +386,7 @@ func (t *tencentTransformer) handleTencentResponse(resp *http.Response) error {
 			return &Error{
 				Code:     status.Code,
 				Message:  status.Message,
-				Provider: t.subProvider,
+				Provider: subProvider,
 			}
 		}
 	}

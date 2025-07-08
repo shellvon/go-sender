@@ -16,19 +16,18 @@ import (
 	"github.com/shellvon/go-sender/utils"
 )
 
-// @ProviderName: Submail / 赛邮
-// @Website: https://www.mysubmail.com
-// @APIDoc: https://www.mysubmail.com/documents
+// submailTransformer implements HTTPRequestTransformer for Submail SMS.
+// It supports sending text message, voice message, and mms message.
 //
-// 官方文档:
-//   - 国内短信: https://www.mysubmail.com/documents/FppOR3
-//   - 国际短信: https://www.mysubmail.com/documents/3UQA3
-//   - 模板短信: https://www.mysubmail.com/documents/OOVyh
-//   - 群发: https://www.mysubmail.com/documents/AzD4Z4
-//   - 语音: https://www.mysubmail.com/documents/meE3C1
-//   - 彩信: https://www.mysubmail.com/documents/N6ktR
-//
-// transformer 支持 text（国内/国际，模板/非模板，单发/群发）、voice（语音）、mms（彩信）类型。
+// Reference:
+//   - Official Website: https://www.mysubmail.com
+//   - API Docs: https://www.mysubmail.com/documents
+//   - SMS API(China Mainland): https://www.mysubmail.com/documents/FppOR3
+//   - SMS API(International): https://www.mysubmail.com/documents/3UQA3
+//   - SMS API(Template): https://www.mysubmail.com/documents/OOVyh
+//   - SMS API(Batch): https://www.mysubmail.com/documents/AzD4Z4
+//   - Voice API: https://www.mysubmail.com/documents/meE3C1
+//   - MMS API: https://www.mysubmail.com/documents/N6ktR
 
 // API endpoint paths.
 const (
@@ -66,15 +65,15 @@ type submailTransformer struct {
 func newSubmailTransformer() *submailTransformer {
 	transformer := &submailTransformer{}
 	transformer.BaseTransformer = NewBaseTransformer(
-		string(core.ProviderTypeSMS),
 		string(SubProviderSubmail),
 		&core.ResponseHandlerConfig{
-			SuccessField:      "status",
-			SuccessValue:      "success",
-			ErrorCodeField:    "code",
-			ErrorMessageField: "msg",
-			ErrorField:        "code",
+			BodyType:  core.BodyTypeJSON,
+			CheckBody: true,
+			Path:      "status",
+			Expect:    "success",
+			Mode:      core.MatchEq,
 		},
+		nil,
 		WithSMSHandler(transformer.transformSMS),
 		WithVoiceHandler(transformer.transformVoice),
 		WithMMSHandler(transformer.transformMMS),

@@ -36,6 +36,7 @@ func (m *mockMessage) Validate() error                 { return nil }
 func (m *mockMessage) ProviderType() core.ProviderType { return core.ProviderTypeSMS }
 func (m *mockMessage) MsgID() string                   { return "test-msg-id" }
 func (m *mockMessage) GetSubProvider() string          { return m.subProvider }
+func (m *mockMessage) GetMsgType() string              { return "" }
 
 // mockTransformer implements core.HTTPTransformer for testing.
 type mockTransformer struct {

@@ -14,16 +14,14 @@ import (
 	"github.com/shellvon/go-sender/utils"
 )
 
-// @ProviderName: Huawei Cloud / 华为云
-// @Website: https://www.huaweicloud.com
-// @APIDoc: https://support.huaweicloud.com/intl/zh-cn/api-msgsms/sms_05_0001.html
+// huaweiTransformer implements HTTPRequestTransformer for Huawei Cloud SMS.
+// It supports sending text message.
 //
-// 官方文档:
-//   - 短信API(国内/国际): https://support.huaweicloud.com/intl/zh-cn/api-msgsms/sms_05_0001.html
-//
-// 仅支持国内/国际短信，不支持彩信和语音。
-//
-// transformer 仅支持 text（模板短信）类型。
+// Reference:
+//   - Official Website: https://www.huaweicloud.com
+//   - API Docs: https://support.huaweicloud.com/intl/zh-cn/api-msgsms/sms_05_0001.html
+//   - SMS API(Domestic): https://support.huaweicloud.com/intl/zh-cn/api-msgsms/sms_05_0001.html
+//   - SMS API(International): https://support.huaweicloud.com/intl/zh-cn/api-msgsms/sms_05_0001.html
 
 const (
 	huaweiAPIPath       = "https://api.rtc.huaweicloud.com:10443/sms/batchSendSms/v1"
@@ -44,15 +42,15 @@ func init() {
 func newHuaweiTransformer() *huaweiTransformer {
 	transformer := &huaweiTransformer{}
 	transformer.BaseTransformer = NewBaseTransformer(
-		string(core.ProviderTypeSMS),
 		string(SubProviderHuawei),
 		&core.ResponseHandlerConfig{
-			SuccessField:      "code",
-			SuccessValue:      "000000",
-			ErrorCodeField:    "code",
-			ErrorMessageField: "description",
-			ErrorField:        "code",
+			BodyType:  core.BodyTypeJSON,
+			CheckBody: true,
+			Path:      "code",
+			Expect:    "000000",
+			Mode:      core.MatchEq,
 		},
+		nil,
 		WithSMSHandler(transformer.transformSMS),
 	)
 	return transformer
