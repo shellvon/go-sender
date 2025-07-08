@@ -27,20 +27,20 @@
 
 ## Capabilities
 
-| Provider      | CN SMS | Intl SMS | Voice | MMS | Notes                        |
-| ------------- | ------ | -------- | ----- | --- | ---------------------------- |
-| Aliyun        | ✅     | ✅       | ✅    | ✅  | Single, batch & MMS APIs     |
-| Tencent Cloud | ✅     | ✅       | ✅    | ❌  | Voice via TTS / IVR          |
-| Huawei Cloud  | ✅     | ✅       | ✅    | ❌  | Voice call API               |
-| CL253         | ✅     | ❌       | ❌    | ❌  | Mainland only                |
-| Yunpian       | ✅     | ✅       | ❌    | ❌  | Separate intl endpoint       |
-| Volcengine    | ✅     | ✅       | ❌    | ❌  | Mainland & intl              |
-| Submail       | ✅     | ✅       | ✅    | ❌  | XSend voice supported        |
-| Juhe          | ✅     | ✅       | ❌    | ✅  | Mainland & intl; MMS support |
-| Luosimao      | ✅     | ❌       | ❌    | ❌  | Mainland only                |
-| Smsbao        | ✅     | ❌       | ❌    | ❌  | Mainland only                |
-| UCP           | ✅     | ✅       | ✅    | ❌  | Voice & intl                 |
-| Yuntongxun    | ✅     | ✅       | ✅    | ✅  | Rich APIs                    |
+| Provider      | CN SMS | Intl SMS | Voice | MMS | Notes                         |
+| ------------- | ------ | -------- | ----- | --- | ----------------------------- |
+| Aliyun        | ✅     | ✅       | ✅    | ✅  | Card SMS; voice domestic only |
+| Tencent Cloud | ✅     | ✅       | ✅    | ❌  | Voice (TTS / IVR) domestic    |
+| Huawei Cloud  | ✅     | ✅       | ❌    | ❌  | SMS only                      |
+| CL253         | ✅     | ✅       | ❌    | ❌  |                               |
+| Yunpian       | ✅     | ✅       | ✅    | ✅  | Supports voice & MMS          |
+| Volcengine    | ✅     | ❌       | ❌    | ❌  | Mainland only                 |
+| Submail       | ✅     | ✅       | ✅    | ✅  | XSend APIs                    |
+| Juhe          | ✅     | ❌       | ❌    | ✅  | MMS only                      |
+| Luosimao      | ✅     | ❌       | ✅    | ❌  | Voice API                     |
+| Smsbao        | ✅     | ❌       | ✅    | ❌  |                               |
+| UCP           | ✅     | ✅       | ❌    | ❌  |                               |
+| Yuntongxun    | ✅     | ✅       | ✅    | ❌  | Voice / video SMS             |
 
 ---
 
