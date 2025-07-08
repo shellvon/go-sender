@@ -25,7 +25,26 @@ sender.SetRateLimiter(limiter)
 
 ## Custom Middleware
 
-支持设置指定的中间件，实现 Middleware 接口即可。
+- You can replace any built-in component with your own implementation.
+- Implement the corresponding interface (e.g. `RateLimiter`, `Queue`, `CircuitBreaker`, `MetricsCollector`).
+- Attach the component via the dedicated setter on `Sender`, for example:
+
+```go
+myLimiter := mypkg.NewAwesomeLimiter()
+sender.SetRateLimiter(myLimiter) // any struct that satisfies core.RateLimiter
+```
+
+If you need to bundle several components at once, build a `core.SenderMiddleware` struct and pass it when registering the provider:
+
+```go
+mw := &core.SenderMiddleware{
+    Queue:       myQueueImpl,      // implements core.Queue
+    Retry:       myRetryPolicy,    // *core.RetryPolicy
+    CircuitBreaker: myCB,          // implements core.CircuitBreaker
+}
+
+sender.RegisterProvider(core.ProviderTypeSMS, smsProvider, mw)
+```
 
 ---
 

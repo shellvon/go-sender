@@ -35,9 +35,8 @@ go-sender supports a wide range of notification channels. Below is a summary of 
 ## Webhook/Universal Push
 
 - Webhook (generic HTTP integration) ([README](../providers/webhook/README.md))
-- 常用推送服务（均可通过 Webhook Provider 适配）：
 
-  | 服务       | 官网/主页                                        | 文档/说明                                                           |
+  | Service    | Website                                          | Docs / API Refrence                                                 |
   | ---------- | ------------------------------------------------ | ------------------------------------------------------------------- |
   | ntfy       | [ntfy.sh](https://ntfy.sh/)                      | [Docs](https://docs.ntfy.sh/publish/)                               |
   | Bark       | [Bark](https://github.com/Finb/Bark)             | [API](https://github.com/Finb/Bark#http-api)                        |
@@ -59,8 +58,8 @@ go-sender supports a wide range of notification channels. Below is a summary of 
   | Mattermost | [Mattermost](https://mattermost.com/)            | [API](https://api.mattermost.com/)                                  |
   | Discord    | [Discord](https://discord.com/)                  | [Webhooks](https://discord.com/developers/docs/resources/webhook)   |
 
-> 更多平台和详细用法请见 [Webhook Provider 文档](../providers/webhook/README.md)。
+> Looking for a provider that is not listed? Create a new transformer or simply use the Webhook provider.
 
 ---
 
-**See each provider's README for configuration and advanced usage.**
+_See each provider’s README for configuration examples and advanced usage._
