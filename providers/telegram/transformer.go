@@ -44,7 +44,7 @@ func (tt *telegramTransformer) transform(
 	_ context.Context,
 	msg Message,
 	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	var endpoint string
 
 	switch msg.(type) {

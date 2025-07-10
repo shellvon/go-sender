@@ -125,16 +125,11 @@ type ProviderSendOptions struct {
 }
 
 // Provider is the interface that all providers must implement.
+// It returns a detailed SendResult along with error (if any).
 type Provider interface {
-	Send(ctx context.Context, msg Message, opts *ProviderSendOptions) error
+	Send(ctx context.Context, msg Message, opts *ProviderSendOptions) (*SendResult, error)
 	// Name returns the unique name of the provider.
 	Name() string
-}
-
-// ResultProvider is an optional interface that providers can implement
-// to return detailed send results including status code, headers, and body.
-type ResultProvider interface {
-	SendWithResult(ctx context.Context, msg Message, opts *ProviderSendOptions) (*SendResult, error)
 }
 
 // RateLimiter is an interface for controlling the rate of operations.

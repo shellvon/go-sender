@@ -98,19 +98,30 @@ func (s *Sender) UnregisterProvider(providerType core.ProviderType) error {
 	return nil
 }
 
-// Send sends a message using the appropriate provider.
+// Send sends a message and only returns error information.
+// It is a thin wrapper around Send that discards the detailed SendResult.
 func (s *Sender) Send(ctx context.Context, message core.Message, opts ...core.SendOption) error {
+	_, err := s.SendWithResult(ctx, message, opts...)
+	return err
+}
+
+// SendWithResult sends a message and returns the detailed SendResult.
+func (s *Sender) SendWithResult(
+	ctx context.Context,
+	message core.Message,
+	opts ...core.SendOption,
+) (*core.SendResult, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	if s.closed {
-		return errors.New("sender is closed")
+		return nil, errors.New("sender is closed")
 	}
 
 	providerType := message.ProviderType()
 	provider, exists := s.providers[providerType]
 	if !exists {
-		return fmt.Errorf("no provider registered for type %s", providerType)
+		return nil, fmt.Errorf("no provider registered for type %s", providerType)
 	}
 
 	allOpts := append([]core.SendOption{core.WithSendHTTPClient(s.defaultHTTPClient)}, opts...)
@@ -124,18 +135,6 @@ func (s *Sender) GetProvider(providerType core.ProviderType) (*core.ProviderDeco
 
 	provider, exists := s.providers[providerType]
 	return provider, exists
-}
-
-// SendVia sends a message via a specific channel (provider/bot) identified by channel.
-// The channel should be a string (provider name, bot name).
-// This method goes through all middleware (rate limiting, retry, circuit breaker, etc.).
-// It's equivalent to:
-//
-//	ctx = core.WithCtxItemName(ctx, channel);
-//	return s.Send(ctx, message, opts...)
-func (s *Sender) SendVia(ctx context.Context, channel string, message core.Message, opts ...core.SendOption) error {
-	ctx = core.WithCtxItemName(ctx, channel)
-	return s.Send(ctx, message, opts...)
 }
 
 // SetRateLimiter sets the rate limiter for the sender.

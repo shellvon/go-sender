@@ -49,25 +49,11 @@ func newLuosimaoTransformer() *luosimaoTransformer {
 func init() {
 	RegisterTransformer(string(SubProviderLuosimao), newLuosimaoTransformer())
 }
-
-// buildLuosimaoRequestSpec 构造 Luosimao HTTPRequestSpec
-//   - 负责拼接 body、设置 Authorization header、构造 HTTPRequestSpec 和响应处理器
-//   - 由 transformSingleSMS/transformBatchSMS/transformVoiceSMS 统一调用
-//
-// 参数:
-//   - params: url.Values 请求参数
-//   - requestURL: 完整请求 URL
-//   - account: 账号配置
-//
-// 返回:
-//   - HTTPRequestSpec: HTTP 请求规范
-//   - ResponseHandler: 响应处理器
-//   - error: 错误信息
 func (t *luosimaoTransformer) buildLuosimaoRequestSpec(
 	params url.Values,
 	requestURL string,
 	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	body := []byte(params.Encode())
 	authHeader := "Basic " + utils.Base64EncodeBytes([]byte("api:key-"+account.APISecret))
 	reqSpec := &core.HTTPRequestSpec{
@@ -90,7 +76,7 @@ func (t *luosimaoTransformer) transformSMS(
 	_ context.Context,
 	msg *Message,
 	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	params := url.Values{}
 	// 对于手机号多余1个的或者只有一个手机号却有定时任务时，则采用批量发送API
 	// 因为单个手机号的不支持定时任务
@@ -122,7 +108,7 @@ func (t *luosimaoTransformer) transformVoice(
 	_ context.Context,
 	msg *Message,
 	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	if msg.Category != CategoryVerification {
 		return nil, nil, NewProviderError(
 			string(SubProviderLuosimao),

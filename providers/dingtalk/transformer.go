@@ -31,7 +31,7 @@ func (dt *dingTalkTransformer) transform(
 	_ context.Context,
 	msg Message,
 	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	qs := url.Values{}
 	qs.Add("access_token", account.APIKey)
 

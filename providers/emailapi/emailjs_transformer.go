@@ -60,7 +60,7 @@ func (et *emailJSTransformer) transform(
 	_ context.Context,
 	msg *Message,
 	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	// Get required parameters
 	serviceID := msg.From
 	if serviceID == "" {

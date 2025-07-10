@@ -57,7 +57,7 @@ func (t *yunpianTransformer) transformSMS(
 	_ context.Context,
 	msg *Message,
 	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	// 验证参数
 	if len(msg.Mobiles) == 0 {
 		return nil, nil, errors.New("mobiles is required")
@@ -92,7 +92,7 @@ func (t *yunpianTransformer) transformSMS(
 func (t *yunpianTransformer) transformSingleSMS(
 	msg *Message,
 	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	endpoint := t.yunpianEndpoint("sms", "/v2/sms/single_send.json")
 	params := map[string]string{
 		"apikey":       account.APISecret,
@@ -111,7 +111,7 @@ func (t *yunpianTransformer) transformSingleSMS(
 func (t *yunpianTransformer) transformBatchSMS(
 	msg *Message,
 	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	endpoint := t.yunpianEndpoint("sms", "/v2/sms/batch_send.json")
 	params := map[string]string{
 		"apikey":       account.APISecret,
@@ -130,7 +130,7 @@ func (t *yunpianTransformer) transformBatchSMS(
 func (t *yunpianTransformer) transformTplSMS(
 	msg *Message,
 	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	endpoint := t.yunpianEndpoint("sms", "/v2/sms/tpl_single_send.json")
 	params := map[string]string{
 		"apikey":       account.APISecret,
@@ -148,7 +148,7 @@ func (t *yunpianTransformer) transformTplSMS(
 func (t *yunpianTransformer) transformTplBatchSMS(
 	msg *Message,
 	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	endpoint := t.yunpianEndpoint("sms", "/v2/sms/tpl_batch_send.json")
 	params := map[string]string{
 		"apikey":       account.APISecret,
@@ -166,7 +166,7 @@ func (t *yunpianTransformer) transformTplBatchSMS(
 func (t *yunpianTransformer) transformIntlSMS(
 	msg *Message,
 	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	endpoint := t.yunpianEndpoint("sms", "/v2/sms/single_send.json")
 	params := map[string]string{
 		"apikey":       account.APISecret,
@@ -185,7 +185,7 @@ func (t *yunpianTransformer) transformVoice(
 	_ context.Context,
 	msg *Message,
 	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	// 验证参数
 	if len(msg.Mobiles) == 0 {
 		return nil, nil, errors.New("mobiles is required")
@@ -211,7 +211,7 @@ func (t *yunpianTransformer) transformMMS(
 	_ context.Context,
 	msg *Message,
 	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	// 验证参数
 	if len(msg.Mobiles) == 0 {
 		return nil, nil, errors.New("mobiles is required")
@@ -243,7 +243,7 @@ func (t *yunpianTransformer) yunpianEndpoint(service, path string) string {
 func (t *yunpianTransformer) buildRequest(
 	endpoint string,
 	params map[string]string,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	values := url.Values{}
 	for k, v := range params {
 		values.Set(k, v)

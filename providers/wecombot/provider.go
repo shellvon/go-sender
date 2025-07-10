@@ -61,17 +61,21 @@ func (p *Provider) Name() string {
 // See https://developer.work.weixin.qq.com/document/path/91770 in the bottom of the page.
 //
 //nolint:nestif // acceptable nesting for media upload.
-func (p *Provider) Send(ctx context.Context, msg core.Message, opts *core.ProviderSendOptions) error {
+func (p *Provider) Send(
+	ctx context.Context,
+	msg core.Message,
+	opts *core.ProviderSendOptions,
+) (*core.SendResult, error) {
 	if up, ok := msg.(uploadTarget); ok {
 		if up.getMediaID() == "" && up.getLocalPath() != "" {
 			file, err := os.Open(up.getLocalPath())
 			if err != nil {
-				return err
+				return nil, err
 			}
 			defer file.Close()
 			mediaID, acc, err := p.uploadMediaType(ctx, up.getLocalPath(), up.mediaType(), file, opts.HTTPClient)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			up.setMediaID(mediaID)
 			ctx = core.WithCtxItemName(ctx, acc.GetName())

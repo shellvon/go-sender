@@ -32,7 +32,7 @@ func (wt *wecombotTransformer) transform(
 	_ context.Context,
 	msg Message,
 	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	if account == nil {
 		return nil, nil, errors.New("no account provided")
 	}

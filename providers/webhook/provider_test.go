@@ -127,7 +127,7 @@ func TestProvider_Send_Success(t *testing.T) {
 		t.Fatalf("Failed to create provider: %v", err)
 	}
 
-	err = provider.Send(
+	_, err = provider.Send(
 		context.Background(),
 		webhook.Webhook().Body([]byte(`{"test": "data"}`)).Method("POST").Headers(map[string]string{
 			"Authorization": "Bearer token",
@@ -166,7 +166,7 @@ func TestProvider_Send_WithPathParams(t *testing.T) {
 		t.Fatalf("Failed to create provider: %v", err)
 	}
 
-	err = provider.Send(
+	_, err = provider.Send(
 		context.Background(),
 		webhook.Webhook().Body([]byte(`{"test": "data"}`)).PathParams(map[string]string{
 			"type": "user",
@@ -206,7 +206,7 @@ func TestProvider_Send_WithQueryParams(t *testing.T) {
 		t.Fatalf("Failed to create provider: %v", err)
 	}
 
-	err = provider.Send(
+	_, err = provider.Send(
 		context.Background(),
 		webhook.Webhook().Body([]byte(`{"test": "data"}`)).Queries(map[string]string{
 			"version": "v1",
@@ -245,7 +245,7 @@ func TestProvider_Send_WithMethodOverride(t *testing.T) {
 		t.Fatalf("Failed to create provider: %v", err)
 	}
 
-	err = provider.Send(
+	_, err = provider.Send(
 		context.Background(),
 		webhook.Webhook().Body([]byte(`{"test": "data"}`)).Method("PUT").Build(),
 		nil,
@@ -278,7 +278,7 @@ func TestProvider_Send_HTTPFailure(t *testing.T) {
 		t.Fatalf("Failed to create provider: %v", err)
 	}
 
-	err = provider.Send(context.Background(), webhook.Webhook().Body([]byte(`{"test": "data"}`)).Build(), nil)
+	_, err = provider.Send(context.Background(), webhook.Webhook().Body([]byte(`{"test": "data"}`)).Build(), nil)
 	if err == nil {
 		t.Error("Expected error for HTTP failure, got nil")
 	}
@@ -316,7 +316,7 @@ func TestProvider_Send_JSONResponseValidation(t *testing.T) {
 		t.Fatalf("Failed to create provider: %v", err)
 	}
 
-	err = provider.Send(context.Background(), webhook.Webhook().Body([]byte(`{"test": "data"}`)).Build(), nil)
+	_, err = provider.Send(context.Background(), webhook.Webhook().Body([]byte(`{"test": "data"}`)).Build(), nil)
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
@@ -340,7 +340,7 @@ func TestProvider_Send_InvalidMessageType(t *testing.T) {
 
 	msg := &invalidMessage{}
 
-	err = provider.Send(context.Background(), msg, nil)
+	_, err = provider.Send(context.Background(), msg, nil)
 	if err == nil {
 		t.Error("Expected error for invalid message type, got nil")
 	}

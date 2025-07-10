@@ -3,12 +3,11 @@ package transformer
 import (
 	"context"
 	"fmt"
-	"net/http"
 
 	"github.com/shellvon/go-sender/core"
 )
 
-type HandlerFunc[M core.Message, C core.Selectable] func(ctx context.Context, msg M, cfg C) (*core.HTTPRequestSpec, core.ResponseHandler, error)
+type HandlerFunc[M core.Message, C core.Selectable] func(ctx context.Context, msg M, cfg C) (*core.HTTPRequestSpec, core.SendResultHandler, error)
 
 type BeforeHook[M core.Message, C core.Selectable] func(ctx context.Context, msg M, cfg C) error
 
@@ -79,7 +78,7 @@ func (t *BaseHTTPTransformer[M, C]) Transform(
 	ctx context.Context,
 	msg core.Message,
 	cfg C,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	m, ok := msg.(M)
 	if !ok {
 		return nil, nil, fmt.Errorf("invalid message type for %s provider: %T", t.providerType, msg)
@@ -117,12 +116,12 @@ func (t *BaseHTTPTransformer[M, C]) Transform(
 	return reqSpec, respHandler, err
 }
 
-func (t *BaseHTTPTransformer[M, C]) buildResponseHandler() core.ResponseHandler {
-	generic := core.NewResponseHandler(t.responseCfg)
+func (t *BaseHTTPTransformer[M, C]) buildResponseHandler() core.SendResultHandler {
+	generic := core.NewSendResultHandler(t.responseCfg)
 	fullName := t.fullName()
 
-	return func(resp *http.Response) error {
-		if err := generic(resp); err != nil {
+	return func(result *core.SendResult) error {
+		if err := generic(result); err != nil {
 			// 仅增加前缀信息，避免依赖 sms.NewProviderError
 			return fmt.Errorf("[%s] %w", fullName, err)
 		}

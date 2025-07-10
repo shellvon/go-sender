@@ -14,8 +14,8 @@ type fakeProvider struct {
 	name    string
 }
 
-func (f *fakeProvider) Send(_ context.Context, _ core.Message, _ *core.ProviderSendOptions) error {
-	return f.sendErr
+func (f *fakeProvider) Send(_ context.Context, _ core.Message, _ *core.ProviderSendOptions) (*core.SendResult, error) {
+	return nil, f.sendErr
 }
 func (f *fakeProvider) Name() string { return f.name }
 
@@ -39,7 +39,7 @@ func TestProviderDecorator_Send_Sync(t *testing.T) {
 	p := &fakeProvider{name: "p2"}
 	pd := core.NewProviderDecorator(p, nil, &core.NoOpLogger{})
 	msg := &fakeMessage{}
-	err := pd.Send(context.Background(), msg)
+	_, err := pd.Send(context.Background(), msg)
 	if err != nil {
 		t.Errorf("Send should succeed, got %v", err)
 	}
@@ -50,7 +50,7 @@ func TestProviderDecorator_Send_Async(t *testing.T) {
 	pd := core.NewProviderDecorator(p, nil, &core.NoOpLogger{})
 	msg := &fakeMessage{}
 	ch := make(chan bool, 1)
-	err := pd.Send(
+	_, err := pd.Send(
 		context.Background(),
 		msg,
 		core.WithSendAsync(true),
@@ -70,7 +70,7 @@ func TestProviderDecorator_Send_Error(t *testing.T) {
 	p := &fakeProvider{name: "p4", sendErr: errors.New("fail")}
 	pd := core.NewProviderDecorator(p, nil, &core.NoOpLogger{})
 	msg := &fakeMessage{}
-	err := pd.Send(context.Background(), msg)
+	_, err := pd.Send(context.Background(), msg)
 	if err == nil {
 		t.Error("Send should return error")
 	}

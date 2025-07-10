@@ -62,7 +62,7 @@ func (t *volcTransformer) transformSMS(
 	_ context.Context,
 	msg *Message,
 	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	// 验证参数
 	if len(msg.Mobiles) == 0 {
 		return nil, nil, NewProviderError(string(SubProviderVolc), "MISSING_PARAM", "mobiles is required")

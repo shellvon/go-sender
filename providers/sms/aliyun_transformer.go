@@ -151,7 +151,7 @@ func (t *aliyunTransformer) transformSMS(
 	_ context.Context,
 	msg *Message,
 	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	phones := make([]string, len(msg.Mobiles))
 	for i, mobile := range msg.Mobiles {
 		phones[i] = t.formatPhoneNumber(mobile, msg.RegionCode)
@@ -210,7 +210,7 @@ func (t *aliyunTransformer) transformCardSMS(
 	_ context.Context,
 	_ *Message,
 	_ *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	return nil, nil, errors.New("not implemented")
 }
 
@@ -221,7 +221,7 @@ func (t *aliyunTransformer) transformVoice(
 	_ context.Context,
 	msg *Message,
 	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	// 只支持国内
 	if msg.IsIntl() {
 		return nil, nil, NewUnsupportedInternationalError(string(SubProviderAliyun), "voice call")

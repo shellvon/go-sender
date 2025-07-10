@@ -91,7 +91,7 @@ func (t *submailTransformer) buildSubmailRequest(
 	account *Account,
 	apiPath string,
 	buildParams func(*Message, *Account) map[string]string,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	params := buildParams(msg, account)
 	body := t.encodeParams(params)
 	endpoint := fmt.Sprintf("%s%s", submailDefaultDomain, apiPath)
@@ -112,7 +112,7 @@ func (t *submailTransformer) transformSMS(
 	_ context.Context,
 	msg *Message,
 	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	if len(msg.Mobiles) == 0 {
 		return nil, nil, NewProviderError(string(SubProviderSubmail), "MISSING_PARAM", "mobiles is required")
 	}
@@ -179,7 +179,7 @@ func (t *submailTransformer) transformVoice(
 	_ context.Context,
 	msg *Message,
 	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	if len(msg.Mobiles) == 0 {
 		return nil, nil, NewProviderError(string(SubProviderSubmail), "MISSING_PARAM", "mobiles is required")
 	}
@@ -217,7 +217,7 @@ func (t *submailTransformer) transformMMS(
 	_ context.Context,
 	msg *Message,
 	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	if len(msg.Mobiles) == 0 {
 		return nil, nil, errors.New("mobiles is required")
 	}

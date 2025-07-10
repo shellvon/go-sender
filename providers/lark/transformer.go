@@ -33,7 +33,7 @@ func (lt *larkTransformer) transform(
 	_ context.Context,
 	msg Message,
 	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	qs := url.Values{}
 	if account.APISecret != "" {
 		ts := strconv.FormatInt(time.Now().Unix(), 10)

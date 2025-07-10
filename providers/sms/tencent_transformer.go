@@ -117,7 +117,7 @@ func (t *tencentTransformer) transformSMS(
 	_ context.Context,
 	msg *Message,
 	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	// 格式化手机号
 	phoneNumbers := make([]string, len(msg.Mobiles))
 	for i, mobile := range msg.Mobiles {
@@ -183,7 +183,7 @@ func (t *tencentTransformer) transformVoice(
 	_ context.Context,
 	msg *Message,
 	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	// 腾讯云语音只支持单发
 	calledNumber := t.formatTencentPhone(msg.Mobiles[0], msg.RegionCode)
 
@@ -336,13 +336,8 @@ func (t *tencentTransformer) hmacSha256(key, data []byte) []byte {
 }
 
 // handleTencentResponse 处理腾讯云API响应.
-func (t *tencentTransformer) handleTencentResponse(resp *http.Response) error {
-	body, _, err := utils.ReadAndClose(resp)
-	subProvider := string(SubProviderSmsbao)
-	if err != nil {
-		return NewProviderError(subProvider, "READ_ERROR", err.Error())
-	}
-
+func (t *tencentTransformer) handleTencentResponse(result *core.SendResult) error {
+	subProvider := string(SubProviderTencent)
 	// Tencent 返回有两种结构：
 	// 1. 成功/失败明细在 SendStatusSet 数组里
 	// 2. 整体失败时，只有 Error 字段
@@ -361,7 +356,7 @@ func (t *tencentTransformer) handleTencentResponse(resp *http.Response) error {
 		} `json:"Response"`
 	}
 
-	if decodeErr := json.Unmarshal(body, &response); decodeErr != nil {
+	if decodeErr := json.Unmarshal(result.Body, &response); decodeErr != nil {
 		return NewProviderError(subProvider, "PARSE_ERROR", decodeErr.Error())
 	}
 
