@@ -116,7 +116,7 @@ func TestSender_Send_WithCallback_Async(t *testing.T) {
 	s.RegisterProvider(core.ProviderTypeSMS, fake, nil)
 	msg := sms.Aliyun().To("***REMOVED***").Content("test").SignName("sign").Build()
 	called := make(chan bool, 1)
-	cb := func(_ error) { called <- true }
+	cb := func(_ *core.SendResult, _ error) { called <- true }
 	err := s.Send(context.Background(), msg, core.WithSendCallback(cb), core.WithSendAsync(true))
 	if err != nil {
 		t.Errorf("Send failed: %v", err)

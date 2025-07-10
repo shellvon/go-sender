@@ -71,7 +71,7 @@ func TestSendOptionsAndWithSendXxx(t *testing.T) {
 	core.WithSendMetadata("k", "v")(opts)
 	core.WithSendDisableCircuitBreaker(true)(opts)
 	core.WithSendDisableRateLimiter(true)(opts)
-	core.WithSendCallback(func(error) {})(opts)
+	core.WithSendCallback(func(*core.SendResult, error) {})(opts)
 	core.WithSendRetryPolicy(&core.RetryPolicy{})(opts)
 	core.WithSendHTTPClient(nil)(opts)
 	if !opts.Async || opts.Priority != 5 || opts.DelayUntil == nil || opts.Timeout != 2*time.Second ||
@@ -440,7 +440,7 @@ func TestSendOptions_WithMethods(t *testing.T) {
 	}
 
 	// 测试WithSendCallback
-	callback := func(_ error) {
+	callback := func(_ *core.SendResult, _ error) {
 		// 回调函数实现
 	}
 	core.WithSendCallback(callback)(opts)

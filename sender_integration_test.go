@@ -718,7 +718,7 @@ func TestCallbackHandling(t *testing.T) {
 			Method(http.MethodPost).
 			Build()
 
-		_ = sender.Send(context.Background(), message, core.WithSendCallback(func(err error) {
+		_ = sender.Send(context.Background(), message, core.WithSendCallback(func(_ *core.SendResult, err error) {
 			ch <- err
 		}))
 
@@ -740,7 +740,7 @@ func TestCallbackHandling(t *testing.T) {
 
 		if sendErr := sender.Send(context.Background(), message,
 			core.WithSendAsync(),
-			core.WithSendCallback(func(err error) { ch <- err }),
+			core.WithSendCallback(func(_ *core.SendResult, err error) { ch <- err }),
 		); sendErr != nil {
 			t.Fatalf("Failed to send message: %v", sendErr)
 		}
@@ -766,7 +766,7 @@ func TestCallbackHandling(t *testing.T) {
 		if sendErr := sender.Send(context.Background(), message,
 			core.WithSendAsync(),
 			core.WithSendDelay(time.Millisecond*100),
-			core.WithSendCallback(func(err error) { ch <- err }),
+			core.WithSendCallback(func(_ *core.SendResult, err error) { ch <- err }),
 		); sendErr != nil {
 			t.Fatalf("Failed to send message: %v", sendErr)
 		}

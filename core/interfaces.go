@@ -131,6 +131,12 @@ type Provider interface {
 	Name() string
 }
 
+// ResultProvider is an optional interface that providers can implement
+// to return detailed send results including status code, headers, and body.
+type ResultProvider interface {
+	SendWithResult(ctx context.Context, msg Message, opts *ProviderSendOptions) (*SendResult, error)
+}
+
 // RateLimiter is an interface for controlling the rate of operations.
 type RateLimiter interface {
 	// Allow checks if an operation is permitted without blocking.
@@ -166,7 +172,7 @@ type QueueItem struct {
 	Metadata    map[string]interface{}
 	CreatedAt   time.Time
 	// Callback is executed after message processing (success or failure)
-	Callback func(error)
+	Callback func(*SendResult, error)
 }
 
 // Compare determines the priority order for QueueItem.
@@ -452,4 +458,12 @@ func (m *DefaultMessage) GetExtraFloatOrDefault(key string, defaultValue float64
 
 func (m *DefaultMessage) GetSubProvider() string {
 	return ""
+}
+
+// SendResult represents the result of a send operation.
+type SendResult struct {
+	Config     interface{} // 发送时的配置信息
+	StatusCode int         // HTTP状态码
+	Headers    http.Header // 响应头
+	Body       []byte      // 响应体
 }

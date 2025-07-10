@@ -25,11 +25,6 @@ type ProviderDecorator struct {
 	logger     Logger
 }
 
-// Global callbackRegistry, only used for local/in-memory queue/testing scenarios.
-//
-//nolint:gochecknoglobals // Reason: callbackRegistry is a global callback registry for async message handling
-var callbackRegistry sync.Map // map[msgID]func(error)
-
 // NewProviderDecorator creates a new ProviderDecorator instance.
 func NewProviderDecorator(provider Provider, middleware *SenderMiddleware, logger Logger) *ProviderDecorator {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -66,6 +61,11 @@ func (pd *ProviderDecorator) Send(ctx context.Context, message Message, opts ...
 		if opt != nil {
 			opt(sendOpts)
 		}
+	}
+
+	// Validate: Callback only makes sense for asynchronous sends.
+	if sendOpts.Callback != nil && !sendOpts.Async {
+		return NewSenderError(ErrCodeInvalidConfig, "callback requires async send", nil)
 	}
 
 	if sendOpts.Async {
@@ -106,23 +106,42 @@ func (pd *ProviderDecorator) executeWithMiddleware(ctx context.Context, message 
 			return NewSenderError(ErrCodeRateLimitExceeded, "rate limit exceeded", nil)
 		}
 	}
+
+	var result *SendResult
+	var err error
+
 	// Circuit breaker
 	if pd.middleware != nil && pd.middleware.CircuitBreaker != nil && !opts.DisableCircuitBreaker {
-		return pd.middleware.CircuitBreaker.Execute(ctx, func() error {
-			return pd.doSendWithRetry(ctx, message, opts)
+		err = pd.middleware.CircuitBreaker.Execute(ctx, func() error {
+			var cbErr error
+			result, cbErr = pd.doSendWithRetry(ctx, message, opts)
+			return cbErr
 		})
+	} else {
+		result, err = pd.doSendWithRetry(ctx, message, opts)
 	}
-	return pd.doSendWithRetry(ctx, message, opts)
+
+	// Execute callback if provided
+	if opts.Callback != nil {
+		opts.Callback(result, err)
+	}
+
+	return err
 }
 
-func (pd *ProviderDecorator) doSendWithRetry(ctx context.Context, message Message, opts *SendOptions) error {
+func (pd *ProviderDecorator) doSendWithRetry(
+	ctx context.Context,
+	message Message,
+	opts *SendOptions,
+) (*SendResult, error) {
+	var result *SendResult
 	var err error
 	if pd.middleware != nil && pd.middleware.Retry != nil {
-		err = pd.sendWithRetry(ctx, message, opts)
+		result, err = pd.sendWithRetry(ctx, message, opts)
 	} else {
-		err = pd.executeSend(ctx, message, opts)
+		result, err = pd.executeSend(ctx, message, opts)
 	}
-	return err
+	return result, err
 }
 
 // The queue consumer worker uses the same logic as the synchronous chain.
@@ -161,11 +180,15 @@ func (pd *ProviderDecorator) processQueueItem(ctx context.Context, item *QueueIt
 		}
 	}
 
+	// Propagate callback stored in QueueItem to SendOptions before processing
+	if item.Callback != nil {
+		opts.Callback = item.Callback
+	}
+
 	err = pd.executeWithMiddleware(restoredCtx, item.Message, opts)
-	// Find and invoke callback (only effective for local/in-memory queue)
-	if cb, ok := callbackRegistry.LoadAndDelete(item.Message.MsgID()); ok {
-		if callback, okCallback := cb.(func(error)); okCallback {
-			callback(err)
+	if err != nil {
+		if pd.logger != nil {
+			_ = pd.logger.Log(LevelError, "message", "execute with middleware failed", "error", err.Error())
 		}
 	}
 }
@@ -185,10 +208,7 @@ func (pd *ProviderDecorator) sendAsync(ctx context.Context, message Message, opt
 		Metadata:    metadata,
 		CreatedAt:   time.Now(),
 		ScheduledAt: opts.DelayUntil,
-	}
-
-	if opts.Callback != nil {
-		callbackRegistry.Store(message.MsgID(), opts.Callback)
+		Callback:    opts.Callback,
 	}
 
 	if pd.middleware != nil && pd.middleware.Queue != nil {
@@ -205,14 +225,14 @@ func (pd *ProviderDecorator) sendAsync(ctx context.Context, message Message, opt
 			case <-context.Background().Done(): // Use background context to prevent premature cancellation
 				// Context cancelled while waiting, do not send
 				if opts.Callback != nil {
-					opts.Callback(context.Background().Err())
+					opts.Callback(nil, context.Background().Err())
 				}
 				return
 			}
 		}
-		errSend := pd.executeSend(context.Background(), message, opts)
+		result, errSend := pd.executeSend(context.Background(), message, opts)
 		if opts.Callback != nil {
-			opts.Callback(errSend)
+			opts.Callback(result, errSend)
 		}
 		if errSend != nil && pd.logger != nil {
 			_ = pd.logger.Log(
@@ -231,7 +251,11 @@ func (pd *ProviderDecorator) sendAsync(ctx context.Context, message Message, opt
 }
 
 // sendWithRetry attempts to send the message with retry logic.
-func (pd *ProviderDecorator) sendWithRetry(ctx context.Context, message Message, opts *SendOptions) error {
+func (pd *ProviderDecorator) sendWithRetry(
+	ctx context.Context,
+	message Message,
+	opts *SendOptions,
+) (*SendResult, error) {
 	retryPolicy := opts.RetryPolicy
 	if retryPolicy == nil {
 		retryPolicy = pd.middleware.Retry
@@ -242,13 +266,15 @@ func (pd *ProviderDecorator) sendWithRetry(ctx context.Context, message Message,
 	}
 
 	var lastErr error
+	var lastResult *SendResult
 	for attempt := 0; attempt <= retryPolicy.MaxAttempts; attempt++ {
-		err := pd.executeSend(ctx, message, opts)
+		result, err := pd.executeSend(ctx, message, opts)
 		if err == nil {
-			return nil
+			return result, nil
 		}
 
 		lastErr = err
+		lastResult = result
 
 		// Check if we should retry based on the retry filter
 		if retryPolicy.Filter == nil || !retryPolicy.Filter(attempt, err) {
@@ -267,17 +293,17 @@ func (pd *ProviderDecorator) sendWithRetry(ctx context.Context, message Message,
 		delay := retryPolicy.NextDelay(attempt, err)
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return nil, ctx.Err()
 		case <-time.After(delay):
 			continue
 		}
 	}
 
-	return fmt.Errorf("failed after %d attempts: %w", retryPolicy.MaxAttempts+1, lastErr)
+	return lastResult, fmt.Errorf("failed after %d attempts: %w", retryPolicy.MaxAttempts+1, lastErr)
 }
 
 // executeSend executes the actual send operation with timeout and metrics.
-func (pd *ProviderDecorator) executeSend(ctx context.Context, message Message, opts *SendOptions) error {
+func (pd *ProviderDecorator) executeSend(ctx context.Context, message Message, opts *SendOptions) (*SendResult, error) {
 	var (
 		err     error
 		timeout = opts.Timeout
@@ -300,9 +326,23 @@ func (pd *ProviderDecorator) executeSend(ctx context.Context, message Message, o
 	}
 
 	// Execute the actual send operation
-	err = pd.Provider.Send(ctx, message, providerOpts)
+	result, err := pd.callProvider(ctx, message, providerOpts)
 
-	return err
+	return result, err
+}
+
+// callProvider calls the provider's Send method and returns the result.
+// If the provider implements ResultProvider, it will use SendWithResult.
+func (pd *ProviderDecorator) callProvider(
+	ctx context.Context,
+	message Message,
+	opts *ProviderSendOptions,
+) (*SendResult, error) {
+	if rp, ok := pd.Provider.(ResultProvider); ok {
+		return rp.SendWithResult(ctx, message, opts)
+	}
+	err := pd.Provider.Send(ctx, message, opts)
+	return nil, err
 }
 
 // startQueueProcessor starts a goroutine to continuously dequeue and process messages.
