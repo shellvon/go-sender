@@ -7,7 +7,6 @@ import (
 	"github.com/shellvon/go-sender/core"
 )
 
-// mockSelectable 用于测试的mock实现.
 type mockSelectable struct {
 	name    string
 	weight  int
@@ -174,7 +173,7 @@ func TestBaseConfig_Select_WithContext(t *testing.T) {
 	}
 
 	// 测试通过context指定item name
-	ctx := core.WithCtxItemName(context.Background(), "test2")
+	ctx := core.WithRoute(context.Background(), &core.RouteInfo{AccountName: "test2"})
 	item, err := config.Select(ctx, nil)
 	if err != nil {
 		t.Errorf("Select() with context item name error = %v, want nil", err)
@@ -184,7 +183,7 @@ func TestBaseConfig_Select_WithContext(t *testing.T) {
 	}
 
 	// 测试通过context指定不存在的item name
-	ctx = core.WithCtxItemName(context.Background(), "nonexistent")
+	ctx = core.WithRoute(context.Background(), &core.RouteInfo{AccountName: "nonexistent"})
 	_, err = config.Select(ctx, nil)
 	if err == nil {
 		t.Error("Expected error for nonexistent item name, got nil")

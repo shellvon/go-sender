@@ -169,6 +169,12 @@ type SendOptions struct {
 	Timeout time.Duration
 	// Metadata holds additional metadata for the message.
 	Metadata map[string]interface{}
+	// AccountName forces the provider to use the specified account name.
+	// When set, the framework will inject it into context so that BaseConfig.Select
+	// picks this exact account instead of the usual strategy.
+	AccountName string
+	// StrategyName overrides the default strategy for this single send (e.g. "round_robin").
+	StrategyName string
 	// DisableCircuitBreaker indicates whether to disable the circuit breaker middleware for this send.
 	DisableCircuitBreaker bool
 	// DisableRateLimiter indicates whether to disable the rate limiter middleware for this send.
@@ -402,6 +408,20 @@ func WithSendMetadata(key string, value interface{}) SendOption {
 	}
 }
 
+// WithSendAccount selects a specific account by name, bypassing strategy selection.
+func WithSendAccount(name string) SendOption {
+	return func(opts *SendOptions) {
+		opts.AccountName = name
+	}
+}
+
+// WithSendStrategy sets a per-send selection strategy.
+func WithSendStrategy(st StrategyType) SendOption {
+	return func(opts *SendOptions) {
+		opts.StrategyName = string(st)
+	}
+}
+
 // WithSendDisableCircuitBreaker sets the DisableCircuitBreaker option.
 func WithSendDisableCircuitBreaker(disable bool) SendOption {
 	return func(o *SendOptions) {
@@ -437,11 +457,8 @@ func WithSendHTTPClient(client *http.Client) SendOption {
 	}
 }
 
-// frameworkMetadataKey is the namespaced key for storing SendOptions in Metadata.
-const frameworkMetadataKey = "__gosender_framework_send_options"
-
-// internalContextItemNameKey is the internal key for storing context item name in queue metadata.
-const internalContextItemNameKey = "__gosender_internal_ctx_item_name__"
+// sendOptionsMetadataKey is the sole key used to embed serialized SendOptions into queue Metadata.
+const sendOptionsMetadataKey = "__gosender_send_options__"
 
 // defaultSerializer is the default SendOptionsSerializer instance.
 //
@@ -452,7 +469,7 @@ var defaultSerializer SendOptionsSerializer = &DefaultSendOptionsSerializer{}
 // It logs a warning if the key already exists to alert about potential user conflicts.
 // It also preserves context information (like specified item names) for queue recovery.
 func serializeSendOptions(
-	ctx context.Context,
+	_ context.Context,
 	opts *SendOptions,
 	metadata map[string]interface{},
 ) (map[string]interface{}, error) {
@@ -461,16 +478,11 @@ func serializeSendOptions(
 	}
 	// Note: metadata key conflict detection removed for lint compliance.
 
-	// Preserve context information for queue recovery.
-	if itemName := GetItemNameFromCtx(ctx); itemName != "" {
-		metadata[internalContextItemNameKey] = itemName
-	}
-
 	data, err := defaultSerializer.Serialize(opts)
 	if err != nil {
 		return nil, NewSenderError(ErrCodeQueueSerializationFailed, "failed to serialize SendOptions", err)
 	}
-	metadata[frameworkMetadataKey] = data
+	metadata[sendOptionsMetadataKey] = data
 	return metadata, nil
 }
 
@@ -487,19 +499,14 @@ func deserializeSendOptions(
 		return ctx, opts, nil
 	}
 
-	// Restore context information from metadata.
-	if itemName, ok := metadata[internalContextItemNameKey].(string); ok && itemName != "" {
-		ctx = WithCtxItemName(ctx, itemName)
-	}
-
-	data, ok := metadata[frameworkMetadataKey]
+	// After deserialization we'll inject route info below.
+	data, ok := metadata[sendOptionsMetadataKey]
 	if !ok {
 		return ctx, opts, nil // Use defaults if key is missing.
 	}
 
 	dataBytes, ok := data.([]byte)
 	if !ok {
-		// log.Print("invalid type for metadata key", "key", frameworkMetadataKey, "expected", "[]byte")
 		return ctx, opts, nil
 	}
 
@@ -508,12 +515,18 @@ func deserializeSendOptions(
 		return nil, nil, NewSenderError(ErrCodeQueueDeserializationFailed, "failed to deserialize SendOptions", err)
 	}
 
-	// Merge deserialized options with preserved metadata.
 	opts.Priority = deserializedOpts.Priority
 	opts.Timeout = deserializedOpts.Timeout
 	opts.DisableCircuitBreaker = deserializedOpts.DisableCircuitBreaker
 	opts.DisableRateLimiter = deserializedOpts.DisableRateLimiter
 	opts.RetryPolicy = deserializedOpts.RetryPolicy
+	opts.AccountName = deserializedOpts.AccountName
+	opts.StrategyName = deserializedOpts.StrategyName
+
+	// Rebuild route info for ctx
+	if opts.AccountName != "" || opts.StrategyName != "" {
+		ctx = WithRoute(ctx, &RouteInfo{AccountName: opts.AccountName, StrategyType: StrategyType(opts.StrategyName)})
+	}
 
 	return ctx, opts, nil
 }

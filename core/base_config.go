@@ -181,19 +181,22 @@ func (c *BaseConfig[T]) Select(ctx context.Context, filter func(T) bool) (T, err
 		}
 		return filtered[0], nil
 	}
-	// 1. context 指定 item name
-	if itemName := GetItemNameFromCtx(ctx); itemName != "" {
-		return c.findEnabledByName(itemName, filtered)
+	ri := GetRoute(ctx)
+	stType := c.GetStrategy()
+	// 1. 指定账号
+	if ri != nil && ri.AccountName != "" {
+		return c.findEnabledByName(ri.AccountName, filtered)
 	}
-	// 2. context 指定策略
-	if ctxStrategy := GetStrategyFromCtx(ctx); ctxStrategy != nil {
-		selected := ctxStrategy.Select(toSelectables(filtered))
-		if selected != nil {
-			return c.findEnabledByName(selected.GetName(), filtered)
-		}
+	if ri != nil && ri.StrategyType != "" {
+		stType = ri.StrategyType
 	}
-	// 3. 用 config 自己的策略
-	strategy, _ := GlobalStrategyRegistry.Get(c.GetStrategy())
+
+	// 3. 必须有策略
+	strategy, _ := GlobalStrategyRegistry.Get(stType)
+	if strategy == nil {
+		return zero, errors.New("no strategy specified or unknown strategy")
+	}
+
 	selected := strategy.Select(toSelectables(filtered))
 	if selected != nil {
 		return c.findEnabledByName(selected.GetName(), filtered)
