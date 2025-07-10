@@ -14,11 +14,11 @@ go-sender supports powerful middleware for cross-cutting concerns.
 
 ```go
 import (
-    "github.com/shellvon/go-sender"
+    gosender "github.com/shellvon/go-sender"
     "github.com/shellvon/go-sender/ratelimiter"
 )
 
-sender := sender.NewSender()
+sender := gosender.NewSender()
 limiter := ratelimiter.NewTokenBucketRateLimiter(10, 1) // 10 reqs/sec
 sender.SetRateLimiter(limiter)
 ```

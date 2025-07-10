@@ -19,6 +19,7 @@ package main
 
 import (
     "context"
+    gosender "github.com/shellvon/go-sender"
     "github.com/shellvon/go-sender/core"
     "github.com/shellvon/go-sender/providers/sms"
 )
@@ -72,7 +73,7 @@ package main
 
 import (
     "context"
-    "github.com/shellvon/go-sender"
+    gosender "github.com/shellvon/go-sender"
     "github.com/shellvon/go-sender/core"
     "github.com/shellvon/go-sender/providers/sms"
 )

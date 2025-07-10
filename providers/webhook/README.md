@@ -92,13 +92,13 @@ if err := sender.Send(context.Background(), msg); err != nil {
 }
 ```
 
-### Specify Endpoint with SendVia
+### Specify Endpoint with WithSendAccount
 
 ```go
-_ = sender.SendVia(context.Background(), "primary", msg)
+_, _ = sender.SendWithResult(context.Background(), msg, core.WithSendAccount("primary"))
 ```
 
-`SendVia` only selects an endpoint **inside the Webhook provider**. It does not let you reuse a message across providers.
+`core.WithSendAccount()` only selects an endpoint **inside the Webhook provider**. It does not let you reuse a message across providers.
 
 ---
 

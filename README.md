@@ -28,23 +28,58 @@ See our [Project Roadmap & Task Tracking](https://github.com/shellvon/go-sender/
 ```go
 import (
 	"context"
+	"log"
+
 	gosender "github.com/shellvon/go-sender"
+	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/providers/sms"
 )
 
 func main() {
-	// Initialize a new sender instance
-	sender := gosender.NewSender(nil)
+	// 1️⃣ Initialize a new sender instance (middleware can be added later)
+	sender := gosender.NewSender()
 
-	// Create an SMS message using Aliyun provider
+	// 2️⃣ Prepare and register an SMS provider (Aliyun as an example)
+	config := sms.Config{
+		ProviderMeta: core.ProviderMeta{   // provider-level config
+			Strategy: core.StrategyRoundRobin, // account selection strategy
+		},
+		Items: []*sms.Account{             // one or more sub-accounts (AK/SK)
+			{
+				BaseAccount: core.BaseAccount{
+					AccountMeta: core.AccountMeta{
+						Name:    "aliyun-default", // custom account name
+						SubType: "aliyun",        // sms sub-provider
+					},
+					Credentials: core.Credentials{
+						APIKey:    "your-access-key",
+						APISecret: "your-secret-key",
+					},
+				},
+				// Optional: Region, Callback, SignName ...
+			},
+		},
+	}
+	aliyunProvider, err := sms.New(config)
+	if err != nil {
+		log.Fatalf("failed to create provider: %v", err)
+	}
+	// Register with sender (nil = use global middleware settings)
+	sender.RegisterProvider(core.ProviderTypeSMS, aliyunProvider, nil)
+
+	// 3️⃣ Build the message to send
 	msg := sms.Aliyun().
 		To("***REMOVED***").
 		Content("Hello from go-sender!").
 		TemplateID("SMS_xxx").
 		Build()
 
-	// Send using GoSender (assumes provider registered elsewhere)
-	_ = sender.Send(context.Background(), msg)
+	// 4️⃣ Send the message and receive detailed result
+	res, err := sender.SendWithResult(context.Background(), msg)
+	if err != nil {
+		log.Fatalf("send failed: %v", err)
+	}
+	log.Printf("request id: %s, provider: %s, cost: %v", res.RequestID, res.ProviderName, res.Elapsed)
 }
 ```
 

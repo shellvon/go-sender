@@ -7,9 +7,9 @@ go-sender is designed to be simple, decoupled, and extensible. Here are the key 
 The main entry point for all message sending.
 
 - Manages all providers and middleware.
-- Exposes `Send` and `SendVia` methods for sending messages.
+- Exposes `Send` and `SendWithResult` methods for sending messages.
 - Handles middleware chains transparently.
-- `SendVia` is only for specifying the account to send with (e.g., different sub-accounts or API keys for the same provider), and cannot be used to send the same message object across different message types or providers.
+- Need to send with a specific sub-account or override strategy? Pass `core.WithSendAccount()` or `core.WithSendStrategy()` when calling `Send`.
 
 ## Provider
 

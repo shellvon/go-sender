@@ -28,17 +28,54 @@
 ```go
 import (
     "context"
+    "log"
+
     gosender "github.com/shellvon/go-sender"
+    "github.com/shellvon/go-sender/core"
     "github.com/shellvon/go-sender/providers/sms"
 )
 
 func main() {
-    sender := gosender.NewSender(nil)
-	msg := sms.Aliyun().
-		To("***REMOVED***").
-		Content("Hello from go-sender!").
-		TemplateID("SMS_xxx").
-		Build()
+    // 1️⃣ 创建 Sender 实例（可按需再设置中间件）
+    sender := gosender.NewSender()
+
+    // 2️⃣ 初始化并注册短信 Provider（以阿里云为例）
+    cfg := sms.Config{
+        ProviderMeta: core.ProviderMeta{
+            Strategy: core.StrategyRoundRobin,
+        },
+        Items: []*sms.Account{{
+            BaseAccount: core.BaseAccount{
+                AccountMeta: core.AccountMeta{
+                    Name:   "aliyun-default",
+                    SubType: "aliyun",
+                },
+                Credentials: core.Credentials{
+                    APIKey:    "your-access-key",
+                    APISecret: "your-secret-key",
+                },
+            },
+        }},
+    }
+    aliyunProvider, err := sms.New(cfg)
+    if err != nil {
+        log.Fatalf("创建 Provider 失败: %v", err)
+    }
+    sender.RegisterProvider(core.ProviderTypeSMS, aliyunProvider, nil)
+
+    // 3️⃣ 构造要发送的消息
+    msg := sms.Aliyun().
+        To("***REMOVED***").
+        Content("Hello from go-sender!").
+        TemplateID("SMS_xxx").
+        Build()
+
+    // 4️⃣ 发送并获取详细结果
+    res, err := sender.SendWithResult(context.Background(), msg)
+    if err != nil {
+        log.Fatalf("发送失败: %v", err)
+    }
+    log.Printf("RequestID: %s, Provider: %s, 耗时: %v", res.RequestID, res.ProviderName, res.Elapsed)
 }
 ```
 

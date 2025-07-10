@@ -6,9 +6,9 @@ Explore real-world usage patterns with go-sender.
 
 ```go
 // Try first SMS account, then fallback to second SMS account if fails
-err := sender.SendVia("aliyun-account-1", msg)
+err := sender.Send(context.Background(), msg, core.WithSendAccount("aliyun-account-1"))
 if err != nil {
-    _ = sender.SendVia("aliyun-account-2", msg)
+    _ = sender.Send(context.Background(), msg, core.WithSendAccount("aliyun-account-2"))
 }
 ```
 
@@ -125,7 +125,7 @@ For local memory queue or goroutine scenarios, you can specify a callback to get
 // Send asynchronously with callback to get actual sending result
 err := sender.Send(ctx, msg,
     core.WithSendAsync(),
-    core.WithSendCallback(func(sendErr error) {
+    core.WithSendCallback(func(res *core.SendResult, sendErr error) {
         if sendErr != nil {
             log.Printf("Message sending failed: %v", sendErr)
         } else {
@@ -139,7 +139,7 @@ err := sender.Send(ctx, msg,
 
 ## Custom HTTP Client
 
-### 1. Timeout Control - 防止请求挂起
+### 1. Timeout Control
 
 ```go
 import (
@@ -148,7 +148,7 @@ import (
     "github.com/shellvon/go-sender/core"
 )
 
-// 设置30秒超时，防止请求无限等待
+// Set a 30-second timeout to prevent hanging requests
 client := &http.Client{
     Timeout: 30 * time.Second,
 }
@@ -156,7 +156,7 @@ client := &http.Client{
 err = sender.Send(ctx, msg, core.WithSendHTTPClient(client))
 ```
 
-### 2. Proxy Support - 企业代理支持
+### 2. Proxy Support
 
 ```go
 import (
@@ -165,7 +165,7 @@ import (
     "github.com/shellvon/go-sender/core"
 )
 
-// 通过企业代理服务器路由请求
+// Route requests through a corporate proxy
 proxyURL, _ := url.Parse("http://proxy.company.com:8080")
 client := &http.Client{
     Transport: &http.Transport{
@@ -176,7 +176,7 @@ client := &http.Client{
 err = sender.Send(ctx, msg, core.WithSendHTTPClient(client))
 ```
 
-### 3. TLS Configuration - 自定义证书和安全设置
+### 3. TLS Configuration
 
 ```go
 import (
@@ -187,7 +187,7 @@ import (
     "github.com/shellvon/go-sender/core"
 )
 
-// 加载自定义CA证书
+// Load a custom CA certificate
 caCert, _ := os.ReadFile("custom-ca.pem")
 caCertPool := x509.NewCertPool()
 caCertPool.AppendCertsFromPEM(caCert)
@@ -204,7 +204,7 @@ client := &http.Client{
 err = sender.Send(ctx, msg, core.WithSendHTTPClient(client))
 ```
 
-### 4. Connection Pooling - 连接池优化
+### 4. Connection Pooling
 
 ```go
 import (
@@ -213,20 +213,20 @@ import (
     "github.com/shellvon/go-sender/core"
 )
 
-// 优化高并发场景下的连接复用
+// Optimize connection reuse for high concurrency
 client := &http.Client{
     Transport: &http.Transport{
-        MaxIdleConns:        100,              // 最大空闲连接数
-        MaxIdleConnsPerHost: 10,               // 每个主机最大空闲连接数
-        IdleConnTimeout:     90 * time.Second, // 空闲连接超时时间
-        DisableCompression:  false,            // 启用压缩
+        MaxIdleConns:        100,              // max idle connections
+        MaxIdleConnsPerHost: 10,               // max idle connections per host
+        IdleConnTimeout:     90 * time.Second, // idle connection timeout
+        DisableCompression:  false,            // enable compression
     },
 }
 
 err = sender.Send(ctx, msg, core.WithSendHTTPClient(client))
 ```
 
-### 5. Retry Logic - 内置重试机制
+### 5. Retry Logic
 
 ```go
 import (
@@ -235,7 +235,7 @@ import (
     "github.com/shellvon/go-sender/core"
 )
 
-// 自定义重试策略
+// Custom retry policy
 retryPolicy := &core.RetryPolicy{
     MaxAttempts:   3,
     InitialDelay:  1 * time.Second,
@@ -247,14 +247,14 @@ client := &http.Client{
     Timeout: 30 * time.Second,
 }
 
-// 使用自定义重试策略
+// Use custom retry policy
 err = sender.Send(ctx, msg,
     core.WithSendHTTPClient(client),
     core.WithSendRetryPolicy(retryPolicy),
 )
 ```
 
-### 6. Load Balancing - 负载均衡
+### 6. Load Balancing
 
 ```go
 import (
@@ -263,18 +263,18 @@ import (
     "github.com/shellvon/go-sender/core"
 )
 
-// 自定义Transport实现负载均衡
+// Custom transport implementing load balancing
 type LoadBalancedTransport struct {
     endpoints []string
     current   int
 }
 
 func (t *LoadBalancedTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-    // 轮询选择端点
+    // Select endpoint in round-robin
     endpoint := t.endpoints[t.current%len(t.endpoints)]
     t.current++
 
-    // 修改请求URL
+    // Modify request URL
     req.URL.Host = endpoint
     return http.DefaultTransport.RoundTrip(req)
 }
@@ -288,7 +288,7 @@ client := &http.Client{
 err = sender.Send(ctx, msg, core.WithSendHTTPClient(client))
 ```
 
-### 7. Authentication - 自定义认证
+### 7. Authentication
 
 ```go
 import (
@@ -296,7 +296,7 @@ import (
     "github.com/shellvon/go-sender/core"
 )
 
-// 添加自定义认证头
+// Add custom authentication headers
 client := &http.Client{
     Transport: &http.Transport{
         ProxyConnectHeader: http.Header{
@@ -309,7 +309,7 @@ client := &http.Client{
 err = sender.Send(ctx, msg, core.WithSendHTTPClient(client))
 ```
 
-### 8. Monitoring - 请求监控
+### 8. Monitoring
 
 ```go
 import (
@@ -319,7 +319,7 @@ import (
     "github.com/shellvon/go-sender/core"
 )
 
-// 自定义Transport添加监控
+// Custom transport with monitoring
 type MonitoredTransport struct {
     base http.RoundTripper
 }
@@ -327,12 +327,12 @@ type MonitoredTransport struct {
 func (t *MonitoredTransport) RoundTrip(req *http.Request) (*http.Response, error) {
     start := time.Now()
 
-    // 记录请求开始
+    // Log request start
     log.Printf("Request started: %s %s", req.Method, req.URL)
 
     resp, err := t.base.RoundTrip(req)
 
-    // 记录请求完成
+    // Log request completed
     duration := time.Since(start)
     log.Printf("Request completed: %s %s in %v", req.Method, req.URL, duration)
 
@@ -348,7 +348,7 @@ client := &http.Client{
 err = sender.Send(ctx, msg, core.WithSendHTTPClient(client))
 ```
 
-### 9. Caching - 响应缓存
+### 9. Caching
 
 ```go
 import (
@@ -358,7 +358,7 @@ import (
     "github.com/shellvon/go-sender/core"
 )
 
-// 简单的内存缓存实现
+// Simple in-memory cache implementation
 type CachedTransport struct {
     base   http.RoundTripper
     cache  map[string]cacheEntry
@@ -373,7 +373,7 @@ type cacheEntry struct {
 func (t *CachedTransport) RoundTrip(req *http.Request) (*http.Response, error) {
     cacheKey := req.URL.String()
 
-    // 检查缓存
+    // Check cache
     t.mu.RLock()
     if entry, exists := t.cache[cacheKey]; exists && time.Now().Before(entry.expires) {
         t.mu.RUnlock()
@@ -381,10 +381,10 @@ func (t *CachedTransport) RoundTrip(req *http.Request) (*http.Response, error) {
     }
     t.mu.RUnlock()
 
-    // 执行实际请求
+    // Execute actual request
     resp, err := t.base.RoundTrip(req)
     if err == nil {
-        // 缓存响应（5分钟）
+        // Cache response for 5 minutes
         t.mu.Lock()
         t.cache[cacheKey] = cacheEntry{
             response: resp,
@@ -406,7 +406,7 @@ client := &http.Client{
 err = sender.Send(ctx, msg, core.WithSendHTTPClient(client))
 ```
 
-### 综合示例 - 生产环境配置
+### Comprehensive Example - Production Configuration
 
 ```go
 import (
@@ -417,34 +417,34 @@ import (
     "github.com/shellvon/go-sender/core"
 )
 
-// 生产环境综合配置
+// Production configuration
 client := &http.Client{
     Timeout: 30 * time.Second,
     Transport: &http.Transport{
-        // 代理配置
+        // Proxy settings
         Proxy: http.ProxyURL(&url.URL{
             Scheme: "http",
             Host:   "proxy.company.com:8080",
         }),
 
-        // TLS配置
+        // TLS settings
         TLSClientConfig: &tls.Config{
             InsecureSkipVerify: false,
             MinVersion:         tls.VersionTLS12,
         },
 
-        // 连接池配置
+        // Connection pool settings
         MaxIdleConns:        100,
         MaxIdleConnsPerHost: 10,
         IdleConnTimeout:     90 * time.Second,
 
-        // 其他优化
+        // Other optimizations
         DisableCompression: false,
         ForceAttemptHTTP2:  true,
     },
 }
 
-// 使用自定义重试策略
+// Use custom retry policy
 retryPolicy := &core.RetryPolicy{
     MaxAttempts:   3,
     InitialDelay:  1 * time.Second,
@@ -463,8 +463,8 @@ err = sender.Send(ctx, msg,
 ```go
 // Use a strategy to select provider based on region or message type
 if isInternational(mobile) {
-    sender.SendVia("yunpian-account", msg)
+    sender.Send(context.Background(), msg, core.WithSendAccount("yunpian-account"))
 } else {
-    sender.SendVia("aliyun-account", msg)
+    sender.Send(context.Background(), msg, core.WithSendAccount("aliyun-account"))
 }
 ```
