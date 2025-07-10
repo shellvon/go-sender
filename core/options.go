@@ -184,7 +184,7 @@ type SendOptions struct {
 	//
 	// Specifying a Callback also implies that `Async` must be set to `true`
 	// for the callback to be effective, as callbacks are not supported for synchronous sends.
-	Callback func(error)
+	Callback func(*SendResult, error)
 	// RetryPolicy allows for a custom retry policy for this send operation (overrides global).
 	// Note: The Filter function within RetryPolicy will be lost if deserialized from a queue.
 	RetryPolicy *RetryPolicy
@@ -417,7 +417,7 @@ func WithSendDisableRateLimiter(disable bool) SendOption {
 }
 
 // WithSendCallback sets the callback function to be executed after message processing.
-func WithSendCallback(callback func(error)) SendOption {
+func WithSendCallback(callback func(*SendResult, error)) SendOption {
 	return func(o *SendOptions) {
 		o.Callback = callback
 	}

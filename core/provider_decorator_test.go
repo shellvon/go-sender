@@ -54,7 +54,7 @@ func TestProviderDecorator_Send_Async(t *testing.T) {
 		context.Background(),
 		msg,
 		core.WithSendAsync(true),
-		core.WithSendCallback(func(error) { ch <- true }),
+		core.WithSendCallback(func(*core.SendResult, error) { ch <- true }),
 	)
 	if err != nil {
 		t.Errorf("Async Send should succeed, got %v", err)
