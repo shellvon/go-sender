@@ -272,6 +272,8 @@ func (s *DefaultSendOptionsSerializer) Serialize(opts *SendOptions) ([]byte, err
 		DisableCircuitBreaker: opts.DisableCircuitBreaker,
 		DisableRateLimiter:    opts.DisableRateLimiter,
 		Metadata:              opts.Metadata,
+		AccountName:           opts.AccountName,
+		StrategyName:          opts.StrategyName,
 	}
 
 	// Convert RetryPolicy to serializable format if present
@@ -304,6 +306,8 @@ func (s *DefaultSendOptionsSerializer) Deserialize(data []byte) (*SendOptions, e
 		DisableCircuitBreaker: dataStruct.DisableCircuitBreaker,
 		DisableRateLimiter:    dataStruct.DisableRateLimiter,
 		Metadata:              dataStruct.Metadata,
+		AccountName:           dataStruct.AccountName,
+		StrategyName:          dataStruct.StrategyName,
 	}
 
 	// Convert serializable RetryPolicy back to RetryPolicy if present
@@ -327,6 +331,8 @@ type sendOptionsData struct {
 	DisableCircuitBreaker bool                   `json:"disable_circuit_breaker"`
 	DisableRateLimiter    bool                   `json:"disable_rate_limiter"`
 	Metadata              map[string]interface{} `json:"metadata,omitempty"`
+	AccountName           string                 `json:"account_name,omitempty"`
+	StrategyName          string                 `json:"strategy_name,omitempty"`
 	// Serializable retry policy (without Filter function)
 	RetryPolicy *serializableRetryPolicy `json:"retry_policy,omitempty"`
 }

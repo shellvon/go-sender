@@ -569,8 +569,7 @@ func TestAccountConfigDynamicUpdate(t *testing.T) {
 		}
 
 		// 验证选择策略是否反映新权重
-		strategy := core.NewWeightedStrategy()
-		ctx := core.WithCtxStrategy(context.Background(), strategy)
+		ctx := core.WithRoute(context.Background(), &core.RouteInfo{StrategyType: core.StrategyWeighted})
 
 		counts := make(map[string]int)
 		iterations := 1000
@@ -629,8 +628,7 @@ func TestAccountConfigDynamicUpdate(t *testing.T) {
 		}
 
 		// 验证禁用账号不会被选择策略选中
-		strategy := core.NewWeightedStrategy()
-		ctx := core.WithCtxStrategy(context.Background(), strategy)
+		ctx := core.WithRoute(context.Background(), &core.RouteInfo{StrategyType: core.StrategyWeighted})
 		_, err := config.Select(ctx, nil)
 		if err == nil {
 			t.Error("Expected error when selecting disabled account")

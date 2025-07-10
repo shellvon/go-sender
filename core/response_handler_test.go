@@ -224,7 +224,7 @@ func TestResponseHandler(t *testing.T) {
 			if err != nil {
 				t.Fatalf("ReadAndClose failed: %v", err)
 			}
-			err = h(&core.SendResult{StatusCode: tc.resp.StatusCode, Body: body})
+			err = h(&core.SendResult{StatusCode: tc.resp.StatusCode, Body: body, Headers: tc.resp.Header})
 			if tc.wantErr && err == nil {
 				t.Errorf("expected error, got nil")
 			}

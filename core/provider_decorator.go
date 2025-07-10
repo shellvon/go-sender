@@ -137,8 +137,10 @@ func (pd *ProviderDecorator) executeWithMiddleware(
 		result, err = pd.doSendWithRetry(ctx, message, opts)
 	}
 
-	// Execute callback if provided
-	if opts.Callback != nil {
+	// Execute callback **only** when the send originated from an async flow. For
+	// synchronous Send (opts.Async == false) callbacks must be ignored per the
+	// updated API contract.
+	if opts.Async && opts.Callback != nil {
 		opts.Callback(result, err)
 	}
 
@@ -196,9 +198,12 @@ func (pd *ProviderDecorator) processQueueItem(ctx context.Context, item *QueueIt
 		}
 	}
 
-	// Propagate callback stored in QueueItem to SendOptions before processing
+	// Propagate callback stored in QueueItem to SendOptions before processing.
+	// Note: Async flag might be lost during serialization, so re-enable it here
+	// to ensure the callback is honoured for local queue processing.
 	if item.Callback != nil {
 		opts.Callback = item.Callback
+		opts.Async = true
 	}
 
 	result, err := pd.executeWithMiddleware(restoredCtx, item.Message, opts)
@@ -327,8 +332,12 @@ func (pd *ProviderDecorator) executeSend(ctx context.Context, message Message, o
 		timeout = DefaultSendTimeout
 	}
 
+	if opts.StrategyName != "" || opts.AccountName != "" {
+		ctx = WithRoute(ctx, &RouteInfo{AccountName: opts.AccountName, StrategyType: StrategyType(opts.StrategyName)})
+	}
+
 	if opts.Metadata != nil {
-		ctx = WithCtxSendMetadata(ctx, opts.Metadata)
+		ctx = context.WithValue(ctx, metadataKey{}, opts.Metadata)
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, timeout)

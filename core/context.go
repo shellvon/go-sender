@@ -5,43 +5,35 @@ import (
 )
 
 type (
-	strategyKey struct{}
-	itemNameKey struct{}
 	metadataKey struct{}
+	routeKey    struct{}
 )
 
-// WithCtxStrategy provides a specific instance of a selection strategy.
-func WithCtxStrategy(ctx context.Context, strategy SelectionStrategy) context.Context {
-	return context.WithValue(ctx, strategyKey{}, strategy)
+// RouteInfo carries per-send routing preferences such as explicit account
+// selection or a custom strategy instance.
+type RouteInfo struct {
+	AccountName  string
+	StrategyType StrategyType
 }
 
-// GetStrategyFromCtx retrieves the strategy instance from the context.
-func GetStrategyFromCtx(ctx context.Context) SelectionStrategy {
-	if strategy, ok := ctx.Value(strategyKey{}).(SelectionStrategy); ok {
-		return strategy
+// WithRoute stores the provided RouteInfo into context and returns the derived
+// context. Pass nil to leave the original context untouched.
+func WithRoute(ctx context.Context, info *RouteInfo) context.Context {
+	if info == nil {
+		return ctx
+	}
+	return context.WithValue(ctx, routeKey{}, info)
+}
+
+// GetRoute extracts RouteInfo from context. Returns nil when absent.
+func GetRoute(ctx context.Context) *RouteInfo {
+	if ri, ok := ctx.Value(routeKey{}).(*RouteInfo); ok {
+		return ri
 	}
 	return nil
 }
 
-// WithCtxItemName specifies the name of a specific item (e.g., a bot or account) to use.
-func WithCtxItemName(ctx context.Context, itemName string) context.Context {
-	return context.WithValue(ctx, itemNameKey{}, itemName)
-}
-
-// GetItemNameFromCtx retrieves the specific item name from the context.
-func GetItemNameFromCtx(ctx context.Context) string {
-	if name, ok := ctx.Value(itemNameKey{}).(string); ok {
-		return name
-	}
-	return ""
-}
-
-// WithCtxSendMetadata adds send metadata to the context.
-func WithCtxSendMetadata(ctx context.Context, metadata map[string]interface{}) context.Context {
-	return context.WithValue(ctx, metadataKey{}, metadata)
-}
-
-// GetSendMetadataFromCtx 从context读取metadata.
+// GetSendMetadataFromCtx retrieves the metadata map stored internally in the context.
 func GetSendMetadataFromCtx(ctx context.Context) map[string]interface{} {
 	if m, ok := ctx.Value(metadataKey{}).(map[string]interface{}); ok {
 		return m

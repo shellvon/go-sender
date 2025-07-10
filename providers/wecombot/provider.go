@@ -78,7 +78,13 @@ func (p *Provider) Send(
 				return nil, err
 			}
 			up.setMediaID(mediaID)
-			ctx = core.WithCtxItemName(ctx, acc.GetName())
+			// Preserve existing route info (e.g., strategy) while overriding account.
+			ri := core.GetRoute(ctx)
+			if ri == nil {
+				ri = &core.RouteInfo{}
+			}
+			ri.AccountName = acc.GetName()
+			ctx = core.WithRoute(ctx, ri)
 		}
 	}
 	return p.HTTPProvider.Send(ctx, msg, opts)

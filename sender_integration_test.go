@@ -152,8 +152,8 @@ func TestRetryAndCircuitBreaker(t *testing.T) {
 	// 配置重试策略
 	retryPolicy := core.NewRetryPolicy(
 		core.WithRetryMaxAttempts(3),
-		core.WithRetryInitialDelay(time.Millisecond*10),
-		core.WithRetryMaxDelay(time.Millisecond*100),
+		core.WithRetryInitialDelay(time.Millisecond*2),
+		core.WithRetryMaxDelay(time.Millisecond*10),
 	)
 	if err := sender.SetRetryPolicy(retryPolicy); err != nil {
 		t.Fatalf("Failed to set retry policy: %v", err)
@@ -162,7 +162,7 @@ func TestRetryAndCircuitBreaker(t *testing.T) {
 	// 配置熔断器
 	circuitBreaker := &testCircuitBreaker{
 		threshold: 3,
-		timeout:   time.Millisecond * 500,
+		timeout:   time.Millisecond * 100,
 	}
 	sender.SetCircuitBreaker(circuitBreaker)
 
@@ -171,7 +171,7 @@ func TestRetryAndCircuitBreaker(t *testing.T) {
 		Items: []*webhook.Endpoint{
 			{
 				Name:    "failing-endpoint",
-				URL:     "http://non-existent.com/webhook",
+				URL:     "http://non-existent/webhook",
 				Method:  http.MethodPost,
 				Headers: map[string]string{"Content-Type": "application/json"},
 			},
