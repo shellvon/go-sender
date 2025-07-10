@@ -11,7 +11,6 @@ import (
 
 	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/providers"
-	"github.com/shellvon/go-sender/utils"
 )
 
 type mockSelectable struct {
@@ -42,7 +41,7 @@ func (m *mockMessage) GetMsgType() string              { return "" }
 type mockTransformer struct {
 	shouldFail bool
 	reqSpec    *core.HTTPRequestSpec
-	handler    core.ResponseHandler
+	handler    core.SendResultHandler
 }
 
 // Implements core.HTTPTransformer[*mockSelectable].
@@ -52,7 +51,7 @@ func (m *mockTransformer) Transform(
 	_ context.Context,
 	_ core.Message,
 	_ *mockSelectable,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	if m.shouldFail {
 		return nil, nil, errors.New("transform failed")
 	}
@@ -106,8 +105,8 @@ func TestHTTPProvider_Send_SingleConfig(t *testing.T) {
 
 	transformer := &mockTransformer{
 		reqSpec: reqSpec,
-		handler: func(resp *http.Response) error {
-			if resp.StatusCode != http.StatusOK {
+		handler: func(result *core.SendResult) error {
+			if result.StatusCode != http.StatusOK {
 				return errors.New("unexpected status code")
 			}
 			return nil
@@ -120,7 +119,7 @@ func TestHTTPProvider_Send_SingleConfig(t *testing.T) {
 	}
 	msg := &mockMessage{}
 
-	err = provider.Send(context.Background(), msg, nil)
+	_, err = provider.Send(context.Background(), msg, nil)
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
@@ -156,7 +155,7 @@ func TestHTTPProvider_Send_TransformFailure(t *testing.T) {
 	}
 	msg := &mockMessage{}
 
-	err = provider.Send(context.Background(), msg, nil)
+	_, err = provider.Send(context.Background(), msg, nil)
 	if err == nil {
 		t.Error("Expected error for transform failure, got nil")
 	}
@@ -193,7 +192,7 @@ func TestHTTPProvider_ExecuteHTTPRequest_WithQueryParams(t *testing.T) {
 	}
 	msg := &mockMessage{}
 
-	err = provider.Send(context.Background(), msg, nil)
+	_, err = provider.Send(context.Background(), msg, nil)
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
@@ -215,7 +214,7 @@ func TestHTTPProvider_ExecuteHTTPRequest_InvalidURL(t *testing.T) {
 	}
 	msg := &mockMessage{}
 
-	err = provider.Send(context.Background(), msg, nil)
+	_, err = provider.Send(context.Background(), msg, nil)
 	if err == nil {
 		t.Error("Expected error for invalid URL, got nil")
 	}
@@ -244,7 +243,7 @@ func TestHTTPProvider_ExecuteHTTPRequest_HTTPFailure(t *testing.T) {
 	}
 	msg := &mockMessage{}
 
-	err = provider.Send(context.Background(), msg, nil)
+	_, err = provider.Send(context.Background(), msg, nil)
 	if err == nil {
 		t.Error("Expected error for HTTP failure, got nil")
 	}
@@ -260,16 +259,12 @@ func TestHTTPProvider_ExecuteHTTPRequest_CustomHandler(t *testing.T) {
 	defer ts.Close()
 
 	customHandlerCalled := false
-	customHandler := func(resp *http.Response) error {
+	customHandler := func(result *core.SendResult) error {
 		customHandlerCalled = true
-		if resp.StatusCode != http.StatusOK {
+		if result.StatusCode != http.StatusOK {
 			return errors.New("unexpected status code")
 		}
-		body, _, err := utils.ReadAndClose(resp)
-		if err != nil {
-			return err
-		}
-		if string(body) != `{"custom": "response"}` {
+		if string(result.Body) != `{"custom": "response"}` {
 			return errors.New("unexpected response body")
 		}
 		return nil
@@ -293,7 +288,7 @@ func TestHTTPProvider_ExecuteHTTPRequest_CustomHandler(t *testing.T) {
 	}
 	msg := &mockMessage{}
 
-	err = provider.Send(context.Background(), msg, nil)
+	_, err = provider.Send(context.Background(), msg, nil)
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}

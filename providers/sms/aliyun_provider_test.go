@@ -10,7 +10,6 @@ import (
 	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/providers"
 	"github.com/shellvon/go-sender/providers/sms"
-	"github.com/shellvon/go-sender/utils"
 )
 
 func TestAliyunProvider_Send_Success(t *testing.T) {
@@ -43,7 +42,7 @@ func TestAliyunProvider_Send_Success(t *testing.T) {
 	}
 	p := &sms.Provider{HTTPProvider: httpProvider}
 	msg := sms.Aliyun().To("***REMOVED***").Content("hi").SignName("sign").Build()
-	err = p.Send(context.Background(), msg, &core.ProviderSendOptions{})
+	_, err = p.Send(context.Background(), msg, &core.ProviderSendOptions{})
 	if err != nil {
 		t.Errorf("Send should succeed: %v", err)
 	}
@@ -57,21 +56,17 @@ func (f *fakeAliyunTransformer) Transform(
 	_ context.Context,
 	_ core.Message,
 	_ *sms.Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	return &core.HTTPRequestSpec{
 			Method:   "POST",
 			URL:      f.url,
 			Headers:  map[string]string{},
 			Body:     []byte("{}"),
 			BodyType: core.BodyTypeJSON,
-		}, func(resp *http.Response) error {
-			body, _, err := utils.ReadAndClose(resp)
-			if err != nil {
-				return err
-			}
-			status := resp.StatusCode
+		}, func(result *core.SendResult) error {
+			status := result.StatusCode
 			if status < 200 || status >= 300 {
-				return fmt.Errorf("HTTP request failed with status %d: %s", status, string(body))
+				return fmt.Errorf("HTTP request failed with status %d: %s", status, string(result.Body))
 			}
 			return nil
 		}, nil
@@ -106,7 +101,7 @@ func TestAliyunProvider_Send_Error(t *testing.T) {
 	}
 	p := &sms.Provider{HTTPProvider: httpProvider}
 	msg := sms.Aliyun().To("***REMOVED***").Content("hi").SignName("sign").Build()
-	err = p.Send(context.Background(), msg, &core.ProviderSendOptions{})
+	_, err = p.Send(context.Background(), msg, &core.ProviderSendOptions{})
 	if err == nil {
 		t.Error("Send should fail when HTTPProvider returns error")
 	}

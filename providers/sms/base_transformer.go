@@ -13,7 +13,7 @@ import (
 // It also supports adding before and after hooks to the transformer.
 
 type (
-	HandlerFunc func(ctx context.Context, msg *Message, account *Account) (*core.HTTPRequestSpec, core.ResponseHandler, error)
+	HandlerFunc func(ctx context.Context, msg *Message, account *Account) (*core.HTTPRequestSpec, core.SendResultHandler, error)
 	Option      func(*BaseTransformer)
 	HTTPOption  = transformer.Option[*Message, *Account]
 	HTTPOptions = []HTTPOption
@@ -97,7 +97,7 @@ func (t *BaseTransformer) dispatchHandler(
 	ctx context.Context,
 	msg *Message,
 	acc *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	handler, ok := t.handlers[msg.Type]
 	if !ok {
 		return nil, nil, fmt.Errorf("sms.%s unsupported message type %v", msg.GetSubProvider(), msg.Type)

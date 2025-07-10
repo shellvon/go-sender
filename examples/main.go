@@ -239,7 +239,7 @@ func runTelegramDemo() {
 	// Send all messages
 	for _, m := range messages {
 		log.Printf("Sending %s...", m.name)
-		err = prov.Send(context.Background(), m.msg, &core.ProviderSendOptions{
+		_, err = prov.Send(context.Background(), m.msg, &core.ProviderSendOptions{
 			HTTPClient: newLoggingHTTPClient(),
 		})
 		if err != nil {
@@ -389,7 +389,7 @@ func runWecombotDemo() {
 	// Send all messages
 	for _, m := range messages {
 		log.Printf("Sending %s...", m.name)
-		err = prov.Send(context.Background(), m.msg, &core.ProviderSendOptions{
+		_, err = prov.Send(context.Background(), m.msg, &core.ProviderSendOptions{
 			HTTPClient: newLoggingHTTPClient(),
 		})
 		if err != nil {
@@ -457,7 +457,7 @@ func runEmailDemo() {
 		Subject("Go-Sender Example").
 		Attach("main.go").
 		Build()
-	err = prov.Send(context.Background(), msg, &core.ProviderSendOptions{
+	_, err = prov.Send(context.Background(), msg, &core.ProviderSendOptions{
 		HTTPClient: newLoggingHTTPClient(),
 	})
 	if err != nil {
@@ -625,7 +625,7 @@ func runSMSDemo() {
 		log.Println("Unsupported provider type for demo. Supported: aliyun, tencent, cl25, volc")
 		return
 	}
-	err = prov.Send(context.Background(), msg, &core.ProviderSendOptions{
+	_, err = prov.Send(context.Background(), msg, &core.ProviderSendOptions{
 		HTTPClient: newLoggingHTTPClient(),
 	})
 	if err != nil {
@@ -753,7 +753,7 @@ func runDingTalkDemo() {
 
 	for _, demo := range demos {
 		log.Printf("Testing %s...\n", demo.name)
-		if err := prov.Send(context.Background(), demo.msg, &core.ProviderSendOptions{
+		if _, err := prov.Send(context.Background(), demo.msg, &core.ProviderSendOptions{
 			HTTPClient: newLoggingHTTPClient(),
 		}); err != nil {
 			log.Printf("%s failed: %v\n", demo.name, err)
@@ -869,7 +869,7 @@ func runServerChanDemo() {
 
 	for _, demo := range demos {
 		log.Printf("Testing %s...\n", demo.name)
-		if err := prov.Send(context.Background(), demo.msg, &core.ProviderSendOptions{
+		if _, err := prov.Send(context.Background(), demo.msg, &core.ProviderSendOptions{
 			HTTPClient: newLoggingHTTPClient(),
 		}); err != nil {
 			log.Printf("%s failed: %v\n", demo.name, err)

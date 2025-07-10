@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/shellvon/go-sender/core"
+	"github.com/shellvon/go-sender/utils"
 )
 
 // helper to build *http.Response quickly.
@@ -218,8 +219,12 @@ func TestResponseHandler(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			h := core.NewResponseHandler(tc.cfg)
-			err := h(tc.resp)
+			h := core.NewSendResultHandler(tc.cfg)
+			body, _, err := utils.ReadAndClose(tc.resp)
+			if err != nil {
+				t.Fatalf("ReadAndClose failed: %v", err)
+			}
+			err = h(&core.SendResult{StatusCode: tc.resp.StatusCode, Body: body})
 			if tc.wantErr && err == nil {
 				t.Errorf("expected error, got nil")
 			}

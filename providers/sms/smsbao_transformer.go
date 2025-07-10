@@ -57,7 +57,7 @@ func (t *smsbaoTransformer) transformSMS(
 	_ context.Context,
 	msg *Message,
 	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	if account == nil || account.APIKey == "" || account.APISecret == "" {
 		return nil, nil, NewProviderError(
 			string(SubProviderSmsbao),
@@ -102,7 +102,7 @@ func (t *smsbaoTransformer) transformVoice(
 	_ context.Context,
 	msg *Message,
 	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	subProvider := string(SubProviderSmsbao)
 	// 检查语音短信的限制
 	if msg.IsIntl() {
@@ -151,12 +151,8 @@ func (t *smsbaoTransformer) transformVoice(
 }
 
 // handleSMSBaoResponse 处理短信宝 API 响应.
-func (t *smsbaoTransformer) handleSMSBaoResponse(resp *http.Response) error {
-	body, _, err := utils.ReadAndClose(resp)
+func (t *smsbaoTransformer) handleSMSBaoResponse(result *core.SendResult) error {
 	subProvider := string(SubProviderSmsbao)
-	if err != nil {
-		return NewProviderError(subProvider, "READ_ERROR", err.Error())
-	}
 	var smsBaoErrorMap = map[string]string{
 		"30": "password error",
 		"40": "account does not exist",
@@ -166,7 +162,7 @@ func (t *smsbaoTransformer) handleSMSBaoResponse(resp *http.Response) error {
 		"50": "content contains sensitive words",
 		"51": "incorrect mobile number",
 	}
-	code := string(body)
+	code := string(result.Body)
 	if code != "0" {
 		return NewProviderError(subProvider, code, smsBaoErrorMap[code])
 	}

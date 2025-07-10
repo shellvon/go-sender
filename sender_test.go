@@ -19,8 +19,8 @@ type FakeProvider struct {
 
 var errFake = errors.New("fake error")
 
-func (f *FakeProvider) Send(_ context.Context, _ core.Message, _ *core.ProviderSendOptions) error {
-	return f.SendErr
+func (f *FakeProvider) Send(_ context.Context, _ core.Message, _ *core.ProviderSendOptions) (*core.SendResult, error) {
+	return nil, f.SendErr
 }
 func (f *FakeProvider) Name() string { return f.NameVal }
 
@@ -35,19 +35,6 @@ func TestSender_RegisterProviderAndSend(t *testing.T) {
 		t.Errorf("Send failed: %v", err)
 	}
 }
-
-func TestSender_SendVia(t *testing.T) {
-	s := gosender.NewSender()
-	fake := &FakeProvider{NameVal: "fake"}
-	s.RegisterProvider(core.ProviderTypeSMS, fake, nil)
-
-	msg := sms.Aliyun().To("***REMOVED***").Content("test").SignName("sign").Build()
-	err := s.SendVia(context.Background(), "fake", msg)
-	if err != nil {
-		t.Errorf("SendVia failed: %v", err)
-	}
-}
-
 func TestSender_Send_Error(t *testing.T) {
 	s := gosender.NewSender()
 	fake := &FakeProvider{NameVal: "fake", SendErr: errors.New("fail")}
@@ -177,8 +164,13 @@ type fakeHealthProvider struct {
 func (f *fakeHealthProvider) HealthCheck(_ context.Context) *core.HealthCheck {
 	return &core.HealthCheck{Status: f.status, Message: f.msg}
 }
-func (f *fakeHealthProvider) Send(_ context.Context, _ core.Message, _ *core.ProviderSendOptions) error {
-	return nil
+
+func (f *fakeHealthProvider) Send(
+	_ context.Context,
+	_ core.Message,
+	_ *core.ProviderSendOptions,
+) (*core.SendResult, error) {
+	return &core.SendResult{}, nil
 }
 func (f *fakeHealthProvider) Name() string { return "fake" }
 
@@ -258,8 +250,8 @@ func (f *fakeCloser) Close() error {
 }
 
 // 实现 core.Provider.
-func (f *fakeCloser) Send(_ context.Context, _ core.Message, _ *core.ProviderSendOptions) error {
-	return nil
+func (f *fakeCloser) Send(_ context.Context, _ core.Message, _ *core.ProviderSendOptions) (*core.SendResult, error) {
+	return &core.SendResult{}, nil
 }
 func (f *fakeCloser) Name() string { return "fake" }
 

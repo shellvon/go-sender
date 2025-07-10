@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"regexp"
 	"slices"
@@ -51,26 +50,22 @@ type ResponseHandlerConfig struct {
 
 // ---------------- Core handler -------------------------------------------
 
-// NewResponseHandler builds a ResponseHandler based on cfg.
-func NewResponseHandler(cfg *ResponseHandlerConfig) ResponseHandler {
+// NewSendResultHandler builds a SendResultHandler based on cfg.
+func NewSendResultHandler(cfg *ResponseHandlerConfig) SendResultHandler {
 	if cfg == nil {
 		cfg = &ResponseHandlerConfig{CheckBody: false}
 	}
 
-	return func(resp *http.Response) error {
-		if resp == nil {
-			return errors.New("response is nil")
+	return func(result *SendResult) error {
+		if result == nil {
+			return errors.New("result is nil")
 		}
 
-		bodyBytes, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return fmt.Errorf("failed to read body: %w", err)
-		}
-		defer resp.Body.Close()
+		bodyBytes := result.Body
 
 		// 1. HTTP status
-		if !isStatusOK(cfg.AcceptStatus, resp.StatusCode) {
-			return fmt.Errorf("HTTP status %d not acceptable", resp.StatusCode)
+		if !isStatusOK(cfg.AcceptStatus, result.StatusCode) {
+			return fmt.Errorf("HTTP status %d not acceptable", result.StatusCode)
 		}
 		if !cfg.CheckBody {
 			return nil
@@ -79,7 +74,11 @@ func NewResponseHandler(cfg *ResponseHandlerConfig) ResponseHandler {
 		// Determine body type
 		bType := cfg.BodyType
 		if bType == BodyTypeNone {
-			bType = detectBodyType(resp.Header.Get("Content-Type"))
+			ct := ""
+			if result.Headers != nil {
+				ct = result.Headers.Get("Content-Type")
+			}
+			bType = detectBodyType(ct)
 		}
 
 		success, evalErr := evaluateSuccessSimple(cfg, bType, bodyBytes)

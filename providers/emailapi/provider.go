@@ -47,7 +47,7 @@ func (t *emailAPITransformer) Transform(
 	ctx context.Context,
 	msg core.Message,
 	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	emailMsg, ok := msg.(*Message)
 	if !ok {
 		return nil, nil, fmt.Errorf("unsupported message type for emailapi transformer: %T", msg)

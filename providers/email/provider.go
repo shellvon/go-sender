@@ -32,20 +32,26 @@ func New(config *Config) (*Provider, error) {
 	}, nil
 }
 
-// Send sends an email message.
-func (p *Provider) Send(ctx context.Context, message core.Message, _ *core.ProviderSendOptions) error {
+// Send sends an email message and returns the result.
+func (p *Provider) Send(
+	ctx context.Context,
+	message core.Message,
+	_ *core.ProviderSendOptions,
+) (*core.SendResult, error) {
 	emailMsg, ok := message.(*Message)
 	if !ok {
-		return core.NewParamError(fmt.Sprintf("invalid message type: expected *email.Message, got %T", message))
+		return nil, core.NewParamError(fmt.Sprintf("invalid message type: expected *email.Message, got %T", message))
 	}
 	if err := emailMsg.Validate(); err != nil {
-		return err
+		return nil, err
 	}
 	account, err := p.config.Select(ctx, nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return p.doSendEmail(ctx, account, emailMsg)
+	err = p.doSendEmail(ctx, account, emailMsg)
+
+	return &core.SendResult{StatusCode: 0}, err
 }
 
 func buildMailOptions(account *Account) []mail.Option {

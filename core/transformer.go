@@ -2,7 +2,6 @@ package core
 
 import (
 	"context"
-	"net/http"
 	"net/url"
 	"time"
 )
@@ -10,7 +9,7 @@ import (
 // HTTPTransformer is a generic interface for transforming messages to HTTP requests.
 // T must implement Selectable interface, usually *Account or other configuration type.
 type HTTPTransformer[T Selectable] interface {
-	Transform(ctx context.Context, msg Message, config T) (*HTTPRequestSpec, ResponseHandler, error)
+	Transform(ctx context.Context, msg Message, config T) (*HTTPRequestSpec, SendResultHandler, error)
 	CanTransform(msg Message) bool
 }
 
@@ -25,7 +24,6 @@ type HTTPRequestSpec struct {
 	Timeout     time.Duration     `json:"timeout"`
 }
 
-// ResponseHandler processes an HTTP response. Implementations must ensure resp.Body is CLOSED.
-// A common pattern is to call utils.ReadAndClose(resp) to obtain body bytes
-// then perform validation/decoding.
-type ResponseHandler func(resp *http.Response) error
+// SendResultHandler processes the SendResult produced after an HTTP request.
+// Implementations should inspect StatusCode, Headers, Body, etc., to determine success.
+type SendResultHandler func(result *SendResult) error

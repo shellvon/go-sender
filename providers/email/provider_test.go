@@ -192,7 +192,7 @@ func TestProviderSendInvalidMessageType(t *testing.T) {
 	// This will cause a type assertion error in the email provider
 	invalidMsg := &sms.Message{}
 
-	err = provider.Send(context.Background(), invalidMsg, nil)
+	_, err = provider.Send(context.Background(), invalidMsg, nil)
 	if err == nil {
 		t.Error("Expected error for invalid message type, got nil")
 	}
@@ -228,7 +228,7 @@ func TestProviderSendInvalidMessage(t *testing.T) {
 	// Create invalid message (empty recipients)
 	invalidMsg := email.NewMessage([]string{}, "Test body")
 
-	err = provider.Send(context.Background(), invalidMsg, nil)
+	_, err = provider.Send(context.Background(), invalidMsg, nil)
 	if err == nil {
 		t.Error("Expected error for invalid message, got nil")
 	}

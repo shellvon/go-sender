@@ -53,7 +53,7 @@ func (rt *resendTransformer) transform(
 	_ context.Context,
 	msg *Message,
 	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	// Build request parameters
 	params := map[string]interface{}{
 		"from":        msg.From,

@@ -101,7 +101,7 @@ func (t *cl253Transformer) transformSMS(
 	_ context.Context,
 	msg *Message,
 	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	// 构建基础参数
 	params := map[string]interface{}{
 		"account":     account.APIKey,

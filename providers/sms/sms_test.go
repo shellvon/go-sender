@@ -26,18 +26,22 @@ func TestSMSBuilderAndValidate(t *testing.T) {
 // FakeProvider implements core.Provider for testing.
 type FakeProvider struct{}
 
-func (f *FakeProvider) Send(_ context.Context, msg core.Message, _ ...*core.ProviderSendOptions) error {
+func (f *FakeProvider) Send(
+	_ context.Context,
+	msg core.Message,
+	_ ...*core.ProviderSendOptions,
+) (*core.SendResult, error) {
 	if msg == nil {
-		return core.NewParamError("msg is nil")
+		return nil, core.NewParamError("msg is nil")
 	}
-	return nil
+	return &core.SendResult{}, nil
 }
 func (f *FakeProvider) Name() string { return "fake" }
 
 func TestSMSSendWithFakeProvider(t *testing.T) {
 	provider := &FakeProvider{}
 	msg := sms.Aliyun().To("***REMOVED***").Content("Test").SignName("Sign").Build()
-	err := provider.Send(context.Background(), msg)
+	_, err := provider.Send(context.Background(), msg)
 	if err != nil {
 		t.Errorf("Send failed: %v", err)
 	}

@@ -11,6 +11,7 @@ import (
 	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/providers"
 	"github.com/shellvon/go-sender/providers/sms"
+	"github.com/shellvon/go-sender/utils"
 )
 
 func TestAliyun_Integration_SendTextSMS(t *testing.T) {
@@ -60,7 +61,11 @@ func TestAliyun_Integration_SendTextSMS(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DoRequest failed: %v", err)
 	}
-	if handleErr := handler(resp); handleErr != nil {
+	body, _, err := utils.ReadAndClose(resp)
+	if err != nil {
+		t.Fatalf("ReadAndClose failed: %v", err)
+	}
+	if handleErr := handler(&core.SendResult{StatusCode: resp.StatusCode, Body: body}); handleErr != nil {
 		t.Errorf("handler failed: %v", handleErr)
 	}
 }

@@ -23,7 +23,7 @@ func (wt *webhookTransformer) transform(
 	_ context.Context,
 	msg *Message,
 	endpoint *Endpoint,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	// Build URL with PathParams and QueryParams
 	url := endpoint.URL
 	if len(msg.PathParams) > 0 || len(msg.QueryParams) > 0 {
@@ -60,7 +60,7 @@ func (wt *webhookTransformer) transform(
 		Headers: headers,
 		Body:    msg.Body,
 	}
-	return reqSpec, core.NewResponseHandler(endpoint.ResponseConfig), nil
+	return reqSpec, core.NewSendResultHandler(endpoint.ResponseConfig), nil
 }
 
 func newWebhookTransformer() core.HTTPTransformer[*Endpoint] {

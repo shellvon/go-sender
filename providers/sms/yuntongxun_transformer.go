@@ -60,7 +60,7 @@ func (t *yuntongxunTransformer) transformSMS(
 	_ context.Context,
 	msg *Message,
 	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	// 验证参数
 	if len(msg.Mobiles) == 0 {
 		return nil, nil, NewProviderError(string(SubProviderYuntongxun), "MISSING_PARAM", "mobiles is required")
@@ -89,7 +89,7 @@ func (t *yuntongxunTransformer) transformSMS(
 func (t *yuntongxunTransformer) transformDomesticSMS(
 	msg *Message,
 	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	// 构建请求体
 	data := map[string]interface{}{
 		"to":         strings.Join(msg.Mobiles, ","),
@@ -124,7 +124,7 @@ func (t *yuntongxunTransformer) transformDomesticSMS(
 func (t *yuntongxunTransformer) transformIntlSMS(
 	msg *Message,
 	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	// 构建请求体
 	data := map[string]interface{}{
 		"mobile":  strings.Join(msg.Mobiles, ","),
@@ -174,7 +174,7 @@ func (t *yuntongxunTransformer) transformVoice(
 	_ context.Context,
 	msg *Message,
 	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	// 验证参数
 	if len(msg.Mobiles) == 0 {
 		return nil, nil, NewProviderError(string(SubProviderYuntongxun), "MISSING_PARAM", "mobiles is required")

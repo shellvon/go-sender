@@ -27,7 +27,7 @@ func (st *serverChanTransformer) transform(
 	_ context.Context,
 	msg *Message,
 	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	apiURL := buildAPIURL(account.APIKey)
 
 	body, err := json.Marshal(msg)

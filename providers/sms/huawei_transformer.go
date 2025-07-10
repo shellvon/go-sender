@@ -67,7 +67,7 @@ func (t *huaweiTransformer) transformSMS(
 	_ context.Context,
 	msg *Message,
 	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	// 格式化手机号
 	formattedMobiles := make([]string, len(msg.Mobiles))
 	for i, mobile := range msg.Mobiles {

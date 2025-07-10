@@ -63,7 +63,7 @@ func (t *juheTransformer) transformSMS(
 	_ context.Context,
 	msg *Message,
 	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	params := url.Values{}
 	params.Set("mobile", msg.Mobiles[0])
 	params.Set("tpl_id", msg.TemplateID)
@@ -98,7 +98,7 @@ func (t *juheTransformer) transformMMS(
 	_ context.Context,
 	msg *Message,
 	account *Account,
-) (*core.HTTPRequestSpec, core.ResponseHandler, error) {
+) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
 	params := url.Values{}
 	params.Set("mobile", strings.Join(msg.Mobiles, ","))
 	params.Set("tpl_id", msg.TemplateID)

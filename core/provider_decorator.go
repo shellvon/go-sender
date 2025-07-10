@@ -50,10 +50,22 @@ func NewProviderDecorator(provider Provider, middleware *SenderMiddleware, logge
 	return pd
 }
 
-// Send applies middleware in a layered fashion.
-func (pd *ProviderDecorator) Send(ctx context.Context, message Message, opts ...SendOption) error {
+// Send applies middleware, executes send synchronously and returns detailed SendResult.
+//
+// Behaviour notes:
+//  1. If SendOptions.Async == false (default)  ➜  The message is sent immediately and
+//     the returned *SendResult contains status-code / headers / body from the provider.
+//  2. If SendOptions.Async == true             ➜  The message is merely **enqueued** (or
+//     dispatched via a background goroutine when no queue is configured). In this case
+//     Send always returns (nil, err) where err reflects whether the enqueue
+//     operation succeeded. The final outcome will not be available here.
+//  3. To observe the actual async result, supply SendOptions.Callback. The callback
+//     will be invoked ONLY when processing occurs in-process (memory queue or goroutine
+//     fallback). Distributed queues executed by external workers cannot trigger the
+//     callback.
+func (pd *ProviderDecorator) Send(ctx context.Context, message Message, opts ...SendOption) (*SendResult, error) {
 	if ctx.Err() != nil {
-		return ctx.Err()
+		return nil, ctx.Err()
 	}
 
 	sendOpts := &SendOptions{}
@@ -63,29 +75,33 @@ func (pd *ProviderDecorator) Send(ctx context.Context, message Message, opts ...
 		}
 	}
 
-	// Validate: Callback only makes sense for asynchronous sends.
-	if sendOpts.Callback != nil && !sendOpts.Async {
-		return NewSenderError(ErrCodeInvalidConfig, "callback requires async send", nil)
-	}
-
 	if sendOpts.Async {
+		// Validate callback usage
+		if sendOpts.Callback != nil && !sendOpts.Async {
+			return nil, NewSenderError(ErrCodeInvalidConfig, "callback requires async send", nil)
+		}
+
 		// Enqueue chain: only enqueue and record metrics
 		err := pd.sendAsync(ctx, message, sendOpts)
 		pd.recordMetric(OperationEnqueue, message, err == nil, 0, 0)
-		return err
+		return nil, err
 	}
 
 	// Synchronous chain: rate limiting -> circuit breaker -> retry -> send -> metrics
 	startTime := time.Now()
-	err := pd.executeWithMiddleware(ctx, message, sendOpts)
+	result, err := pd.executeWithMiddleware(ctx, message, sendOpts)
 	pd.recordMetric(OperationSent, message, err == nil, time.Since(startTime), 0)
-	return err
+	return result, err
 }
 
 // Unified logic for consumer and synchronous chains.
-func (pd *ProviderDecorator) executeWithMiddleware(ctx context.Context, message Message, opts *SendOptions) error {
+func (pd *ProviderDecorator) executeWithMiddleware(
+	ctx context.Context,
+	message Message,
+	opts *SendOptions,
+) (*SendResult, error) {
 	if ctx.Err() != nil {
-		return ctx.Err()
+		return nil, ctx.Err()
 	}
 
 	if pd.logger != nil {
@@ -103,7 +119,7 @@ func (pd *ProviderDecorator) executeWithMiddleware(ctx context.Context, message 
 	// Rate limiting
 	if pd.middleware != nil && pd.middleware.RateLimiter != nil && !opts.DisableRateLimiter {
 		if !pd.middleware.RateLimiter.Allow() {
-			return NewSenderError(ErrCodeRateLimitExceeded, "rate limit exceeded", nil)
+			return nil, NewSenderError(ErrCodeRateLimitExceeded, "rate limit exceeded", nil)
 		}
 	}
 
@@ -126,7 +142,7 @@ func (pd *ProviderDecorator) executeWithMiddleware(ctx context.Context, message 
 		opts.Callback(result, err)
 	}
 
-	return err
+	return result, err
 }
 
 func (pd *ProviderDecorator) doSendWithRetry(
@@ -185,7 +201,8 @@ func (pd *ProviderDecorator) processQueueItem(ctx context.Context, item *QueueIt
 		opts.Callback = item.Callback
 	}
 
-	err = pd.executeWithMiddleware(restoredCtx, item.Message, opts)
+	result, err := pd.executeWithMiddleware(restoredCtx, item.Message, opts)
+	_ = result // result already delivered via internal callback if any
 	if err != nil {
 		if pd.logger != nil {
 			_ = pd.logger.Log(LevelError, "message", "execute with middleware failed", "error", err.Error())
@@ -230,10 +247,7 @@ func (pd *ProviderDecorator) sendAsync(ctx context.Context, message Message, opt
 				return
 			}
 		}
-		result, errSend := pd.executeSend(context.Background(), message, opts)
-		if opts.Callback != nil {
-			opts.Callback(result, errSend)
-		}
+		_, errSend := pd.executeWithMiddleware(context.Background(), message, opts)
 		if errSend != nil && pd.logger != nil {
 			_ = pd.logger.Log(
 				LevelError,
@@ -325,24 +339,9 @@ func (pd *ProviderDecorator) executeSend(ctx context.Context, message Message, o
 		HTTPClient: EnsureHTTPClient(opts.HTTPClient),
 	}
 
-	// Execute the actual send operation
-	result, err := pd.callProvider(ctx, message, providerOpts)
+	result, err := pd.Provider.Send(ctx, message, providerOpts)
 
 	return result, err
-}
-
-// callProvider calls the provider's Send method and returns the result.
-// If the provider implements ResultProvider, it will use SendWithResult.
-func (pd *ProviderDecorator) callProvider(
-	ctx context.Context,
-	message Message,
-	opts *ProviderSendOptions,
-) (*SendResult, error) {
-	if rp, ok := pd.Provider.(ResultProvider); ok {
-		return rp.SendWithResult(ctx, message, opts)
-	}
-	err := pd.Provider.Send(ctx, message, opts)
-	return nil, err
 }
 
 // startQueueProcessor starts a goroutine to continuously dequeue and process messages.
