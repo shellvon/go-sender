@@ -104,7 +104,7 @@ msg := sms.Aliyun().
 
 ```go
 provider, _ := sms.New(&cfg)
-_ = provider.Send(context.Background(), msg, nil)
+_, _ = provider.Send(context.Background(), msg, nil) // provider.Send already returns (*SendResult, error)
 ```
 
 ### 2. Using GoSender
@@ -113,14 +113,14 @@ _ = provider.Send(context.Background(), msg, nil)
 sender := gosender.NewSender()
 provider, _ := sms.New(&cfg)
 sender.RegisterProvider(core.ProviderTypeSMS, provider, nil)
-_ = sender.Send(context.Background(), msg)
+_, _ = sender.SendWithResult(context.Background(), msg)
 ```
 
 ---
 
-## SendVia Helper
+## Per-Account Send (WithSendAccount)
 
-`SendVia(accountName, msg)` lets you choose a specific account (e.g., Aliyun-cn vs Aliyun-intl) at runtime:
+Use `core.WithSendAccount("accountName")` to pick a specific account (e.g., Aliyun-cn vs Aliyun-intl) at runtime:
 
 ```go
 msg := sms.Aliyun().
@@ -129,11 +129,13 @@ msg := sms.Aliyun().
     TemplateID("SMS_1234567").
     Build()
 
-// try primary aliyun account first
-if err := sender.SendVia("aliyun-main", msg); err != nil {
-    // fallback to backup account (maybe in another region)
-    _ = sender.SendVia("aliyun-backup", msg)
+ctx := context.Background()
+
+// 先尝试主账号发送
+if _, err := sender.SendWithResult(ctx, msg, core.WithSendAccount("aliyun-main")); err != nil {
+    // 失败后回退到备用账号
+    _, _ = sender.SendWithResult(ctx, msg, core.WithSendAccount("aliyun-backup"))
 }
 ```
 
-SendVia only switches between accounts **inside the SMS provider**; it does not allow cross-provider reuse of one message instance.
+`core.WithSendAccount()` only switches between accounts **inside the SMS provider**; it does not allow cross-provider reuse of one message instance.

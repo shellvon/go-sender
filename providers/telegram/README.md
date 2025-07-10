@@ -86,9 +86,9 @@ _ = sender.Send(context.Background(), msg)
 
 ---
 
-## SendVia Helper
+## Per-Account Send (WithSendAccount)
 
-`SendVia(accountName, msg)` lets you choose a specific bot account at runtime:
+Use `core.WithSendAccount("accountName")` to choose a specific bot account at runtime:
 
 ```go
 msg := telegram.Text().
@@ -96,14 +96,14 @@ msg := telegram.Text().
     Text("Hello from go-sender!").
     Build()
 
-// try primary bot account first
-if err := sender.SendVia("main-bot", msg); err != nil {
-    // fallback to backup bot account
-    _ = sender.SendVia("backup-bot", msg)
+ctx := context.Background()
+
+if _, err := sender.SendWithResult(ctx, msg, core.WithSendAccount("main-bot")); err != nil {
+    _, _ = sender.SendWithResult(ctx, msg, core.WithSendAccount("backup-bot"))
 }
 ```
 
-SendVia only switches between accounts **inside the Telegram provider**; it does not allow cross-provider reuse of one message instance.
+`core.WithSendAccount()` only switches between accounts **inside the Telegram provider**; it does not allow cross-provider reuse of one message instance.
 
 ---
 

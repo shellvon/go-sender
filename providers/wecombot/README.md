@@ -132,7 +132,7 @@ import (
     "github.com/shellvon/go-sender/providers/wecombot"
 )
 
-s := gosender.NewSender(nil)
+s := gosender.NewSender()
 wecomProvider, err := wecombot.New(config)
 if err != nil {
     log.Fatalf("Failed to create WeCom Bot provider: %v", err)
