@@ -19,7 +19,7 @@
 - 🪶 **轻量**：纯 Go 实现，零臃肿，极少依赖。
 - 🧩 **灵活**：即插即用，支持短信、邮件、IM、Webhook 等。
 - 🚀 **简单**：几行代码即可发消息。
-- 🔌 **可扩展**：轻松添加新渠道或自定义功能。
+- 🔌 **可扩展**：轻松添加新渠道、**Hook**、中间件。
 
 ---
 
@@ -77,6 +77,26 @@ func main() {
     }
     log.Printf("RequestID: %s, Provider: %s, 耗时: %v", res.RequestID, res.ProviderName, res.Elapsed)
 }
+
+// --- Hook 最小示例 ---------------------------------------------------
+
+// 1. 全局 BeforeHook：所有消息发送前打印日志
+mw := &core.SenderMiddleware{}
+mw.UseBeforeHook(func(_ context.Context, m core.Message, _ *core.SendOptions) error {
+    log.Printf("准备发送 %s", m.MsgID())
+    return nil
+})
+
+// 注册 Provider 时带上带 Hook 的 middleware
+sender.RegisterProvider(core.ProviderTypeSMS, aliyunProvider, mw)
+
+// 2. 单次发送级别 AfterHook：仅对这条消息生效
+sender.Send(context.Background(), msg,
+    core.WithSendAfterHooks(func(_ context.Context, _ core.Message, _ *core.SendOptions, _ *core.SendResult, err error) {
+        log.Printf("发送完成，err=%v", err)
+    }),
+)
+
 ```
 
 安装：

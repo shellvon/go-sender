@@ -46,6 +46,18 @@ mw := &core.SenderMiddleware{
 sender.RegisterProvider(core.ProviderTypeSMS, smsProvider, mw)
 ```
 
+## Hooks vs Middleware
+
+| Aspect          | Middleware (RateLimiter / Retry …)                                | Hooks (Before / After)                                     |
+| --------------- | ----------------------------------------------------------------- | ---------------------------------------------------------- |
+| Purpose         | Infrastructure & reliability (rate-limit, retry, circuit-breaker) | Lightweight business extensions: logging, tracing, masking |
+| Lifecycle       | Long-lived, initialised once                                      | Executed on every send                                     |
+| Can abort flow? | Depends on implementation                                         | **BeforeHook can abort**                                   |
+| Alters result?  | May change result (e.g. Retry)                                    | AfterHook never alters result                              |
+
+Choose **Hooks** for logging, tracing, data-masking, etc.
+Choose **Middleware** for flow-control features like rate-limit, retry or circuit-breaker.
+
 ---
 
 **See [advanced.md](./advanced.md) for more customization.**

@@ -19,7 +19,7 @@ See our [Project Roadmap & Task Tracking](https://github.com/shellvon/go-sender/
 - 🪶 **Lightweight**: Pure Go, zero bloat, minimal dependencies.
 - 🧩 **Flexible**: Plug-and-play for SMS, Email, IM, Webhook, and more.
 - 🚀 **Simple**: Send a message in just a few lines.
-- 🔌 **Extensible**: Add new channels or features easily.
+- 🔌 **Extensible**: Add new channels, middleware **and Before/After Hooks** easily.
 
 ---
 
@@ -81,6 +81,27 @@ func main() {
 	}
 	log.Printf("request id: %s, provider: %s, cost: %v", res.RequestID, res.ProviderName, res.Elapsed)
 }
+
+// --- Mini Hook Demo ---------------------------------------------------
+
+// Add a global before-hook: run for every message
+senderMiddleware := &core.SenderMiddleware{}
+senderMiddleware.UseBeforeHook(func(_ context.Context, m core.Message, _ *core.SendOptions) error {
+   log.Printf("about to send %s", m.MsgID())
+   return nil
+})
+
+// Register provider with custom middleware containing the hook
+sender.RegisterProvider(core.ProviderTypeSMS, aliyunProvider, senderMiddleware)
+
+// Or add a per-request hook only for this message:
+_, _ = sender.SendWithResult(
+    context.Background(), msg,
+    core.WithSendAfterHooks(func(_ context.Context, _ core.Message, _ *core.SendOptions, _ *core.SendResult, err error) {
+        log.Printf("done, err=%v", err)
+    }),
+)
+
 ```
 
 Install:

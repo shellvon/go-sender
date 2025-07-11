@@ -94,6 +94,59 @@ func (pd *ProviderDecorator) Send(ctx context.Context, message Message, opts ...
 	return result, err
 }
 
+// callBeforeHooks executes global and per-request BeforeHooks in order.
+// Returns error immediately when any hook fails.
+func (pd *ProviderDecorator) callBeforeHooks(
+	ctx context.Context,
+	msg Message,
+	opts *SendOptions,
+) error {
+	if pd.middleware != nil {
+		for _, h := range pd.middleware.beforeHooks {
+			if h == nil {
+				continue
+			}
+			if err := h(ctx, msg, opts); err != nil {
+				return err
+			}
+		}
+	}
+
+	for _, h := range opts.BeforeHooks {
+		if h == nil {
+			continue
+		}
+		if err := h(ctx, msg, opts); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// callAfterHooks executes global then per-request AfterHooks.
+func (pd *ProviderDecorator) callAfterHooks(
+	ctx context.Context,
+	msg Message,
+	opts *SendOptions,
+	res *SendResult,
+	sendErr error,
+) {
+	if pd.middleware != nil {
+		for _, h := range pd.middleware.afterHooks {
+			if h == nil {
+				continue
+			}
+			h(ctx, msg, opts, res, sendErr)
+		}
+	}
+	for _, h := range opts.AfterHooks {
+		if h == nil {
+			continue
+		}
+		h(ctx, msg, opts, res, sendErr)
+	}
+}
+
 // Unified logic for consumer and synchronous chains.
 func (pd *ProviderDecorator) executeWithMiddleware(
 	ctx context.Context,
@@ -102,6 +155,10 @@ func (pd *ProviderDecorator) executeWithMiddleware(
 ) (*SendResult, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
+	}
+
+	if err := pd.callBeforeHooks(ctx, message, opts); err != nil {
+		return nil, err
 	}
 
 	if pd.logger != nil {
@@ -143,6 +200,8 @@ func (pd *ProviderDecorator) executeWithMiddleware(
 	if opts.Async && opts.Callback != nil {
 		opts.Callback(result, err)
 	}
+
+	pd.callAfterHooks(ctx, message, opts, result, err)
 
 	return result, err
 }
