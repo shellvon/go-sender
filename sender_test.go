@@ -330,3 +330,118 @@ func TestSender_UnregisterProvider_AfterClose(t *testing.T) {
 		t.Error("expected error when unregistering after sender closed")
 	}
 }
+
+type senderDummyMsg struct{ core.DefaultMessage }
+
+func (senderDummyMsg) Validate() error                 { return nil }
+func (senderDummyMsg) ProviderType() core.ProviderType { return "dummy" }
+func (senderDummyMsg) GetSubProvider() string          { return "" }
+
+// provider that marks call.
+type hookRecordProvider struct {
+	called  *bool
+	sendErr error
+}
+
+func (r *hookRecordProvider) Send(
+	_ context.Context,
+	_ core.Message,
+	_ *core.ProviderSendOptions,
+) (*core.SendResult, error) {
+	if r.called != nil {
+		*r.called = true
+	}
+	if r.sendErr != nil {
+		return nil, r.sendErr
+	}
+	return &core.SendResult{}, nil
+}
+func (*hookRecordProvider) Name() string { return "hook-rec" }
+
+func TestSender_HookExecutionOrder(t *testing.T) {
+	order := []string{}
+
+	mw := &core.SenderMiddleware{}
+	mw.UseBeforeHook(func(_ context.Context, _ core.Message, _ *core.SendOptions) error {
+		order = append(order, "global-before")
+		return nil
+	})
+	mw.UseAfterHook(func(_ context.Context, _ core.Message, _ *core.SendOptions, _ *core.SendResult, _ error) {
+		order = append(order, "global-after")
+	})
+
+	s := gosender.NewSender()
+	called := false
+	s.RegisterProvider("dummy", &hookRecordProvider{called: &called}, mw)
+
+	perBefore := func(_ context.Context, _ core.Message, _ *core.SendOptions) error {
+		order = append(order, "per-before")
+		return nil
+	}
+	perAfter := func(_ context.Context, _ core.Message, _ *core.SendOptions, _ *core.SendResult, _ error) {
+		order = append(order, "per-after")
+	}
+
+	_, err := s.SendWithResult(
+		context.Background(),
+		&senderDummyMsg{},
+		core.WithSendBeforeHooks(perBefore),
+		core.WithSendAfterHooks(perAfter),
+	)
+	if err != nil {
+		t.Fatalf("send failed: %v", err)
+	}
+	if !called {
+		t.Fatalf("provider not called")
+	}
+
+	expected := []string{"global-before", "per-before", "global-after", "per-after"}
+	for i, v := range expected {
+		if i >= len(order) || order[i] != v {
+			t.Fatalf("hook order mismatch: got %v, want %v", order, expected)
+		}
+	}
+}
+
+func TestSender_BeforeHookAbort(t *testing.T) {
+	mw := &core.SenderMiddleware{}
+	abortErr := errors.New("abort")
+	mw.UseBeforeHook(func(_ context.Context, _ core.Message, _ *core.SendOptions) error {
+		return abortErr
+	})
+
+	s := gosender.NewSender()
+	called := false
+	s.RegisterProvider("dummy", &hookRecordProvider{called: &called}, mw)
+
+	_, err := s.SendWithResult(context.Background(), &senderDummyMsg{})
+	if !errors.Is(err, abortErr) {
+		t.Fatalf("expected abort error, got %v", err)
+	}
+	if called {
+		t.Fatalf("provider should not be called after abort")
+	}
+}
+
+func TestSender_HookAfterOnError(t *testing.T) {
+	errProvider := errors.New("fail")
+	mw := &core.SenderMiddleware{}
+	afterCalled := false
+	mw.UseAfterHook(func(_ context.Context, _ core.Message, _ *core.SendOptions, _ *core.SendResult, err error) {
+		afterCalled = true
+		if err == nil {
+			t.Errorf("expected error in afterHook, got nil")
+		}
+	})
+
+	s := gosender.NewSender()
+	s.RegisterProvider("dummy", &hookRecordProvider{called: nil, sendErr: errProvider}, mw)
+
+	_, err := s.SendWithResult(context.Background(), &senderDummyMsg{})
+	if !errors.Is(err, errProvider) {
+		t.Fatalf("expected provider error, got %v", err)
+	}
+	if !afterCalled {
+		t.Fatalf("afterHook not executed on error")
+	}
+}

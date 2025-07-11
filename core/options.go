@@ -198,6 +198,12 @@ type SendOptions struct {
 	// Only affects HTTP-based providers; SMTP/email providers are not affected.
 	// This client is optional.
 	HTTPClient *http.Client
+
+	// ---- Per-request hooks (not serialized) --------------------------
+	// BeforeHooks are executed after global SenderMiddleware.beforeHooks but before the send attempt.
+	BeforeHooks []BeforeHook `json:"-"`
+	// AfterHooks are executed after global SenderMiddleware.afterHooks.
+	AfterHooks []AfterHook `json:"-"`
 }
 
 // NotificationMiddleware holds configurations for various notification middlewares.
@@ -454,6 +460,20 @@ func WithSendRetryPolicy(policy *RetryPolicy) SendOption {
 func WithSendHTTPClient(client *http.Client) SendOption {
 	return func(opts *SendOptions) {
 		opts.HTTPClient = EnsureHTTPClient(client)
+	}
+}
+
+// WithSendBeforeHooks appends per-request BeforeHooks.
+func WithSendBeforeHooks(hooks ...BeforeHook) SendOption {
+	return func(opts *SendOptions) {
+		opts.BeforeHooks = append(opts.BeforeHooks, hooks...)
+	}
+}
+
+// WithSendAfterHooks appends per-request AfterHooks.
+func WithSendAfterHooks(hooks ...AfterHook) SendOption {
+	return func(opts *SendOptions) {
+		opts.AfterHooks = append(opts.AfterHooks, hooks...)
 	}
 }
 

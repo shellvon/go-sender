@@ -187,6 +187,29 @@ err = sender.Send(context.Background(), msg, core.WithSendHTTPClient(client))
 - **Monitoring**: Add request/response logging and metrics
 - **Caching**: Implement response caching for repeated requests
 
+## 🪝 Using Hooks (Before / After)
+
+Need to run custom logic before or after each send? go-sender provides **Hooks**:
+
+```go
+mw := &core.SenderMiddleware{}
+mw.UseBeforeHook(func(_ context.Context, m core.Message, _ *core.SendOptions) error {
+    fmt.Println("GLOBAL BEFORE", m.MsgID())
+    return nil
+})
+
+sender.RegisterProvider(core.ProviderTypeSMS, smsProvider, mw)
+
+// Per-request hooks:
+sender.Send(ctx, msg,
+    core.WithSendAfterHooks(func(_ context.Context, _ core.Message, _ *core.SendOptions, _ *core.SendResult, err error) {
+        fmt.Println("PER-REQ AFTER, err:", err)
+    }),
+)
+```
+
+Execution order: `global before → per-request before → send → global after → per-request after`.
+
 ## 📚 Next Steps
 
 - [Core Concepts](./concepts.md)
