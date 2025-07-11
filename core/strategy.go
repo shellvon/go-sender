@@ -246,12 +246,17 @@ func (h *HealthBasedStrategy) Select(items []Selectable) Selectable {
 	// Check health status, select healthy items
 	healthyItems := make([]Selectable, 0)
 	for _, item := range enabledItems {
-		if _, ok := item.(HealthCheckable); ok {
-			if health := h.healthChecker.HealthCheck(context.Background()); health.Status == HealthStatusHealthy {
-				healthyItems = append(healthyItems, item)
-			}
-		} else {
-			// If item doesn't support health check, consider it healthy
+		var health *HealthCheck
+		// 1. 若 item 自身实现了 HealthCheckable，则直接调用
+		if hcItem, ok := item.(HealthCheckable); ok {
+			health = hcItem.HealthCheck(context.Background())
+		} else if h.healthChecker != nil {
+			// 2. 否则退回到全局/外部注入的 healthChecker（如果存在）
+			health = h.healthChecker.HealthCheck(context.Background())
+		}
+
+		// Treat nil/unknown/degraded as unhealthy; 仅保留 healthy
+		if health == nil || health.Status == HealthStatusHealthy {
 			healthyItems = append(healthyItems, item)
 		}
 	}

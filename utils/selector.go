@@ -1,5 +1,3 @@
-// TODO: API documentation not understood, temporarily not implemented
-//
 //revive:disable:var-naming
 package utils
 
