@@ -11,13 +11,13 @@ type CLIFlags struct {
 	// Configuration
 	ConfigFile string
 	DryRun     bool
-	Verbose    bool
 	LogLevel   string
 	Output     string // json, yaml, console
 
 	// Provider Selection
 	Provider string
 	Account  string
+	Strategy string // provider selection strategy
 
 	// Message Content
 	To             []string
@@ -34,6 +34,7 @@ type CLIFlags struct {
 	// Advanced Options
 	Priority int
 	Timeout  time.Duration
+	Metadata map[string]string // additional metadata
 }
 
 // OutputFormat represents the output format type

@@ -1,50 +1,44 @@
-# Enhanced go-sender CLI Configuration Example
-# This file demonstrates all supported providers and their configuration options
-
-# Global settings
-log_level: INFO
-
 # Provider accounts configuration
 accounts:
   # SMS Providers
-  - provider: sms
-    subtype: aliyun
-    name: aliyun-main
-    api_key: "LTAI4G..."  # AccessKey ID
-    api_secret: "xxx..."  # AccessKey Secret
-    sign_name: "MyApp"
-    region: "cn-hangzhou"
-    enabled: true
-    weight: 10
+  # - provider: sms
+  #   subtype: aliyun
+  #   name: aliyun-main
+  #   api_key: "LTAI4G..." # AccessKey ID
+  #   api_secret: "xxx..." # AccessKey Secret
+  #   sign_name: "MyApp"
+  #   region: "cn-hangzhou"
+  #   enabled: true
+  #   weight: 10
 
-  - provider: sms
-    subtype: tencent
-    name: tencent-backup
-    api_key: "AKIDxxx..."  # SecretId
-    api_secret: "xxx..."   # SecretKey
-    sign_name: "MyApp"
-    app_id: "1400xxx"
-    region: "ap-guangzhou"
-    enabled: true
-    weight: 5
+  # - provider: sms
+  #   subtype: tencent
+  #   name: tencent-backup
+  #   api_key: "AKIDxxx..." # SecretId
+  #   api_secret: "xxx..." # SecretKey
+  #   sign_name: "MyApp"
+  #   app_id: "1400xxx"
+  #   region: "ap-guangzhou"
+  #   enabled: true
+  #   weight: 5
 
-  - provider: sms
-    subtype: huawei
-    name: huawei-sms
-    api_key: "xxx"         # App Key
-    api_secret: "xxx"      # App Secret
-    sign_name: "MyApp"
-    sender: "10690xxx"
-    enabled: false
-    weight: 3
+  # - provider: sms
+  #   subtype: huawei
+  #   name: huawei-sms
+  #   api_key: "xxx" # App Key
+  #   api_secret: "xxx" # App Secret
+  #   sign_name: "MyApp"
+  #   sender: "10690xxx"
+  #   enabled: false
+  #   weight: 3
 
   # Email Providers
   - provider: email
     name: smtp-gmail
     host: "smtp.gmail.com"
     port: 587
-    api_key: "user@gmail.com"    # Username
-    api_secret: "app_password"   # App Password
+    api_key: "user@gmail.com" # Username
+    api_secret: "app_password" # App Password
     from: "noreply@myapp.com"
     enabled: true
     weight: 10
@@ -59,91 +53,91 @@ accounts:
     enabled: false
     weight: 5
 
-  # DingTalk Bot
-  - provider: dingtalk
-    name: dingtalk-alerts
-    api_key: "webhook_token_here"
-    api_secret: "secret_here"  # Optional signing secret
-    enabled: true
-    weight: 10
+  # # DingTalk Bot
+  # - provider: dingtalk
+  #   name: dingtalk-alerts
+  #   api_key: "webhook_token_here"
+  #   api_secret: "secret_here" # Optional signing secret
+  #   enabled: true
+  #   weight: 10
 
-  # Telegram Bot
-  - provider: telegram
-    name: telegram-bot
-    api_key: "bot_token_here"
-    enabled: true
-    weight: 10
+  # # Telegram Bot
+  # - provider: telegram
+  #   name: telegram-bot
+  #   api_key: "bot_token_here"
+  #   enabled: true
+  #   weight: 10
 
-  # Lark (Feishu) Bot
-  - provider: lark
-    name: lark-notifications
-    api_key: "webhook_token_here"
-    api_secret: "signing_secret"  # Optional
-    enabled: true
-    weight: 10
+  # # Lark (Feishu) Bot
+  # - provider: lark
+  #   name: lark-notifications
+  #   api_key: "webhook_token_here"
+  #   api_secret: "signing_secret" # Optional
+  #   enabled: true
+  #   weight: 10
 
-  # WeComBot (Enterprise WeChat)
-  - provider: wecombot
-    name: wecom-alerts
-    api_key: "webhook_key_here"
-    enabled: true
-    weight: 10
+  # # WeComBot (Enterprise WeChat)
+  # - provider: wecombot
+  #   name: wecom-alerts
+  #   api_key: "webhook_key_here"
+  #   enabled: true
+  #   weight: 10
 
-  # Webhook Endpoints
-  - provider: webhook
-    name: slack-webhook
-    url: "https://hooks.slack.com/services/xxx/xxx/xxx"
-    method: "POST"
-    headers:
-      Content-Type: "application/json"
-      Authorization: "Bearer token_here"
-    enabled: true
-    weight: 10
+  # # Webhook Endpoints
+  # - provider: webhook
+  #   name: slack-webhook
+  #   url: "https://hooks.slack.com/services/xxx/xxx/xxx"
+  #   method: "POST"
+  #   headers:
+  #     Content-Type: "application/json"
+  #     Authorization: "Bearer token_here"
+  #   enabled: true
+  #   weight: 10
 
-  - provider: webhook
-    name: discord-webhook
-    url: "https://discord.com/api/webhooks/xxx/xxx"
-    method: "POST"
-    headers:
-      Content-Type: "application/json"
-    enabled: true
-    weight: 8
+  # - provider: webhook
+  #   name: discord-webhook
+  #   url: "https://discord.com/api/webhooks/xxx/xxx"
+  #   method: "POST"
+  #   headers:
+  #     Content-Type: "application/json"
+  #   enabled: true
+  #   weight: 8
 
-  # ServerChan
-  - provider: serverchan
-    name: serverchan-notify
-    api_key: "sckey_here"
-    enabled: true
-    weight: 5
+  # # ServerChan
+  # - provider: serverchan
+  #   name: serverchan-notify
+  #   api_key: "sckey_here"
+  #   enabled: true
+  #   weight: 5
 
-  # EmailAPI Providers
-  - provider: emailapi
-    subtype: resend
-    name: resend-api
-    api_key: "re_xxx"
-    from: "noreply@myapp.com"
-    enabled: false
-    weight: 10
+  # # EmailAPI Providers
+  # - provider: emailapi
+  #   subtype: resend
+  #   name: resend-api
+  #   api_key: "re_xxx"
+  #   from: "noreply@myapp.com"
+  #   enabled: false
+  #   weight: 10
 
-  - provider: emailapi
-    subtype: emailjs
-    name: emailjs-service
-    api_key: "service_id"
-    api_secret: "template_id"
-    user_id: "user_id"
-    enabled: false
-    weight: 8
+  # - provider: emailapi
+  #   subtype: emailjs
+  #   name: emailjs-service
+  #   api_key: "service_id"
+  #   api_secret: "template_id"
+  #   user_id: "user_id"
+  #   enabled: false
+  #   weight: 8
 
 # Example CLI flag defaults (can be overridden by command line)
 # These settings can also be set via environment variables with GO_SENDER_ prefix
 # For example: GO_SENDER_OUTPUT=json, GO_SENDER_VERBOSE=true
 
 # Default output format
-output: console  # console, json, yaml
+output: console # console, json, yaml
 
 # Default logging
 verbose: false
-log_level: INFO  # DEBUG, INFO, WARN, ERROR
+log_level: DEBUG # DEBUG, INFO, WARN, ERROR
 
 # Default provider selection strategy
 # strategy: round_robin  # round_robin, weighted, failover

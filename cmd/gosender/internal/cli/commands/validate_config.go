@@ -20,9 +20,15 @@ are correct and can be loaded successfully. This helps identify configuration
 issues before attempting to send messages.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Load configuration
-			conf, err := configLoader.LoadConfig()
+			conf, configSource, err := configLoader.LoadConfig()
 			if err != nil {
 				return fmt.Errorf("failed to load configuration: %w", err)
+			}
+			// 输出配置文件信息
+			logLevel := conf.LogLevel
+			if logLevel == "DEBUG" {
+				fmt.Printf("Using configuration from: %s\n", configSource)
+				fmt.Printf("Log level: %s\n", logLevel)
 			}
 
 			// Validate configuration

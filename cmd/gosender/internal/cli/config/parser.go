@@ -9,6 +9,7 @@ import (
 	"github.com/shellvon/go-sender/providers/email"
 	"github.com/shellvon/go-sender/providers/sms"
 	"github.com/shellvon/go-sender/providers/webhook"
+	"github.com/shellvon/go-sender/providers/wecombot"
 )
 
 // AccountParser handles parsing of account configurations without mapstructure
@@ -191,12 +192,43 @@ func (p *AccountParser) ParseWebhookEndpoint(raw map[string]interface{}) (*webho
 	return ep, nil
 }
 
+// ParseWeComBotAccount parses WeComBot account configuration
+func (p *AccountParser) ParseWeComBotAccount(raw map[string]interface{}) (*wecombot.Account, error) {
+	acc := &wecombot.Account{}
+
+	// Parse AccountMeta fields
+	if provider, ok := raw["provider"].(string); ok {
+		acc.Provider = provider
+	}
+	if name, ok := raw["name"].(string); ok {
+		acc.Name = name
+	}
+	if weight, ok := raw["weight"]; ok {
+		if w, ok := weight.(int); ok {
+			acc.Weight = w
+		} else if w, ok := weight.(float64); ok {
+			acc.Weight = int(w)
+		}
+	}
+	if disabled, ok := raw["disabled"].(bool); ok {
+		acc.Disabled = disabled
+	}
+
+	// Parse Credentials fields
+	if apiKey, ok := raw["api_key"].(string); ok {
+		acc.APIKey = apiKey
+	}
+
+	return acc, nil
+}
+
 // ParseAccounts parses all accounts from configuration
 func (p *AccountParser) ParseAccounts(config *cli.RootConfig) (
 	[]*sms.Account,
 	[]*email.Account,
 	[]*dingtalk.Account,
 	[]*webhook.Endpoint,
+	[]*wecombot.Account,
 	error,
 ) {
 	var (
@@ -204,47 +236,55 @@ func (p *AccountParser) ParseAccounts(config *cli.RootConfig) (
 		emailAccounts    []*email.Account
 		dingtalkAccounts []*dingtalk.Account
 		webhookEndpoints []*webhook.Endpoint
+		wecomAccounts    []*wecombot.Account
 	)
 
 	for i, raw := range config.Accounts {
 		provider, ok := raw["provider"].(string)
 		if !ok || provider == "" {
-			return nil, nil, nil, nil, fmt.Errorf("accounts[%d] missing provider field", i)
+			return nil, nil, nil, nil, nil, fmt.Errorf("accounts[%d] missing provider field", i)
 		}
 
 		switch provider {
 		case string(core.ProviderTypeSMS):
 			acc, err := p.ParseSMSAccount(raw)
 			if err != nil {
-				return nil, nil, nil, nil, fmt.Errorf("parse sms account at index %d: %w", i, err)
+				return nil, nil, nil, nil, nil, fmt.Errorf("parse sms account at index %d: %w", i, err)
 			}
 			smsAccounts = append(smsAccounts, acc)
 
 		case string(core.ProviderTypeEmail):
 			acc, err := p.ParseEmailAccount(raw)
 			if err != nil {
-				return nil, nil, nil, nil, fmt.Errorf("parse email account at index %d: %w", i, err)
+				return nil, nil, nil, nil, nil, fmt.Errorf("parse email account at index %d: %w", i, err)
 			}
 			emailAccounts = append(emailAccounts, acc)
 
 		case string(core.ProviderTypeDingtalk):
 			acc, err := p.ParseDingTalkAccount(raw)
 			if err != nil {
-				return nil, nil, nil, nil, fmt.Errorf("parse dingtalk account at index %d: %w", i, err)
+				return nil, nil, nil, nil, nil, fmt.Errorf("parse dingtalk account at index %d: %w", i, err)
 			}
 			dingtalkAccounts = append(dingtalkAccounts, acc)
 
 		case string(core.ProviderTypeWebhook):
 			ep, err := p.ParseWebhookEndpoint(raw)
 			if err != nil {
-				return nil, nil, nil, nil, fmt.Errorf("parse webhook endpoint at index %d: %w", i, err)
+				return nil, nil, nil, nil, nil, fmt.Errorf("parse webhook endpoint at index %d: %w", i, err)
 			}
 			webhookEndpoints = append(webhookEndpoints, ep)
 
+		case string(core.ProviderTypeWecombot):
+			acc, err := p.ParseWeComBotAccount(raw)
+			if err != nil {
+				return nil, nil, nil, nil, nil, fmt.Errorf("parse wecombot account at index %d: %w", i, err)
+			}
+			wecomAccounts = append(wecomAccounts, acc)
+
 		default:
-			return nil, nil, nil, nil, fmt.Errorf("unsupported provider type: %s", provider)
+			return nil, nil, nil, nil, nil, fmt.Errorf("unsupported provider type: %s", provider)
 		}
 	}
 
-	return smsAccounts, emailAccounts, dingtalkAccounts, webhookEndpoints, nil
+	return smsAccounts, emailAccounts, dingtalkAccounts, webhookEndpoints, wecomAccounts, nil
 }

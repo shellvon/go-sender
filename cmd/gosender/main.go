@@ -26,13 +26,11 @@ dry-run mode, and structured output formats.`,
 
 	// Global flags
 	root.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file path (default: auto-discover)")
-	root.PersistentFlags().Bool("verbose", false, "enable verbose output")
 	root.PersistentFlags().String("log-level", "INFO", "log level (DEBUG, INFO, WARN, ERROR)")
 	root.PersistentFlags().String("output", "console", "output format (console, json, yaml)")
 
 	// Bind global flags to viper
 	viper.BindPFlag("config", root.PersistentFlags().Lookup("config"))
-	viper.BindPFlag("verbose", root.PersistentFlags().Lookup("verbose"))
 	viper.BindPFlag("log-level", root.PersistentFlags().Lookup("log-level"))
 	viper.BindPFlag("output", root.PersistentFlags().Lookup("output"))
 

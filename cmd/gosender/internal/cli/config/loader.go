@@ -47,7 +47,7 @@ func (c *ConfigLoader) BindFlags(cmd *cobra.Command) error {
 }
 
 // LoadConfig loads configuration from file, supporting multiple formats with priority
-func (c *ConfigLoader) LoadConfig() (*cli.RootConfig, error) {
+func (c *ConfigLoader) LoadConfig() (*cli.RootConfig, string, error) {
 	// Use global viper instance for better integration with CLI flags
 	globalViper := viper.GetViper()
 
@@ -58,28 +58,32 @@ func (c *ConfigLoader) LoadConfig() (*cli.RootConfig, error) {
 	}
 
 	var err error
+	var actualConfigFile string
+
 	if configFile != "" {
 		// Use specified config file with global viper
 		err = c.loadSpecificConfigFileWithViper(configFile, globalViper)
+		actualConfigFile = configFile
 	} else {
 		// Implement configuration file discovery with priority (YAML > JSON)
-		err = c.discoverAndLoadConfigFileWithViper(globalViper)
+		actualConfigFile, err = c.discoverAndLoadConfigFileWithViper(globalViper)
 	}
 
 	if err != nil {
 		// If no config file found, try to load from environment variables only
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-			return c.loadFromEnvWithViper(globalViper)
+			config, envErr := c.loadFromEnvWithViper(globalViper)
+			return config, "environment variables", envErr
 		}
-		return nil, fmt.Errorf("failed to read config file: %w", err)
+		return nil, "", fmt.Errorf("failed to read config file: %w", err)
 	}
 
 	var config cli.RootConfig
 	if err := globalViper.Unmarshal(&config); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
+		return nil, actualConfigFile, fmt.Errorf("failed to unmarshal config: %w", err)
 	}
 
-	return &config, nil
+	return &config, actualConfigFile, nil
 }
 
 // loadSpecificConfigFileWithViper loads a specific configuration file using provided viper instance
@@ -105,7 +109,7 @@ func (c *ConfigLoader) loadSpecificConfigFileWithViper(configFile string, v *vip
 }
 
 // discoverAndLoadConfigFileWithViper discovers and loads config files with priority (YAML > JSON)
-func (c *ConfigLoader) discoverAndLoadConfigFileWithViper(v *viper.Viper) error {
+func (c *ConfigLoader) discoverAndLoadConfigFileWithViper(v *viper.Viper) (string, error) {
 	searchPaths := []string{
 		".",
 		"./config",
@@ -145,12 +149,13 @@ func (c *ConfigLoader) discoverAndLoadConfigFileWithViper(v *viper.Viper) error 
 			if _, err := os.Stat(configFile); err == nil {
 				v.SetConfigType(cfg.typ)
 				v.SetConfigFile(configFile)
-				return v.ReadInConfig()
+				err := v.ReadInConfig()
+				return configFile, err
 			}
 		}
 	}
 
-	return viper.ConfigFileNotFoundError{}
+	return "", viper.ConfigFileNotFoundError{}
 }
 
 // loadFromEnvWithViper loads configuration from environment variables only using provided viper instance
