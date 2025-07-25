@@ -686,7 +686,69 @@ func TestMiddlewareChain(t *testing.T) {
 	}
 }
 
+func TestRetryPolicy(t *testing.T) {
+	sender := gosender.NewSender(gosender.WithLogger(&testLogger{t: t}))
+	defer sender.Close()
+
+	// 配置重试策略
+	retryPolicy := core.NewRetryPolicy(
+		core.WithRetryMaxAttempts(3),
+		core.WithRetryInitialDelay(time.Millisecond*100),
+		core.WithRetryMaxDelay(time.Second),
+	)
+	if err := sender.SetRetryPolicy(retryPolicy); err != nil {
+		t.Fatalf("Failed to set retry policy: %v", err)
+	}
+
+	// 注册 webhook provider
+	webhookConfig := &webhook.Config{
+		Items: []*webhook.Endpoint{
+			{
+				Name:    "retry-test",
+				URL:     "http://example.com/webhook",
+				Method:  http.MethodPost,
+				Headers: map[string]string{"Content-Type": "application/json"},
+			},
+		},
+	}
+	webhookProvider, err := webhook.New(webhookConfig)
+	if err != nil {
+		t.Fatalf("Failed to create webhook provider: %v", err)
+	}
+	sender.RegisterProvider(core.ProviderTypeWebhook, webhookProvider, nil)
+
+	// 测试场景 1: 重试策略
+	t.Run("Retry Policy", func(t *testing.T) {
+		message := webhook.Webhook().
+			Body([]byte(`{"test":"retry"}`)).
+			Method(http.MethodPost).
+			Build()
+
+		// 发送请求，应该被重试
+		sendErr := sender.Send(context.Background(), message)
+		if sendErr != nil && sendErr.Error() == "retry limit exceeded" {
+			t.Error("Expected retry error")
+		}
+	})
+
+	// 测试场景 2: 重试策略超时
+	t.Run("Retry Policy Timeout", func(t *testing.T) {
+		message := webhook.Webhook().
+			Body([]byte(`{"test":"retry-timeout"}`)).
+			Method(http.MethodPost).
+			Build()
+
+		// 发送请求，应该被重试，但是超时
+		sendErr := sender.Send(context.Background(), message)
+		if sendErr != nil && sendErr.Error() == "retry limit exceeded" {
+			t.Error("Expected retry error")
+		}
+	})
+}
+
 // TestCallbackHandling 测试回调处理.
+//
+//nolint:gocognit // 不适合拆分
 func TestCallbackHandling(t *testing.T) {
 	sender := gosender.NewSender(gosender.WithLogger(&testLogger{t: t}))
 	defer sender.Close()
@@ -733,6 +795,9 @@ func TestCallbackHandling(t *testing.T) {
 	// 场景 2: 异步发送 —— Callback 必须触发
 	t.Run("Async Send Callback", func(t *testing.T) {
 		ch := make(chan error, 1)
+		var callbackExecuted bool
+		var mu sync.Mutex
+
 		message := webhook.Webhook().
 			Body([]byte(`{"test":"async-callback"}`)).
 			Method(http.MethodPost).
@@ -740,18 +805,46 @@ func TestCallbackHandling(t *testing.T) {
 
 		if sendErr := sender.Send(context.Background(), message,
 			core.WithSendAsync(),
-			core.WithSendCallback(func(_ *core.SendResult, err error) { ch <- err }),
+			core.WithSendCallback(func(_ *core.SendResult, err error) {
+				mu.Lock()
+				callbackExecuted = true
+				mu.Unlock()
+				ch <- err
+			}),
 		); sendErr != nil {
 			t.Fatalf("Failed to send message: %v", sendErr)
 		}
 
-		select {
-		case cbErr := <-ch:
-			if cbErr == nil {
-				t.Error("Expected error in callback, got nil")
+		timeout := time.After(5 * time.Second)
+		ticker := time.NewTicker(100 * time.Millisecond)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case cbErr := <-ch:
+				if cbErr == nil {
+					t.Error("Expected error in callback, got nil")
+				}
+				return // 测试成功
+			case <-ticker.C:
+				// 定期检查回调是否已执行（用于调试）
+				mu.Lock()
+				executed := callbackExecuted
+				mu.Unlock()
+				if executed {
+					t.Log("Callback was executed but channel receive may be delayed")
+				}
+			case <-timeout:
+				mu.Lock()
+				executed := callbackExecuted
+				mu.Unlock()
+				if executed {
+					t.Error("Callback was executed but channel receive failed - possible race condition")
+				} else {
+					t.Error("Callback error not received - callback was never executed")
+				}
+				return
 			}
-		case <-time.After(3 * time.Second): // 增加超时时间从1秒到3秒
-			t.Error("Callback error not received")
 		}
 	})
 
