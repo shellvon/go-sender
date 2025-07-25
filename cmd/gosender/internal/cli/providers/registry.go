@@ -2,88 +2,163 @@ package providers
 
 import (
 	"fmt"
+	"reflect"
 
 	gosender "github.com/shellvon/go-sender"
 	"github.com/shellvon/go-sender/cmd/gosender/internal/cli"
+	"github.com/shellvon/go-sender/cmd/gosender/internal/cli/config"
 	"github.com/shellvon/go-sender/core"
 )
 
-// ProviderBuilder defines the interface for building providers from configuration
-type ProviderBuilder interface {
-	// BuildProvider creates a provider instance from parsed accounts
-	BuildProvider(accounts []any) (core.Provider, error)
-	// GetProviderType returns the provider type this builder handles
+// 反射使用的方法名常量
+const (
+	BuildProviderMethodName = "BuildProvider"
+)
+
+// ProviderTypeGetter 是一个简单的接口，只要求实现 GetProviderType 方法
+type ProviderTypeGetter interface {
 	GetProviderType() core.ProviderType
 }
 
-// MessageBuilder defines the interface for building messages from CLI flags
+// MessageBuilder 定义了从 CLI 标志创建消息的接口
 type MessageBuilder interface {
-	// BuildMessage creates a message from CLI flags
+	ProviderTypeGetter
+	// BuildMessage 从 CLI 标志创建消息
 	BuildMessage(flags *cli.CLIFlags) (core.Message, error)
-	// GetProviderType returns the provider type this builder handles
-	GetProviderType() core.ProviderType
-	// ValidateFlags validates CLI flags for this provider
+	// ValidateFlags 验证 CLI 标志是否符合此 Provider 的要求
 	ValidateFlags(flags *cli.CLIFlags) error
 }
 
-// ProviderRegistry manages provider and message builders
+// ProviderFactory 是一个更高级的接口，同时提供 Provider 和 Message 构建能力
+type ProviderFactory interface {
+	ProviderTypeGetter
+	GetProviderBuilder() ProviderTypeGetter
+	GetMessageBuilder() MessageBuilder
+}
+
+// ProviderRegistry 管理 Provider 和消息构建器
 type ProviderRegistry struct {
-	providerBuilders map[core.ProviderType]ProviderBuilder
+	// 存储不同类型的 Builder
+	providerBuilders map[core.ProviderType]ProviderTypeGetter
 	messageBuilders  map[core.ProviderType]MessageBuilder
 }
 
-// NewProviderRegistry creates a new provider registry
+// NewProviderRegistry 创建一个新的 Provider 注册表
 func NewProviderRegistry() *ProviderRegistry {
 	return &ProviderRegistry{
-		providerBuilders: make(map[core.ProviderType]ProviderBuilder),
+		providerBuilders: make(map[core.ProviderType]ProviderTypeGetter),
 		messageBuilders:  make(map[core.ProviderType]MessageBuilder),
 	}
 }
 
-// RegisterProviderBuilder registers a provider builder
-func (r *ProviderRegistry) RegisterProviderBuilder(builder ProviderBuilder) {
-	r.providerBuilders[builder.GetProviderType()] = builder
+// RegisterProvider 注册任何类型的 Provider Builder
+func (r *ProviderRegistry) RegisterProvider(builder ProviderTypeGetter) error {
+	if builder == nil {
+		return fmt.Errorf("cannot register nil builder")
+	}
+
+	providerType := builder.GetProviderType()
+	r.providerBuilders[providerType] = builder
+	return nil
 }
 
-// RegisterMessageBuilder registers a message builder
+// RegisterMessageBuilder 注册一个消息构建器
 func (r *ProviderRegistry) RegisterMessageBuilder(builder MessageBuilder) {
 	r.messageBuilders[builder.GetProviderType()] = builder
 }
 
-// BuildProviders builds all providers from configuration and registers them with sender
-func (r *ProviderRegistry) BuildProviders(sender *gosender.Sender, config *cli.RootConfig) error {
-	// Group accounts by provider type
-	accountsByType := make(map[core.ProviderType][]any)
-
-	for _, account := range config.Accounts {
-		providerStr, ok := account["provider"].(string)
-		if !ok {
-			continue
-		}
-
-		providerType := core.ProviderType(providerStr)
-		accountsByType[providerType] = append(accountsByType[providerType], account)
+// Register 同时注册 Provider 和对应的 MessageBuilder
+func (r *ProviderRegistry) Register(providerBuilder ProviderTypeGetter, messageBuilder MessageBuilder) error {
+	if providerBuilder == nil || messageBuilder == nil {
+		return fmt.Errorf("cannot register nil builder")
 	}
 
-	// Build and register each provider
-	for providerType, accounts := range accountsByType {
+	// 确保两者类型一致
+	if providerBuilder.GetProviderType() != messageBuilder.GetProviderType() {
+		return fmt.Errorf("provider type mismatch: %s vs %s",
+			providerBuilder.GetProviderType(), messageBuilder.GetProviderType())
+	}
+
+	// 注册两个组件
+	r.providerBuilders[providerBuilder.GetProviderType()] = providerBuilder
+	r.messageBuilders[messageBuilder.GetProviderType()] = messageBuilder
+
+	return nil
+}
+
+// RegisterFactory 注册实现了 ProviderFactory 接口的工厂
+func (r *ProviderRegistry) RegisterFactory(factory ProviderFactory) error {
+	if factory == nil {
+		return fmt.Errorf("cannot register nil factory")
+	}
+
+	return r.Register(factory.GetProviderBuilder(), factory.GetMessageBuilder())
+}
+
+// BuildProviders 从配置构建所有 Provider 并将其注册到 Sender
+func (r *ProviderRegistry) BuildProviders(sender *gosender.Sender, rootConfig *cli.RootConfig) error {
+	parser := config.NewAccountParser()
+	parsedAccounts, err := parser.ParseAccounts(rootConfig)
+	if err != nil {
+		return fmt.Errorf("failed to parse accounts: %w", err)
+	}
+
+	// 为每种 Provider 类型构建并注册 Provider
+	for providerType, accounts := range parsedAccounts {
 		builder, exists := r.providerBuilders[providerType]
 		if !exists {
 			return fmt.Errorf("no provider builder registered for type: %s", providerType)
 		}
 
-		provider, err := builder.BuildProvider(accounts)
-		if err != nil {
-			return fmt.Errorf("failed to build provider %s: %w", providerType, err)
+		// 使用反射来确定具体 Provider 类型并构建 Provider
+		builderValue := reflect.ValueOf(builder)
+
+		// 查找 BuildProvider 方法
+		buildMethod := builderValue.MethodByName(BuildProviderMethodName)
+		if !buildMethod.IsValid() {
+			return fmt.Errorf("builder for %s does not have %s method", providerType, BuildProviderMethodName)
 		}
 
-		sender.RegisterProvider(providerType, provider, nil)
+		// 获取方法类型并检查参数
+		methodType := buildMethod.Type()
+		if methodType.NumIn() != 1 {
+			return fmt.Errorf("%s method for %s has wrong number of parameters", BuildProviderMethodName, providerType)
+		}
+
+		// 创建正确类型的参数
+		accountsType := methodType.In(0)
+		accountsSlice := reflect.MakeSlice(accountsType, 0, len(accounts))
+
+		// 将账户转换为正确的类型
+		for i, acc := range accounts {
+			accValue := reflect.ValueOf(acc)
+			if !accValue.Type().AssignableTo(accountsType.Elem()) {
+				return fmt.Errorf("account at index %d is not compatible with provider %s", i, providerType)
+			}
+			accountsSlice = reflect.Append(accountsSlice, accValue)
+		}
+
+		// 调用 BuildProvider 方法
+		results := buildMethod.Call([]reflect.Value{accountsSlice})
+		if len(results) != 2 {
+			return fmt.Errorf("%s method for %s has wrong number of return values", BuildProviderMethodName, providerType)
+		}
+
+		// 检查错误
+		errValue := results[1]
+		if !errValue.IsNil() {
+			return fmt.Errorf("failed to build provider %s: %w", providerType, errValue.Interface().(error))
+		}
+
+		// 获取 Provider
+		providerValue := results[0].Interface().(core.Provider)
+		sender.RegisterProvider(providerType, providerValue, nil)
 	}
 
 	return nil
 }
 
-// BuildMessage builds a message for the specified provider type
+// BuildMessage 为指定的 Provider 类型构建消息
 func (r *ProviderRegistry) BuildMessage(providerType core.ProviderType, flags *cli.CLIFlags) (core.Message, error) {
 	builder, exists := r.messageBuilders[providerType]
 	if !exists {
@@ -97,7 +172,7 @@ func (r *ProviderRegistry) BuildMessage(providerType core.ProviderType, flags *c
 	return builder.BuildMessage(flags)
 }
 
-// GetSupportedProviders returns all supported provider types
+// GetSupportedProviders 返回所有支持的 Provider 类型
 func (r *ProviderRegistry) GetSupportedProviders() []core.ProviderType {
 	var providers []core.ProviderType
 	for providerType := range r.providerBuilders {
@@ -106,7 +181,7 @@ func (r *ProviderRegistry) GetSupportedProviders() []core.ProviderType {
 	return providers
 }
 
-// ValidateFlags validates flags for the specified provider
+// ValidateFlags 验证指定 Provider 的标志
 func (r *ProviderRegistry) ValidateFlags(providerType core.ProviderType, flags *cli.CLIFlags) error {
 	builder, exists := r.messageBuilders[providerType]
 	if !exists {

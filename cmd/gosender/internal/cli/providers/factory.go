@@ -2,40 +2,39 @@ package providers
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/shellvon/go-sender/core"
 )
 
-// DefaultProviderRegistry creates and configures the default provider registry
 func DefaultProviderRegistry() *ProviderRegistry {
 	registry := NewProviderRegistry()
 
-	// Register email provider and message builders
-	registry.RegisterProviderBuilder(&EmailProviderBuilder{})
-	registry.RegisterMessageBuilder(&EmailMessageBuilder{})
+	builders := []ProviderFactory{
+		NewEmailBuilder(),      // 邮件服务
+		NewWeComBotBuilder(),   // 企业微信机器人
+		NewServerChanBuilder(), // ServerChan
+	}
 
-	// Register wecombot provider and message builders
-	registry.RegisterProviderBuilder(&WeComBotProviderBuilder{})
-	registry.RegisterMessageBuilder(&WeComBotMessageBuilder{})
-
-	// TODO: Add other providers here as they are implemented
-	// registry.RegisterProviderBuilder(&SMSProviderBuilder{})
-	// registry.RegisterMessageBuilder(&SMSMessageBuilder{})
-	// registry.RegisterProviderBuilder(&DingTalkProviderBuilder{})
-	// registry.RegisterMessageBuilder(&DingTalkMessageBuilder{})
+	for _, builder := range builders {
+		if err := registry.RegisterFactory(builder); err != nil {
+			log.Printf("Warning: failed to register builder for provider %s: %v",
+				builder.GetProviderType(), err)
+		}
+	}
 
 	return registry
 }
 
-// GetProviderType converts string to ProviderType with validation
+// GetProviderType 将字符串转换为 ProviderType 并进行验证
 func GetProviderType(provider string) (core.ProviderType, error) {
 	if provider == "" {
-		return core.ProviderTypeSMS, nil // Default
+		return core.ProviderTypeSMS, nil // 默认
 	}
 
 	providerType := core.ProviderType(provider)
 
-	// Validate that it's a known provider type
+	// 验证是否为已知的 provider 类型
 	switch providerType {
 	case core.ProviderTypeSMS,
 		core.ProviderTypeEmail,

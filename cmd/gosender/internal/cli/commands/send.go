@@ -64,7 +64,8 @@ configurations without actually sending messages.`,
 
 			// Basic validation
 			// WeComBot doesn't need --to parameter as it sends to groups
-			if flags.Provider != "wecombot" && len(flags.To) == 0 {
+			// ServerChan doesn't need --to parameter as it sends to groups
+			if flags.Provider != "wecombot" && flags.Provider != "serverchan" && len(flags.To) == 0 {
 				return fmt.Errorf("--to is required: specify at least one recipient")
 			}
 

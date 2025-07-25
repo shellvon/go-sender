@@ -4,52 +4,43 @@ import (
 	"fmt"
 
 	"github.com/shellvon/go-sender/cmd/gosender/internal/cli"
-	"github.com/shellvon/go-sender/cmd/gosender/internal/cli/config"
 	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/providers/email"
 )
 
-// EmailProviderBuilder builds email providers
-type EmailProviderBuilder struct{}
-
-func (b *EmailProviderBuilder) GetProviderType() core.ProviderType {
-	return core.ProviderTypeEmail
-}
-
-func (b *EmailProviderBuilder) BuildProvider(accounts []any) (core.Provider, error) {
-	parser := config.NewAccountParser()
-	var emailAccounts []*email.Account
-
-	for i, rawAccount := range accounts {
-		accountMap, ok := rawAccount.(map[string]any)
-		if !ok {
-			return nil, fmt.Errorf("invalid account format at index %d", i)
-		}
-
-		account, err := parser.ParseEmailAccount(accountMap)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse email account at index %d: %w", i, err)
-		}
-
-		emailAccounts = append(emailAccounts, account)
-	}
-
-	if len(emailAccounts) == 0 {
+// createEmailProvider 从账户列表创建 Email Provider
+func createEmailProvider(accounts []*email.Account) (core.Provider, error) {
+	if len(accounts) == 0 {
 		return nil, fmt.Errorf("no valid email accounts found")
 	}
 
-	cfg := &email.Config{Items: emailAccounts}
+	cfg := &email.Config{Items: accounts}
 	return email.New(cfg)
 }
 
-// EmailMessageBuilder builds email messages
-type EmailMessageBuilder struct{}
+// buildEmailMessage 从 CLI 标志构建邮件消息
+func buildEmailMessage(flags *cli.CLIFlags) (*email.Message, error) {
+	builder := email.Email().
+		To(flags.To...).
+		Body(flags.Content)
 
-func (b *EmailMessageBuilder) GetProviderType() core.ProviderType {
-	return core.ProviderTypeEmail
+	if flags.Subject != "" {
+		builder = builder.Subject(flags.Subject)
+	}
+
+	if flags.HTML {
+		builder = builder.HTML()
+	}
+
+	if len(flags.Files) > 0 {
+		builder = builder.Attach(flags.Files...)
+	}
+
+	return builder.Build(), nil
 }
 
-func (b *EmailMessageBuilder) ValidateFlags(flags *cli.CLIFlags) error {
+// validateEmailFlags 验证 CLI 标志是否符合邮件发送要求
+func validateEmailFlags(flags *cli.CLIFlags) error {
 	if len(flags.To) == 0 {
 		return fmt.Errorf("email requires at least one recipient")
 	}
@@ -65,38 +56,12 @@ func (b *EmailMessageBuilder) ValidateFlags(flags *cli.CLIFlags) error {
 	return nil
 }
 
-func (b *EmailMessageBuilder) BuildMessage(flags *cli.CLIFlags) (core.Message, error) {
-	builder := email.Email().
-		To(flags.To...).
-		Body(flags.Content)
-
-	if flags.Subject != "" {
-		builder = builder.Subject(flags.Subject)
-	}
-
-	if flags.HTML {
-		builder = builder.HTML()
-	}
-
-	// Add file attachments if provided
-	if len(flags.Files) > 0 {
-		builder = builder.Attach(flags.Files...)
-	}
-
-	// TODO: We could extend CLI flags to support CC, BCC, ReplyTo, From
-	// For now, these would be set via the builder if needed:
-	// if flags.Cc != nil {
-	//     builder = builder.Cc(flags.Cc...)
-	// }
-	// if flags.Bcc != nil {
-	//     builder = builder.Bcc(flags.Bcc...)
-	// }
-	// if flags.ReplyTo != "" {
-	//     builder = builder.ReplyTo(flags.ReplyTo)
-	// }
-	// if flags.From != "" {
-	//     builder = builder.From(flags.From)
-	// }
-
-	return builder.Build(), nil
+// NewEmailBuilder 创建一个新的 Email GenericBuilder
+func NewEmailBuilder() *GenericBuilder[*email.Account, *email.Message] {
+	return NewGenericBuilder(
+		core.ProviderTypeEmail,
+		createEmailProvider,
+		buildEmailMessage,
+		validateEmailFlags,
+	)
 }

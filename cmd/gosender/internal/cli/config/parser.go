@@ -1,18 +1,42 @@
 package config
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/shellvon/go-sender/cmd/gosender/internal/cli"
 	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/providers/dingtalk"
 	"github.com/shellvon/go-sender/providers/email"
+	"github.com/shellvon/go-sender/providers/serverchan"
 	"github.com/shellvon/go-sender/providers/sms"
 	"github.com/shellvon/go-sender/providers/webhook"
 	"github.com/shellvon/go-sender/providers/wecombot"
 )
 
-// AccountParser handles parsing of account configurations without mapstructure
+// AccountCreator 是创建账户对象的函数类型
+type AccountCreator func() core.Selectable
+
+// accountRegistry 存储所有已注册的账户创建器
+var accountRegistry = make(map[core.ProviderType]AccountCreator)
+
+// RegisterAccountType 注册一个账户类型的创建器
+func RegisterAccountType(providerType core.ProviderType, creator AccountCreator) {
+	accountRegistry[providerType] = creator
+}
+
+// 初始化内置的账户类型
+func init() {
+	// 注册所有内置账户类型
+	RegisterAccountType(core.ProviderTypeSMS, func() core.Selectable { return &sms.Account{} })
+	RegisterAccountType(core.ProviderTypeEmail, func() core.Selectable { return &email.Account{} })
+	RegisterAccountType(core.ProviderTypeDingtalk, func() core.Selectable { return &dingtalk.Account{} })
+	RegisterAccountType(core.ProviderTypeWebhook, func() core.Selectable { return &webhook.Endpoint{} })
+	RegisterAccountType(core.ProviderTypeWecombot, func() core.Selectable { return &wecombot.Account{} })
+	RegisterAccountType(core.ProviderTypeServerChan, func() core.Selectable { return &serverchan.Account{} })
+}
+
+// AccountParser handles parsing of account configurations
 type AccountParser struct{}
 
 // NewAccountParser creates a new account parser
@@ -20,271 +44,88 @@ func NewAccountParser() *AccountParser {
 	return &AccountParser{}
 }
 
+// ParseAccount parses a single account from raw map
+func (p *AccountParser) ParseAccount(providerType core.ProviderType, raw map[string]interface{}) (core.Selectable, error) {
+	// 从注册表获取账户创建器
+	creator, ok := accountRegistry[providerType]
+	if !ok {
+		return nil, fmt.Errorf("unsupported provider type: %s", providerType)
+	}
+
+	// 创建账户实例
+	result := creator()
+
+	// Convert map to JSON bytes and unmarshal to the struct
+	jsonBytes, err := json.Marshal(raw)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal account to JSON: %w", err)
+	}
+
+	if err := json.Unmarshal(jsonBytes, result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal account: %w", err)
+	}
+
+	return result, nil
+}
+
+// ParseAccounts parses all accounts from configuration and groups them by provider type
+func (p *AccountParser) ParseAccounts(config *cli.RootConfig) (map[core.ProviderType][]core.Selectable, error) {
+	// Initialize result map
+	accounts := make(map[core.ProviderType][]core.Selectable)
+
+	for i, raw := range config.Accounts {
+		providerStr, ok := raw["provider"].(string)
+		if !ok || providerStr == "" {
+			return nil, fmt.Errorf("accounts[%d] missing provider field", i)
+		}
+
+		providerType := core.ProviderType(providerStr)
+		account, err := p.ParseAccount(providerType, raw)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse account at index %d: %w", i, err)
+		}
+
+		// Group accounts by provider type
+		accounts[providerType] = append(accounts[providerType], account)
+	}
+
+	return accounts, nil
+}
+
+// Helper methods for specific providers - convenience methods that leverage ParseAccount
+
 // ParseSMSAccount parses SMS account configuration
 func (p *AccountParser) ParseSMSAccount(raw map[string]interface{}) (*sms.Account, error) {
-	acc := &sms.Account{}
-
-	// Parse AccountMeta fields
-	if provider, ok := raw["provider"].(string); ok {
-		acc.Provider = provider
+	account, err := p.ParseAccount(core.ProviderTypeSMS, raw)
+	if err != nil {
+		return nil, err
 	}
-	if subtype, ok := raw["subtype"].(string); ok {
-		acc.SubType = subtype
-	}
-	if name, ok := raw["name"].(string); ok {
-		acc.Name = name
-	}
-	if weight, ok := raw["weight"]; ok {
-		if w, ok := weight.(int); ok {
-			acc.Weight = w
-		} else if w, ok := weight.(float64); ok {
-			acc.Weight = int(w)
-		}
-	}
-	if disabled, ok := raw["disabled"].(bool); ok {
-		acc.Disabled = disabled
-	}
-
-	// Parse Credentials fields
-	if apiKey, ok := raw["api_key"].(string); ok {
-		acc.APIKey = apiKey
-	}
-	if apiSecret, ok := raw["api_secret"].(string); ok {
-		acc.APISecret = apiSecret
-	}
-	if appID, ok := raw["app_id"].(string); ok {
-		acc.AppID = appID
-	}
-
-	// Parse SMS-specific fields
-	if region, ok := raw["region"].(string); ok {
-		acc.Region = region
-	}
-	if callback, ok := raw["callback"].(string); ok {
-		acc.Callback = callback
-	}
-	if signName, ok := raw["sign_name"].(string); ok {
-		acc.SignName = signName
-	}
-
-	return acc, nil
+	return account.(*sms.Account), nil
 }
 
 // ParseEmailAccount parses Email account configuration
 func (p *AccountParser) ParseEmailAccount(raw map[string]interface{}) (*email.Account, error) {
-	acc := &email.Account{}
-
-	// Parse AccountMeta fields
-	if provider, ok := raw["provider"].(string); ok {
-		acc.Provider = provider
+	account, err := p.ParseAccount(core.ProviderTypeEmail, raw)
+	if err != nil {
+		return nil, err
 	}
-	if name, ok := raw["name"].(string); ok {
-		acc.Name = name
-	}
-	if weight, ok := raw["weight"]; ok {
-		if w, ok := weight.(int); ok {
-			acc.Weight = w
-		} else if w, ok := weight.(float64); ok {
-			acc.Weight = int(w)
-		}
-	}
-	if disabled, ok := raw["disabled"].(bool); ok {
-		acc.Disabled = disabled
-	}
-
-	// Parse Credentials fields
-	if apiKey, ok := raw["api_key"].(string); ok {
-		acc.APIKey = apiKey
-	}
-	if apiSecret, ok := raw["api_secret"].(string); ok {
-		acc.APISecret = apiSecret
-	}
-
-	// Parse Email-specific fields
-	if host, ok := raw["host"].(string); ok {
-		acc.Host = host
-	}
-	if port, ok := raw["port"]; ok {
-		if p, ok := port.(int); ok {
-			acc.Port = p
-		} else if p, ok := port.(float64); ok {
-			acc.Port = int(p)
-		}
-	}
-	if from, ok := raw["from"].(string); ok {
-		acc.From = from
-	}
-
-	return acc, nil
-}
-
-// ParseDingTalkAccount parses DingTalk account configuration
-func (p *AccountParser) ParseDingTalkAccount(raw map[string]interface{}) (*dingtalk.Account, error) {
-	acc := &dingtalk.Account{}
-
-	// Parse AccountMeta fields
-	if provider, ok := raw["provider"].(string); ok {
-		acc.Provider = provider
-	}
-	if name, ok := raw["name"].(string); ok {
-		acc.Name = name
-	}
-	if weight, ok := raw["weight"]; ok {
-		if w, ok := weight.(int); ok {
-			acc.Weight = w
-		} else if w, ok := weight.(float64); ok {
-			acc.Weight = int(w)
-		}
-	}
-	if disabled, ok := raw["disabled"].(bool); ok {
-		acc.Disabled = disabled
-	}
-
-	// Parse Credentials fields
-	if apiKey, ok := raw["api_key"].(string); ok {
-		acc.APIKey = apiKey
-	}
-	if apiSecret, ok := raw["api_secret"].(string); ok {
-		acc.APISecret = apiSecret
-	}
-
-	return acc, nil
-}
-
-// ParseWebhookEndpoint parses Webhook endpoint configuration
-func (p *AccountParser) ParseWebhookEndpoint(raw map[string]interface{}) (*webhook.Endpoint, error) {
-	ep := &webhook.Endpoint{}
-
-	// Parse AccountMeta fields
-	// if provider, ok := raw["provider"].(string); ok {
-	// 	// ep.Provider = provider
-	// }
-	if name, ok := raw["name"].(string); ok {
-		ep.Name = name
-	}
-	if weight, ok := raw["weight"]; ok {
-		if w, ok := weight.(int); ok {
-			ep.Weight = w
-		} else if w, ok := weight.(float64); ok {
-			ep.Weight = int(w)
-		}
-	}
-	if disabled, ok := raw["disabled"].(bool); ok {
-		ep.Disabled = disabled
-	}
-
-	// Parse Webhook-specific fields
-	if url, ok := raw["url"].(string); ok {
-		ep.URL = url
-	}
-	if method, ok := raw["method"].(string); ok {
-		ep.Method = method
-	}
-	if headers, ok := raw["headers"].(map[string]interface{}); ok {
-		ep.Headers = make(map[string]string)
-		for k, v := range headers {
-			if str, ok := v.(string); ok {
-				ep.Headers[k] = str
-			}
-		}
-	}
-
-	return ep, nil
+	return account.(*email.Account), nil
 }
 
 // ParseWeComBotAccount parses WeComBot account configuration
 func (p *AccountParser) ParseWeComBotAccount(raw map[string]interface{}) (*wecombot.Account, error) {
-	acc := &wecombot.Account{}
-
-	// Parse AccountMeta fields
-	if provider, ok := raw["provider"].(string); ok {
-		acc.Provider = provider
+	account, err := p.ParseAccount(core.ProviderTypeWecombot, raw)
+	if err != nil {
+		return nil, err
 	}
-	if name, ok := raw["name"].(string); ok {
-		acc.Name = name
-	}
-	if weight, ok := raw["weight"]; ok {
-		if w, ok := weight.(int); ok {
-			acc.Weight = w
-		} else if w, ok := weight.(float64); ok {
-			acc.Weight = int(w)
-		}
-	}
-	if disabled, ok := raw["disabled"].(bool); ok {
-		acc.Disabled = disabled
-	}
-
-	// Parse Credentials fields
-	if apiKey, ok := raw["api_key"].(string); ok {
-		acc.APIKey = apiKey
-	}
-
-	return acc, nil
+	return account.(*wecombot.Account), nil
 }
 
-// ParseAccounts parses all accounts from configuration
-func (p *AccountParser) ParseAccounts(config *cli.RootConfig) (
-	[]*sms.Account,
-	[]*email.Account,
-	[]*dingtalk.Account,
-	[]*webhook.Endpoint,
-	[]*wecombot.Account,
-	error,
-) {
-	var (
-		smsAccounts      []*sms.Account
-		emailAccounts    []*email.Account
-		dingtalkAccounts []*dingtalk.Account
-		webhookEndpoints []*webhook.Endpoint
-		wecomAccounts    []*wecombot.Account
-	)
-
-	for i, raw := range config.Accounts {
-		provider, ok := raw["provider"].(string)
-		if !ok || provider == "" {
-			return nil, nil, nil, nil, nil, fmt.Errorf("accounts[%d] missing provider field", i)
-		}
-
-		switch provider {
-		case string(core.ProviderTypeSMS):
-			acc, err := p.ParseSMSAccount(raw)
-			if err != nil {
-				return nil, nil, nil, nil, nil, fmt.Errorf("parse sms account at index %d: %w", i, err)
-			}
-			smsAccounts = append(smsAccounts, acc)
-
-		case string(core.ProviderTypeEmail):
-			acc, err := p.ParseEmailAccount(raw)
-			if err != nil {
-				return nil, nil, nil, nil, nil, fmt.Errorf("parse email account at index %d: %w", i, err)
-			}
-			emailAccounts = append(emailAccounts, acc)
-
-		case string(core.ProviderTypeDingtalk):
-			acc, err := p.ParseDingTalkAccount(raw)
-			if err != nil {
-				return nil, nil, nil, nil, nil, fmt.Errorf("parse dingtalk account at index %d: %w", i, err)
-			}
-			dingtalkAccounts = append(dingtalkAccounts, acc)
-
-		case string(core.ProviderTypeWebhook):
-			ep, err := p.ParseWebhookEndpoint(raw)
-			if err != nil {
-				return nil, nil, nil, nil, nil, fmt.Errorf("parse webhook endpoint at index %d: %w", i, err)
-			}
-			webhookEndpoints = append(webhookEndpoints, ep)
-
-		case string(core.ProviderTypeWecombot):
-			acc, err := p.ParseWeComBotAccount(raw)
-			if err != nil {
-				return nil, nil, nil, nil, nil, fmt.Errorf("parse wecombot account at index %d: %w", i, err)
-			}
-			wecomAccounts = append(wecomAccounts, acc)
-
-		default:
-			return nil, nil, nil, nil, nil, fmt.Errorf("unsupported provider type: %s", provider)
-		}
+// ParseServerChanAccount parses ServerChan account configuration
+func (p *AccountParser) ParseServerChanAccount(raw map[string]interface{}) (*serverchan.Account, error) {
+	account, err := p.ParseAccount(core.ProviderTypeServerChan, raw)
+	if err != nil {
+		return nil, err
 	}
-
-	return smsAccounts, emailAccounts, dingtalkAccounts, webhookEndpoints, wecomAccounts, nil
+	return account.(*serverchan.Account), nil
 }

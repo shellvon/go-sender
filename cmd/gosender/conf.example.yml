@@ -77,11 +77,11 @@ accounts:
   #   weight: 10
 
   # # WeComBot (Enterprise WeChat)
-  # - provider: wecombot
-  #   name: wecom-alerts
-  #   api_key: "webhook_key_here"
-  #   enabled: true
-  #   weight: 10
+  - provider: wecombot
+    name: wecom-alerts
+    api_key: "webhook_key_here"
+    enabled: true
+    weight: 10
 
   # # Webhook Endpoints
   # - provider: webhook
@@ -103,12 +103,12 @@ accounts:
   #   enabled: true
   #   weight: 8
 
-  # # ServerChan
-  # - provider: serverchan
-  #   name: serverchan-notify
-  #   api_key: "sckey_here"
-  #   enabled: true
-  #   weight: 5
+  # ServerChan
+  - provider: serverchan
+    name: serverchan-notify
+    api_key: "SCT_YOUR_KEY"
+    enabled: true
+    weight: 5
 
   # # EmailAPI Providers
   # - provider: emailapi
