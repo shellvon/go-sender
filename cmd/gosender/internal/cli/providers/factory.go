@@ -14,6 +14,9 @@ func DefaultProviderRegistry() *ProviderRegistry {
 		NewEmailBuilder(),      // 邮件服务
 		NewWeComBotBuilder(),   // 企业微信机器人
 		NewServerChanBuilder(), // ServerChan
+		NewTelegramBuilder(),   // Telegram 机器人
+		NewLarkBuilder(),       // 飞书/Lark 机器人
+		NewDingTalkBuilder(),   // 钉钉/DingTalk 机器人
 	}
 
 	for _, builder := range builders {

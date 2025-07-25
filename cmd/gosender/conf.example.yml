@@ -53,30 +53,34 @@ accounts:
     enabled: false
     weight: 5
 
-  # # DingTalk Bot
-  # - provider: dingtalk
-  #   name: dingtalk-alerts
-  #   api_key: "webhook_token_here"
-  #   api_secret: "secret_here" # Optional signing secret
-  #   enabled: true
-  #   weight: 10
+  # DingTalk Bot
+  - provider: dingtalk
+    name: dingtalk-alerts
+    api_key: "webhook_token_here" # 钉钉机器人的access_token
+    api_secret: "secret_here" # 安全设置中的签名密钥(签名/加签时需要)
+    enabled: true
+    weight: 10
+    # 目前支持的消息类型: text, markdown
 
-  # # Telegram Bot
-  # - provider: telegram
-  #   name: telegram-bot
-  #   api_key: "bot_token_here"
-  #   enabled: true
-  #   weight: 10
+  # Telegram Bot
+  - provider: telegram
+    name: telegram-bot
+    api_key: "bot_token_here" # Telegram Bot API Token (从@BotFather获取)
+    enabled: true
+    weight: 10
+    # 目前支持的消息类型: text
+    # 使用时需要在--to参数指定chat_id
 
-  # # Lark (Feishu) Bot
-  # - provider: lark
-  #   name: lark-notifications
-  #   api_key: "webhook_token_here"
-  #   api_secret: "signing_secret" # Optional
-  #   enabled: true
-  #   weight: 10
+  # Lark (Feishu) Bot
+  - provider: lark
+    name: lark-notifications
+    api_key: "webhook_token_here" # 飞书/Lark机器人的webhook地址中的token部分
+    api_secret: "signing_secret" # 安全设置中的签名密钥(签名/加签时需要)
+    enabled: true
+    weight: 10
+    # 目前支持的消息类型: text
 
-  # # WeComBot (Enterprise WeChat)
+  # WeComBot (Enterprise WeChat)
   - provider: wecombot
     name: wecom-alerts
     api_key: "webhook_key_here"
