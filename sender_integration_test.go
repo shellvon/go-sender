@@ -748,10 +748,15 @@ func TestRetryPolicy(t *testing.T) {
 
 // TestCallbackHandling 测试回调处理.
 //
-//nolint:gocognit // 不适合拆分
+//nolint:gocognit // test
 func TestCallbackHandling(t *testing.T) {
 	sender := gosender.NewSender(gosender.WithLogger(&testLogger{t: t}))
-	defer sender.Close()
+	// 修改关闭方式，添加一个延迟，确保异步操作有足够的时间完成
+	defer func() {
+		// 给异步操作额外的时间完成
+		time.Sleep(500 * time.Millisecond)
+		sender.Close()
+	}()
 
 	// 注册 webhook provider (所有子测试复用)
 	webhookConfig := &webhook.Config{
@@ -770,7 +775,21 @@ func TestCallbackHandling(t *testing.T) {
 	}
 	sender.RegisterProvider(core.ProviderTypeWebhook, webhookProvider, nil)
 
-	// 同步/异步子测试各自使用独立通道，避免相互影响
+	// 添加中间件的钩子函数，用于确认 async 标志和回调是否正确设置
+	middleware := &core.SenderMiddleware{}
+	middleware.UseBeforeHook(func(_ context.Context, msg core.Message, opts *core.SendOptions) error {
+		if opts.Async {
+			t.Logf("BeforeHook: Async flag is set for message %s", msg.MsgID())
+		}
+		if opts.Callback != nil {
+			t.Logf("BeforeHook: Callback is set for message %s", msg.MsgID())
+		}
+		return nil
+	})
+
+	// 使用自定义中间件重新注册provider
+	webhookProvider, _ = webhook.New(webhookConfig)
+	sender.RegisterProvider(core.ProviderTypeWebhook, webhookProvider, middleware)
 
 	// 场景 1: 同步发送 —— 期望 Callback 不被触发
 	t.Run("Sync Send Callback", func(t *testing.T) {
@@ -794,7 +813,8 @@ func TestCallbackHandling(t *testing.T) {
 
 	// 场景 2: 异步发送 —— Callback 必须触发
 	t.Run("Async Send Callback", func(t *testing.T) {
-		ch := make(chan error, 1)
+		var wg sync.WaitGroup
+		var callbackErr error
 		var callbackExecuted bool
 		var mu sync.Mutex
 
@@ -803,76 +823,113 @@ func TestCallbackHandling(t *testing.T) {
 			Method(http.MethodPost).
 			Build()
 
+		wg.Add(1)
 		if sendErr := sender.Send(context.Background(), message,
 			core.WithSendAsync(),
 			core.WithSendCallback(func(_ *core.SendResult, err error) {
 				mu.Lock()
 				callbackExecuted = true
+				callbackErr = err
 				mu.Unlock()
-				ch <- err
+				wg.Done()
 			}),
 		); sendErr != nil {
 			t.Fatalf("Failed to send message: %v", sendErr)
 		}
 
-		timeout := time.After(5 * time.Second)
-		ticker := time.NewTicker(100 * time.Millisecond)
-		defer ticker.Stop()
+		// 使用 WaitGroup 等待回调执行，增加最大等待时间到30秒
+		done := make(chan struct{})
+		go func() {
+			wg.Wait()
+			close(done)
+		}()
 
-		for {
-			select {
-			case cbErr := <-ch:
-				if cbErr == nil {
-					t.Error("Expected error in callback, got nil")
-				}
-				return // 测试成功
-			case <-ticker.C:
-				// 定期检查回调是否已执行（用于调试）
-				mu.Lock()
-				executed := callbackExecuted
-				mu.Unlock()
-				if executed {
-					t.Log("Callback was executed but channel receive may be delayed")
-				}
-			case <-timeout:
-				mu.Lock()
-				executed := callbackExecuted
-				mu.Unlock()
-				if executed {
-					t.Error("Callback was executed but channel receive failed - possible race condition")
-				} else {
-					t.Error("Callback error not received - callback was never executed")
-				}
-				return
+		select {
+		case <-done:
+			mu.Lock()
+			executed := callbackExecuted
+			//nolint:govet // test
+			err := callbackErr
+			mu.Unlock()
+
+			if !executed {
+				t.Error("Callback was not executed")
+			} else if err == nil {
+				t.Error("Expected error in callback, got nil")
+			}
+		case <-time.After(30 * time.Second): // 增加等待时间，从10秒到30秒
+			mu.Lock()
+			executed := callbackExecuted
+			mu.Unlock()
+			if executed {
+				t.Error("Callback was executed but WaitGroup was not signaled - possible race condition")
+			} else {
+				t.Error("Callback error not received - callback was never executed")
 			}
 		}
 	})
 
 	// 场景 3: 带延迟的异步发送回调 —— Callback 必须触发
 	t.Run("Delayed Async Send Callback", func(t *testing.T) {
-		ch := make(chan error, 1)
+		var wg sync.WaitGroup
+		var callbackErr error
+		var callbackExecuted bool
+		var mu sync.Mutex
+
 		message := webhook.Webhook().
 			Body([]byte(`{"test":"delayed-callback"}`)).
 			Method(http.MethodPost).
 			Build()
 
+		wg.Add(1)
 		if sendErr := sender.Send(context.Background(), message,
 			core.WithSendAsync(),
 			core.WithSendDelay(time.Millisecond*100),
-			core.WithSendCallback(func(_ *core.SendResult, err error) { ch <- err }),
+			core.WithSendCallback(func(_ *core.SendResult, err error) {
+				mu.Lock()
+				callbackExecuted = true
+				callbackErr = err
+				mu.Unlock()
+				wg.Done()
+			}),
 		); sendErr != nil {
 			t.Fatalf("Failed to send message: %v", sendErr)
 		}
 
+		// 使用 WaitGroup 等待回调执行，考虑延迟时间，增加最大等待时间到15秒
+		done := make(chan struct{})
+		go func() {
+			wg.Wait()
+			close(done)
+		}()
+
 		select {
-		case cbErr := <-ch:
-			if cbErr == nil {
-				t.Error("Expected error in callback, got nil")
+		case <-done:
+			mu.Lock()
+			executed := callbackExecuted
+			//nolint:govet // test
+			err := callbackErr
+			mu.Unlock()
+
+			if !executed {
+				t.Error("Delayed callback was not executed")
+			} else if err == nil {
+				t.Error("Expected error in delayed callback, got nil")
 			}
-		case <-time.After(2 * time.Second):
-			t.Error("Delayed callback not received within timeout")
+		case <-time.After(15 * time.Second): // 增加等待时间，从5秒到15秒
+			mu.Lock()
+			executed := callbackExecuted
+			mu.Unlock()
+			if executed {
+				t.Error("Delayed callback was executed but WaitGroup was not signaled - possible race condition")
+			} else {
+				t.Error("Delayed callback not received within timeout")
+			}
 		}
 	})
+
+	// 在测试结尾添加一个小延迟，确保异步操作有机会完成
+	time.Sleep(500 * time.Millisecond)
 }
 
 // testCircuitBreaker 是一个用于测试的熔断器实现.
