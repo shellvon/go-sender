@@ -5,8 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/shellvon/go-sender/core"
 	"github.com/wneessen/go-mail"
+
+	"github.com/shellvon/go-sender/core"
 )
 
 // Config is a type alias for core.BaseConfig[*Account].

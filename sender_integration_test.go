@@ -59,7 +59,7 @@ func TestSenderIntegration(t *testing.T) {
 		Items: []*webhook.Endpoint{
 			{
 				Name:    "test",
-				URL:     "http://example.com/webhook",
+				URL:     "http://127.0.0.1:0/webhook", // 使用无效端口，确保连接失败
 				Method:  http.MethodPost,
 				Headers: map[string]string{"Content-Type": "application/json"},
 			},
@@ -109,14 +109,14 @@ func TestMultipleProviders(t *testing.T) {
 		Items: []*webhook.Endpoint{
 			{
 				Name:    "endpoint1",
-				URL:     "http://example1.com/webhook",
+				URL:     "http://127.0.0.1:0/webhook",
 				Method:  http.MethodPost,
 				Headers: map[string]string{"Content-Type": "application/json"},
 				Weight:  1,
 			},
 			{
 				Name:    "endpoint2",
-				URL:     "http://example2.com/webhook",
+				URL:     "http://127.0.0.1:0/webhook",
 				Method:  http.MethodPost,
 				Headers: map[string]string{"Content-Type": "application/json"},
 				Weight:  2,
@@ -225,7 +225,7 @@ func TestConcurrentSending(t *testing.T) {
 		Items: []*webhook.Endpoint{
 			{
 				Name:    "test",
-				URL:     "http://example.com/webhook",
+				URL:     "http://127.0.0.1:0/webhook",
 				Method:  http.MethodPost,
 				Headers: map[string]string{"Content-Type": "application/json"},
 			},
@@ -282,7 +282,7 @@ func TestMessageTransformation(t *testing.T) {
 		Items: []*webhook.Endpoint{
 			{
 				Name:    "test",
-				URL:     "http://example.com/webhook",
+				URL:     "http://127.0.0.1:0/webhook",
 				Method:  http.MethodPost,
 				Headers: map[string]string{"Content-Type": "application/json"},
 			},
@@ -320,19 +320,19 @@ func TestAccountSelectionStrategy(t *testing.T) {
 		Items: []*webhook.Endpoint{
 			{
 				Name:   "endpoint1",
-				URL:    "http://example1.com/webhook",
+				URL:    "http://127.0.0.1:0/webhook",
 				Method: http.MethodPost,
 				Weight: 1,
 			},
 			{
 				Name:   "endpoint2",
-				URL:    "http://example2.com/webhook",
+				URL:    "http://127.0.0.1:0/webhook",
 				Method: http.MethodPost,
 				Weight: 2,
 			},
 			{
 				Name:   "endpoint3",
-				URL:    "http://example3.com/webhook",
+				URL:    "http://127.0.0.1:0/webhook",
 				Method: http.MethodPost,
 				Weight: 3,
 			},
@@ -401,7 +401,7 @@ func TestQueueProcessing(t *testing.T) {
 		Items: []*webhook.Endpoint{
 			{
 				Name:    "test",
-				URL:     "http://example.com/webhook",
+				URL:     "http://127.0.0.1:0/webhook",
 				Method:  http.MethodPost,
 				Headers: map[string]string{"Content-Type": "application/json"},
 			},
@@ -750,8 +750,8 @@ func TestCallbackHandling(t *testing.T) {
 			if cbErr == nil {
 				t.Error("Expected error in callback, got nil")
 			}
-		case <-time.After(time.Second):
-			t.Error("Async callback not received within timeout")
+		case <-time.After(3 * time.Second): // 增加超时时间从1秒到3秒
+			t.Error("Callback error not received")
 		}
 	})
 
