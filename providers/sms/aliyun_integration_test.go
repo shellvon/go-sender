@@ -30,7 +30,7 @@ func TestAliyun_Integration_SendTextSMS(t *testing.T) {
 		},
 	}
 	msg := sms.Aliyun()
-	msg.To("***REMOVED***")
+	msg.To("13800138000")
 	msg.Content("hi")
 	msg.SignName("sign")
 	msg.Type(sms.Voice)
@@ -90,8 +90,8 @@ func TestSender_DispatchToAliyun_EndToEnd(t *testing.T) {
 		if err := r.ParseForm(); err != nil {
 			t.Fatalf("ParseForm failed: %v", err)
 		}
-		if got := r.FormValue("PhoneNumbers"); got != "***REMOVED***" {
-			t.Errorf("PhoneNumbers = %s, want ***REMOVED***", got)
+		if got := r.FormValue("PhoneNumbers"); got != "13800138000" {
+			t.Errorf("PhoneNumbers = %s, want 13800138000", got)
 		}
 		if got := r.FormValue("SignName"); got != "sign" {
 			t.Errorf("SignName = %s, want sign", got)
@@ -140,7 +140,7 @@ func TestSender_DispatchToAliyun_EndToEnd(t *testing.T) {
 	sender.SetDefaultHTTPClient(client)
 
 	msg := sms.Aliyun().
-		To("***REMOVED***").
+		To("13800138000").
 		Content("hi").
 		SignName("sign").
 		Type(sms.SMSText).

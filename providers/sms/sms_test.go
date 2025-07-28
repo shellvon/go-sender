@@ -10,7 +10,7 @@ import (
 
 func TestSMSBuilderAndValidate(t *testing.T) {
 	msg := sms.Aliyun().
-		To("***REMOVED***").
+		To("13800138000").
 		Content("Test message").
 		SignName("TestSign").
 		Build()
@@ -40,7 +40,7 @@ func (f *FakeProvider) Name() string { return "fake" }
 
 func TestSMSSendWithFakeProvider(t *testing.T) {
 	provider := &FakeProvider{}
-	msg := sms.Aliyun().To("***REMOVED***").Content("Test").SignName("Sign").Build()
+	msg := sms.Aliyun().To("13800138000").Content("Test").SignName("Sign").Build()
 	_, err := provider.Send(context.Background(), msg)
 	if err != nil {
 		t.Errorf("Send failed: %v", err)

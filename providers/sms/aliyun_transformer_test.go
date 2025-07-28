@@ -18,7 +18,7 @@ func mustGetAliyunTransformer(t *testing.T) core.HTTPTransformer[*sms.Account] {
 
 func TestAliyunTransformer_CanTransform(t *testing.T) {
 	tr := mustGetAliyunTransformer(t)
-	msg := sms.Aliyun().To("***REMOVED***").Content("hi").SignName("sign").Build()
+	msg := sms.Aliyun().To("13800138000").Content("hi").SignName("sign").Build()
 	if !tr.CanTransform(msg) {
 		t.Error("CanTransform should return true for Aliyun message")
 	}
@@ -30,7 +30,7 @@ func TestAliyunTransformer_CanTransform(t *testing.T) {
 
 func TestAliyunTransformer_Transform_Text(t *testing.T) {
 	tr := mustGetAliyunTransformer(t)
-	msg := sms.Aliyun().To("***REMOVED***").Content("hi").SignName("sign").Build()
+	msg := sms.Aliyun().To("13800138000").Content("hi").SignName("sign").Build()
 	msg.Type = sms.SMSText
 	acc := &sms.Account{BaseAccount: core.BaseAccount{Credentials: core.Credentials{APIKey: "ak", APISecret: "sk"}}}
 	spec, handler, err := tr.Transform(context.Background(), msg, acc)
@@ -44,7 +44,7 @@ func TestAliyunTransformer_Transform_Text(t *testing.T) {
 
 func TestAliyunTransformer_Transform_UnsupportedType(t *testing.T) {
 	tr := mustGetAliyunTransformer(t)
-	msg := sms.Aliyun().To("***REMOVED***").Content("hi").SignName("sign").Build()
+	msg := sms.Aliyun().To("13800138000").Content("hi").SignName("sign").Build()
 	msg.Type = 99 // 非法类型
 	acc := &sms.Account{BaseAccount: core.BaseAccount{Credentials: core.Credentials{APIKey: "ak", APISecret: "sk"}}}
 	_, _, err := tr.Transform(context.Background(), msg, acc)
@@ -55,7 +55,7 @@ func TestAliyunTransformer_Transform_UnsupportedType(t *testing.T) {
 
 func TestAliyunTransformer_Transform_TextWithVoiceParam(t *testing.T) {
 	aliyunBuilder := sms.Aliyun()
-	aliyunBuilder.Type(sms.SMSText).To("***REMOVED***").Content("hi").SignName("sign")
+	aliyunBuilder.Type(sms.SMSText).To("13800138000").Content("hi").SignName("sign")
 	msg := aliyunBuilder.Volume(80).Build()
 	tr := mustGetAliyunTransformer(t)
 	acc := &sms.Account{BaseAccount: core.BaseAccount{Credentials: core.Credentials{APIKey: "ak", APISecret: "sk"}}}
@@ -74,7 +74,7 @@ func TestAliyunTransformer_Transform_TextWithVoiceParam(t *testing.T) {
 
 func TestAliyunTransformer_Transform_VoiceWithVoiceParam(t *testing.T) {
 	aliyunBuilder := sms.Aliyun()
-	aliyunBuilder.Type(sms.Voice).To("***REMOVED***").Content("hi").SignName("sign")
+	aliyunBuilder.Type(sms.Voice).To("13800138000").Content("hi").SignName("sign")
 	msg := aliyunBuilder.Volume(80).Build()
 	tr := mustGetAliyunTransformer(t)
 	acc := &sms.Account{BaseAccount: core.BaseAccount{Credentials: core.Credentials{APIKey: "ak", APISecret: "sk"}}}

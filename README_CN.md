@@ -61,7 +61,7 @@ func main() {
 
     // 3️⃣ 构造要发送的消息
     msg := sms.Aliyun().
-        To("***REMOVED***").
+        To("13800138000").
         Content("Hello from go-sender!").
         TemplateID("SMS_xxx").
         Build()

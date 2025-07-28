@@ -9,7 +9,7 @@ import (
 
 func TestAliyunSMSBuilder_AllFields_Text(t *testing.T) {
 	msg := sms.Aliyun().
-		To("***REMOVED***", "13900139000").
+		To("13800138000", "13900139000").
 		Content("test content").
 		SignName("test-sign").
 		TemplateID("TEMPLATE_ID").
@@ -36,7 +36,7 @@ func TestAliyunSMSBuilder_AllFields_Text(t *testing.T) {
 	if got, want := msg.Content, "test content"; got != want {
 		t.Errorf("Content = %q, want %q", got, want)
 	}
-	if got, want := msg.Mobiles, []string{"***REMOVED***", "13900139000"}; !reflect.DeepEqual(got, want) {
+	if got, want := msg.Mobiles, []string{"13800138000", "13900139000"}; !reflect.DeepEqual(got, want) {
 		t.Errorf("Mobiles = %v, want %v", got, want)
 	}
 	if got, want := msg.TemplateParams["code"], "1234"; got != want {
@@ -63,7 +63,7 @@ func TestAliyunSMSBuilder_AllFields_Text(t *testing.T) {
 
 func TestAliyunSMSBuilder_AllFields_Voice(t *testing.T) {
 	msg := sms.Aliyun().
-		To("***REMOVED***").
+		To("13800138000").
 		Content("test voice content").
 		SignName("voice-sign").
 		TemplateID("VOICE_TEMPLATE").
@@ -86,7 +86,7 @@ func TestAliyunSMSBuilder_AllFields_Voice(t *testing.T) {
 	if got, want := msg.Content, "test voice content"; got != want {
 		t.Errorf("Content = %q, want %q", got, want)
 	}
-	if got, want := msg.Mobiles, []string{"***REMOVED***"}; !reflect.DeepEqual(got, want) {
+	if got, want := msg.Mobiles, []string{"13800138000"}; !reflect.DeepEqual(got, want) {
 		t.Errorf("Mobiles = %v, want %v", got, want)
 	}
 	// 检查 Extras 字段（语音专属 key）
@@ -104,7 +104,7 @@ func TestAliyunSMSBuilder_AllFields_Voice(t *testing.T) {
 
 func TestAliyunSMSBuilder_AllFields_Extras(t *testing.T) {
 	msg := sms.Aliyun().
-		To("***REMOVED***", "13900139000").
+		To("13800138000", "13900139000").
 		Content("test content").
 		SignName("test-sign").
 		TemplateID("TEMPLATE_ID").
@@ -135,7 +135,7 @@ func TestAliyunSMSBuilder_AllFields_Extras(t *testing.T) {
 	if got, want := msg.Content, "test content"; got != want {
 		t.Errorf("Content = %q, want %q", got, want)
 	}
-	if got, want := msg.Mobiles, []string{"***REMOVED***", "13900139000"}; !reflect.DeepEqual(got, want) {
+	if got, want := msg.Mobiles, []string{"13800138000", "13900139000"}; !reflect.DeepEqual(got, want) {
 		t.Errorf("Mobiles = %v, want %v", got, want)
 	}
 	if got, want := msg.TemplateParams["code"], "1234"; got != want {
@@ -162,7 +162,7 @@ func TestAliyunSMSBuilder_AllFields_Extras(t *testing.T) {
 
 func TestAliyunSMSBuilder_RequiredFields(t *testing.T) {
 	msg := sms.Aliyun().
-		To("***REMOVED***").
+		To("13800138000").
 		Content("hi").
 		SignName("sign").
 		Build()
