@@ -46,8 +46,10 @@ func newVolcTransformer() *volcTransformer {
 		&core.ResponseHandlerConfig{
 			BodyType:  core.BodyTypeJSON,
 			CheckBody: true,
-			Path:      "code",
-			Expect:    "0",
+			Path:      "ResponseMetadata.Error.Code",
+			CodePath:  "ResponseMetadata.Error.Code",
+			MsgPath:   "ResponseMetadata.Error.Message",
+			Expect:    "",
 			Mode:      core.MatchEq,
 		},
 		nil,
