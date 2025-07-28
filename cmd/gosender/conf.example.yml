@@ -4,66 +4,67 @@ accounts:
   - provider: sms
     subtype: aliyun
     name: aliyun-main
-    api_key: "LTAI4G..." # AccessKey ID
-    api_secret: "xxx..." # AccessKey Secret
-    sign_name: "MyApp"
+    api_key: "YOUR_ACCESS_KEY_ID" # AccessKey ID
+    api_secret: "YOUR_ACCESS_KEY_SECRET" # AccessKey Secret
+    sign_name: "YOUR_SIGN_NAME"
     region: "cn-hangzhou"
     enabled: true
     weight: 10
     # 使用方式:
-    # 文本短信: gosender send --provider sms --sub-provider aliyun --to "***REMOVED***" --content "您的验证码是1234"
+    # 文本短信: gosender send --provider sms --sub-provider aliyun --to "1380013xxxx" --content "您的验证码是1234"
     # 可以通过metadata传递额外参数: --metadata region=cn-hangzhou,sign_name=MyApp
 
   - provider: sms
     subtype: tencent
     name: tencent-backup
-    api_key: "AKIDxxx..." # SecretId
-    api_secret: "xxx..." # SecretKey
-    sign_name: "MyApp"
-    app_id: "1400xxx"
+    api_key: "YOUR_SECRET_ID" # SecretId
+    api_secret: "YOUR_SECRET_KEY" # SecretKey
+    sign_name: "YOUR_SIGN_NAME"
+    app_id: "YOUR_APP_ID"
     region: "ap-guangzhou"
     enabled: true
     weight: 5
     # 使用方式:
-    # 文本短信: gosender send --provider sms --sub-provider tencent --to "***REMOVED***" --content "您的验证码是1234"
-    # 模板短信: gosender send --provider sms --sub-provider tencent --to "***REMOVED***" --message-type template --template-id "123456" --template-params "code=1234,time=5" --metadata params_order='["1234","5"]'
+    # 文本短信: gosender send --provider sms --sub-provider tencent --to "1380013xxxx" --content "您的验证码是1234"
+    # 模板短信: gosender send --provider sms --sub-provider tencent --to "1380013xxxx" --message-type template --template-id "123456" --template-params "code=1234,time=5" --metadata params_order='["1234","5"]'
 
   - provider: sms
     subtype: volc
     name: volcengine-sms
-    api_key: "xxxx" # Access Key
-    api_secret: "XXX" # Secret Key
-    sign_name: "成都***REMOVED***"
-    app_id: "xxxx"
+    api_key: "YOUR_ACCESS_KEY" # Access Key
+    api_secret: "YOUR_SECRET_KEY" # Secret Key
+    sign_name: "YOUR_SIGN_NAME"
+    app_id: "YOUR_APP_ID"
     enabled: true
     weight: 10
     # 使用方式:
-    # 文本短信: gosender send --provider sms --sub-provider volc --to "***REMOVED***" --message-type text --content "您的验证码是1234"
-    # 使用模板: gosender send --provider sms --sub-provider volc --to "***REMOVED***" --message-type text --template-id "ST_xxx" --template-params "code=123456"
+    # 文本短信: gosender send --provider sms --sub-provider volc --to "138001xxxx" --message-type text --content "您的验证码是1234"
+    # 使用模板: gosender send --provider sms --sub-provider volc --to "138001xxxx" --message-type text --template-id "YOUR_TEMPLATE_ID" --template-params "code=123456"
+    # 火山引擎特定参数: --metadata sign_name=YOUR_SIGN_NAME,app_id=YOUR_APP_ID
 
   - provider: sms
     subtype: huawei
     name: huawei-sms
-    api_key: "xxx" # App Key
-    api_secret: "xxx" # App Secret
-    sign_name: "MyApp"
-    sender: "10690xxx"
+    api_key: "YOUR_APP_KEY" # App Key
+    api_secret: "YOUR_APP_SECRET" # App Secret
+    sign_name: "YOUR_SIGN_NAME"
+    sender: "YOUR_SENDER"
     enabled: false
     weight: 3
     # 使用方式:
-    # 文本短信: gosender send --provider sms --sub-provider huawei --to "***REMOVED***" --content "您的验证码是1234"
-    # 模板短信: gosender send --provider sms --sub-provider huawei --to "***REMOVED***" --message-type template --template-id "SMS_001" --template-params "code=1234,time=5"
-    # 语音短信: gosender send --provider sms --sub-provider huawei --to "***REMOVED***" --message-type voice --content "1234"
-    # 平台特定参数: --metadata sender=1069xxx,signature=MySign,status_callback=http://example.com/callback
+    # 文本短信: gosender send --provider sms --sub-provider huawei --to "1380013xxxx" --content "您的验证码是1234"
+    # 模板短信: gosender send --provider sms --sub-provider huawei --to "1380013xxxx" --message-type template --template-id "SMS_001" --template-params "code=1234,time=5"
+    # 语音短信: gosender send --provider sms --sub-provider huawei --to "1380013xxxx" --message-type voice --content "1234"
+    # 平台特定参数: --metadata sender=YOUR_SENDER,signature=YOUR_SIGN,status_callback=http://example.com/callback
 
   # Email Providers
   - provider: email
     name: smtp-gmail
     host: "smtp.gmail.com"
     port: 587
-    api_key: "user@gmail.com" # Username
-    api_secret: "app_password" # App Password
-    from: "noreply@myapp.com"
+    api_key: "YOUR_EMAIL" # Username
+    api_secret: "YOUR_APP_PASSWORD" # App Password
+    from: "YOUR_FROM_EMAIL"
     enabled: true
     weight: 10
 
@@ -71,17 +72,17 @@ accounts:
     name: smtp-outlook
     host: "smtp-mail.outlook.com"
     port: 587
-    api_key: "user@outlook.com"
-    api_secret: "password"
-    from: "noreply@myapp.com"
+    api_key: "YOUR_EMAIL"
+    api_secret: "YOUR_PASSWORD"
+    from: "YOUR_FROM_EMAIL"
     enabled: false
     weight: 5
 
   # DingTalk Bot
   - provider: dingtalk
     name: dingtalk-alerts
-    api_key: "webhook_token_here" # 钉钉机器人的access_token
-    api_secret: "secret_here" # 安全设置中的签名密钥(签名/加签时需要)
+    api_key: "YOUR_WEBHOOK_TOKEN" # 钉钉机器人的access_token
+    api_secret: "YOUR_SECRET_KEY" # 安全设置中的签名密钥(签名/加签时需要)
     enabled: true
     weight: 10
     # 目前支持的消息类型: text, markdown
@@ -89,7 +90,7 @@ accounts:
   # Telegram Bot
   - provider: telegram
     name: telegram-bot
-    api_key: "bot_token_here" # Telegram Bot API Token (从@BotFather获取)
+    api_key: "YOUR_BOT_TOKEN" # Telegram Bot API Token (从@BotFather获取)
     enabled: true
     weight: 10
     # 目前支持的消息类型: text
@@ -98,8 +99,8 @@ accounts:
   # Lark (Feishu) Bot
   - provider: lark
     name: lark-notifications
-    api_key: "webhook_token_here" # 飞书/Lark机器人的webhook地址中的token部分
-    api_secret: "signing_secret" # 安全设置中的签名密钥(签名/加签时需要)
+    api_key: "YOUR_WEBHOOK_TOKEN" # 飞书/Lark机器人的webhook地址中的token部分
+    api_secret: "YOUR_SIGNING_SECRET" # 安全设置中的签名密钥(签名/加签时需要)
     enabled: true
     weight: 10
     # 目前支持的消息类型: text
@@ -107,7 +108,7 @@ accounts:
   # WeComBot (Enterprise WeChat)
   - provider: wecombot
     name: wecom-alerts
-    api_key: "webhook_key_here"
+    api_key: "YOUR_WEBHOOK_KEY"
     enabled: true
     weight: 10
 
@@ -134,7 +135,7 @@ accounts:
   # ServerChan
   - provider: serverchan
     name: serverchan-notify
-    api_key: "SCT_YOUR_KEY"
+    api_key: "YOUR_SERVERCHAN_KEY"
     enabled: true
     weight: 5
 
@@ -142,8 +143,8 @@ accounts:
   - provider: emailapi
     subtype: resend
     name: resend-api
-    api_key: "re_xxx" # Resend API key
-    from: "noreply@myapp.com"
+    api_key: "YOUR_RESEND_API_KEY" # Resend API key
+    from: "YOUR_FROM_EMAIL"
     enabled: true
     weight: 10
     # 使用方式:
@@ -153,13 +154,13 @@ accounts:
   - provider: emailapi
     subtype: emailjs
     name: emailjs-service
-    api_key: "service_id" # EmailJS Service ID
-    api_secret: "template_id" # EmailJS Template ID
-    user_id: "user_id" # EmailJS User ID
+    api_key: "YOUR_SERVICE_ID" # EmailJS Service ID
+    api_secret: "YOUR_TEMPLATE_ID" # EmailJS Template ID
+    user_id: "YOUR_USER_ID" # EmailJS User ID
     enabled: true
     weight: 8
     # 使用方式:
-    # gosender send --provider emailapi --sub-provider emailjs --to "user@example.com" --subject "主题" --message-type template --template-id "template123" --template-params "name=John,company=Acme"
+    # gosender send --provider emailapi --sub-provider emailjs --to "user@example.com" --subject "主题" --message-type template --template-id "YOUR_TEMPLATE_ID" --template-params "name=Your_Name,company=Your_Company"
 
 # Example CLI flag defaults (can be overridden by command line)
 # These settings can also be set via environment variables with GO_SENDER_ prefix

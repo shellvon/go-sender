@@ -56,3 +56,4 @@ func NewLarkBuilder() *GenericBuilder[*lark.Account, core.Message] {
 		validateLarkFlags,
 	)
 }
+ 

@@ -65,3 +65,4 @@ func NewDingTalkBuilder() *GenericBuilder[*dingtalk.Account, core.Message] {
 		validateDingTalkFlags,
 	)
 }
+ 
