@@ -1,36 +1,60 @@
 # Provider accounts configuration
 accounts:
   # SMS Providers
-  # - provider: sms
-  #   subtype: aliyun
-  #   name: aliyun-main
-  #   api_key: "LTAI4G..." # AccessKey ID
-  #   api_secret: "xxx..." # AccessKey Secret
-  #   sign_name: "MyApp"
-  #   region: "cn-hangzhou"
-  #   enabled: true
-  #   weight: 10
+  - provider: sms
+    subtype: aliyun
+    name: aliyun-main
+    api_key: "LTAI4G..." # AccessKey ID
+    api_secret: "xxx..." # AccessKey Secret
+    sign_name: "MyApp"
+    region: "cn-hangzhou"
+    enabled: true
+    weight: 10
+    # 使用方式:
+    # 文本短信: gosender send --provider sms --sub-provider aliyun --to "***REMOVED***" --content "您的验证码是1234"
+    # 可以通过metadata传递额外参数: --metadata region=cn-hangzhou,sign_name=MyApp
 
-  # - provider: sms
-  #   subtype: tencent
-  #   name: tencent-backup
-  #   api_key: "AKIDxxx..." # SecretId
-  #   api_secret: "xxx..." # SecretKey
-  #   sign_name: "MyApp"
-  #   app_id: "1400xxx"
-  #   region: "ap-guangzhou"
-  #   enabled: true
-  #   weight: 5
+  - provider: sms
+    subtype: tencent
+    name: tencent-backup
+    api_key: "AKIDxxx..." # SecretId
+    api_secret: "xxx..." # SecretKey
+    sign_name: "MyApp"
+    app_id: "1400xxx"
+    region: "ap-guangzhou"
+    enabled: true
+    weight: 5
+    # 使用方式:
+    # 文本短信: gosender send --provider sms --sub-provider tencent --to "***REMOVED***" --content "您的验证码是1234"
+    # 模板短信: gosender send --provider sms --sub-provider tencent --to "***REMOVED***" --message-type template --template-id "123456" --template-params "code=1234,time=5" --metadata params_order='["1234","5"]'
 
-  # - provider: sms
-  #   subtype: huawei
-  #   name: huawei-sms
-  #   api_key: "xxx" # App Key
-  #   api_secret: "xxx" # App Secret
-  #   sign_name: "MyApp"
-  #   sender: "10690xxx"
-  #   enabled: false
-  #   weight: 3
+  - provider: sms
+    subtype: volc
+    name: volcengine-sms
+    api_key: "xxxx" # Access Key
+    api_secret: "XXX" # Secret Key
+    sign_name: "成都***REMOVED***"
+    app_id: "xxxx"
+    enabled: true
+    weight: 10
+    # 使用方式:
+    # 文本短信: gosender send --provider sms --sub-provider volc --to "***REMOVED***" --message-type text --content "您的验证码是1234"
+    # 使用模板: gosender send --provider sms --sub-provider volc --to "***REMOVED***" --message-type text --template-id "ST_xxx" --template-params "code=123456"
+
+  - provider: sms
+    subtype: huawei
+    name: huawei-sms
+    api_key: "xxx" # App Key
+    api_secret: "xxx" # App Secret
+    sign_name: "MyApp"
+    sender: "10690xxx"
+    enabled: false
+    weight: 3
+    # 使用方式:
+    # 文本短信: gosender send --provider sms --sub-provider huawei --to "***REMOVED***" --content "您的验证码是1234"
+    # 模板短信: gosender send --provider sms --sub-provider huawei --to "***REMOVED***" --message-type template --template-id "SMS_001" --template-params "code=1234,time=5"
+    # 语音短信: gosender send --provider sms --sub-provider huawei --to "***REMOVED***" --message-type voice --content "1234"
+    # 平台特定参数: --metadata sender=1069xxx,signature=MySign,status_callback=http://example.com/callback
 
   # Email Providers
   - provider: email
@@ -114,23 +138,28 @@ accounts:
     enabled: true
     weight: 5
 
-  # # EmailAPI Providers
-  # - provider: emailapi
-  #   subtype: resend
-  #   name: resend-api
-  #   api_key: "re_xxx"
-  #   from: "noreply@myapp.com"
-  #   enabled: false
-  #   weight: 10
+  # EmailAPI Providers
+  - provider: emailapi
+    subtype: resend
+    name: resend-api
+    api_key: "re_xxx" # Resend API key
+    from: "noreply@myapp.com"
+    enabled: true
+    weight: 10
+    # 使用方式:
+    # gosender send --provider emailapi --sub-provider resend --to "user@example.com" --subject "主题" --content "内容"
+    # 发送HTML: gosender send --provider emailapi --sub-provider resend --to "user@example.com" --subject "主题" --content "<h1>内容</h1>" --message-type html
 
-  # - provider: emailapi
-  #   subtype: emailjs
-  #   name: emailjs-service
-  #   api_key: "service_id"
-  #   api_secret: "template_id"
-  #   user_id: "user_id"
-  #   enabled: false
-  #   weight: 8
+  - provider: emailapi
+    subtype: emailjs
+    name: emailjs-service
+    api_key: "service_id" # EmailJS Service ID
+    api_secret: "template_id" # EmailJS Template ID
+    user_id: "user_id" # EmailJS User ID
+    enabled: true
+    weight: 8
+    # 使用方式:
+    # gosender send --provider emailapi --sub-provider emailjs --to "user@example.com" --subject "主题" --message-type template --template-id "template123" --template-params "name=John,company=Acme"
 
 # Example CLI flag defaults (can be overridden by command line)
 # These settings can also be set via environment variables with GO_SENDER_ prefix

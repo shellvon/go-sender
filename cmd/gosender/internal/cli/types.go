@@ -15,9 +15,10 @@ type CLIFlags struct {
 	Output     string // json, yaml, console
 
 	// Provider Selection
-	Provider string
-	Account  string
-	Strategy string // provider selection strategy
+	Provider    string
+	SubProvider string // sub-provider type for SMS, EmailAPI, etc.
+	Account     string
+	Strategy    string // provider selection strategy
 
 	// Message Content
 	To             []string

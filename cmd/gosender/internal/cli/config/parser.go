@@ -8,8 +8,11 @@ import (
 	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/providers/dingtalk"
 	"github.com/shellvon/go-sender/providers/email"
+	"github.com/shellvon/go-sender/providers/emailapi"
+	"github.com/shellvon/go-sender/providers/lark"
 	"github.com/shellvon/go-sender/providers/serverchan"
 	"github.com/shellvon/go-sender/providers/sms"
+	"github.com/shellvon/go-sender/providers/telegram"
 	"github.com/shellvon/go-sender/providers/webhook"
 	"github.com/shellvon/go-sender/providers/wecombot"
 )
@@ -34,6 +37,9 @@ func init() {
 	RegisterAccountType(core.ProviderTypeWebhook, func() core.Selectable { return &webhook.Endpoint{} })
 	RegisterAccountType(core.ProviderTypeWecombot, func() core.Selectable { return &wecombot.Account{} })
 	RegisterAccountType(core.ProviderTypeServerChan, func() core.Selectable { return &serverchan.Account{} })
+	RegisterAccountType(core.ProviderTypeTelegram, func() core.Selectable { return &telegram.Account{} })
+	RegisterAccountType(core.ProviderTypeLark, func() core.Selectable { return &lark.Account{} })
+	RegisterAccountType(core.ProviderTypeEmailAPI, func() core.Selectable { return &emailapi.Account{} })
 }
 
 // AccountParser handles parsing of account configurations

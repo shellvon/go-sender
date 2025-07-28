@@ -43,6 +43,7 @@ configurations without actually sending messages.`,
 			flags.Content = viper.GetString("content")
 			flags.Subject = viper.GetString("subject")
 			flags.Provider = viper.GetString("provider")
+			flags.SubProvider = viper.GetString("sub-provider")
 			flags.Account = viper.GetString("account")
 			flags.Strategy = viper.GetString("strategy")
 			flags.TemplateID = viper.GetString("template-id")                  // Use hyphen as in CLI flag
@@ -88,6 +89,7 @@ configurations without actually sending messages.`,
 	cmd.Flags().StringVarP(&flags.Content, "content", "m", "", "message content")
 	cmd.Flags().StringVarP(&flags.Subject, "subject", "s", "", "message subject (for email and applicable providers)")
 	cmd.Flags().StringVarP(&flags.Provider, "provider", "p", "", "specific provider to use (sms, email, dingtalk, webhook, etc.)")
+	cmd.Flags().StringVar(&flags.SubProvider, "sub-provider", "", "sub-provider type (aliyun, tencent, resend, etc.)")
 	cmd.Flags().StringVarP(&flags.Account, "account", "a", "", "specific account name to use")
 	cmd.Flags().StringVar(&flags.Strategy, "strategy", "", "provider selection strategy (round_robin, weighted, failover)")
 	cmd.Flags().StringVar(&flags.TemplateID, "template-id", "", "template ID for SMS and applicable providers")

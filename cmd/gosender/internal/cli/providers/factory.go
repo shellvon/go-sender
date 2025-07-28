@@ -17,6 +17,8 @@ func DefaultProviderRegistry() *ProviderRegistry {
 		NewTelegramBuilder(),   // Telegram 机器人
 		NewLarkBuilder(),       // 飞书/Lark 机器人
 		NewDingTalkBuilder(),   // 钉钉/DingTalk 机器人
+		NewSMSBuilder(),        // 短信服务
+		NewEmailAPIBuilder(),   // 基于API的邮件服务
 	}
 
 	for _, builder := range builders {
