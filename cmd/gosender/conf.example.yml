@@ -112,25 +112,44 @@ accounts:
     enabled: true
     weight: 10
 
-  # # Webhook Endpoints
-  # - provider: webhook
-  #   name: slack-webhook
-  #   url: "https://hooks.slack.com/services/xxx/xxx/xxx"
-  #   method: "POST"
-  #   headers:
-  #     Content-Type: "application/json"
-  #     Authorization: "Bearer token_here"
-  #   enabled: true
-  #   weight: 10
+  # Webhook Endpoints
+  - provider: webhook
+    name: slack-webhook
+    url: "https://hooks.slack.com/services/xxx/xxx/xxx"
+    method: "POST"
+    headers:
+      Content-Type: "application/json"
+      Authorization: "Bearer token_here"
+    enabled: true
+    weight: 10
+    # 使用方式:
+    # JSON内容: gosender send --provider webhook --account slack-webhook --content '{"text":"Hello, World!"}'
+    # 普通文本: gosender send --provider webhook --account slack-webhook --content "Hello, World!"
 
-  # - provider: webhook
-  #   name: discord-webhook
-  #   url: "https://discord.com/api/webhooks/xxx/xxx"
-  #   method: "POST"
-  #   headers:
-  #     Content-Type: "application/json"
-  #   enabled: true
-  #   weight: 8
+  - provider: webhook
+    name: discord-webhook
+    url: "https://discord.com/api/webhooks/xxx/xxx"
+    method: "POST"
+    headers:
+      Content-Type: "application/json"
+    enabled: true
+    weight: 8
+    # 使用方式:
+    # gosender send --provider webhook --account discord-webhook --content '{"content":"Hello from go-sender!"}'
+
+  - provider: webhook
+    name: custom-api
+    url: "https://api.example.com/v1/endpoint/{id}"
+    method: "PUT"
+    headers:
+      Content-Type: "application/json"
+      X-API-KEY: "your-api-key"
+    query_params:
+      source: "gosender"
+    enabled: true
+    weight: 5
+    # 使用方式:
+    # 使用路径参数: gosender send --provider webhook --account custom-api --content '{"data":"value"}' --metadata path_params="id=123"
 
   # ServerChan
   - provider: serverchan

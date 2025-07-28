@@ -66,7 +66,8 @@ configurations without actually sending messages.`,
 			// Basic validation
 			// WeComBot doesn't need --to parameter as it sends to groups
 			// ServerChan doesn't need --to parameter as it sends to groups
-			if flags.Provider != "wecombot" && flags.Provider != "serverchan" && len(flags.To) == 0 {
+			// Webhook doesn't need --to parameter as it sends to webhook
+			if flags.Provider != "wecombot" && flags.Provider != "serverchan" && flags.Provider != "webhook" && len(flags.To) == 0 {
 				return fmt.Errorf("--to is required: specify at least one recipient")
 			}
 
@@ -143,7 +144,24 @@ func handleDryRun(flags *cli.CLIFlags, conf *cli.RootConfig) error {
 		httpRequest = simulateEmailRequest(flags, conf)
 	} else {
 		// For HTTP-based providers, "send" message with mock client
-		_, err = sender.SendWithResult(context.Background(), msg)
+		sendOpts := []core.SendOption{}
+
+		// Add account selection if specified
+		if flags.Account != "" {
+			sendOpts = append(sendOpts, core.WithSendAccount(flags.Account))
+		}
+
+		// Add timeout if specified
+		if flags.Timeout > 0 {
+			sendOpts = append(sendOpts, core.WithSendTimeout(flags.Timeout))
+		}
+
+		// Add priority if specified
+		if flags.Priority > 0 {
+			sendOpts = append(sendOpts, core.WithSendPriority(flags.Priority))
+		}
+
+		_, err = sender.SendWithResult(context.Background(), msg, sendOpts...)
 		if err != nil {
 			return fmt.Errorf("dry-run send failed: %w", err)
 		}
@@ -307,8 +325,25 @@ func handleRealSend(flags *cli.CLIFlags, conf *cli.RootConfig) error {
 		return fmt.Errorf("failed to build message: %w", err)
 	}
 
-	// 5. Send message
-	result, err := sender.SendWithResult(context.Background(), msg)
+	// 5. Send message with options
+	sendOpts := []core.SendOption{}
+
+	// Add account selection if specified
+	if flags.Account != "" {
+		sendOpts = append(sendOpts, core.WithSendAccount(flags.Account))
+	}
+
+	// Add timeout if specified
+	if flags.Timeout > 0 {
+		sendOpts = append(sendOpts, core.WithSendTimeout(flags.Timeout))
+	}
+
+	// Add priority if specified
+	if flags.Priority > 0 {
+		sendOpts = append(sendOpts, core.WithSendPriority(flags.Priority))
+	}
+
+	result, err := sender.SendWithResult(context.Background(), msg, sendOpts...)
 	if err != nil {
 		return err
 	}
@@ -323,6 +358,7 @@ func handleRealSend(flags *cli.CLIFlags, conf *cli.RootConfig) error {
 	formattedResult := &cli.FormattedResult{
 		Success:    true,
 		Provider:   string(providerType),
+		Account:    flags.Account, // 添加账户名称
 		StatusCode: result.StatusCode,
 		Metadata: map[string]interface{}{
 			"response_body": string(result.Body),

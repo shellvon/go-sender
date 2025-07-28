@@ -19,6 +19,7 @@ func DefaultProviderRegistry() *ProviderRegistry {
 		NewDingTalkBuilder(),   // 钉钉/DingTalk 机器人
 		NewSMSBuilder(),        // 短信服务
 		NewEmailAPIBuilder(),   // 基于API的邮件服务
+		NewWebhookBuilder(),    // Webhook服务
 	}
 
 	for _, builder := range builders {
