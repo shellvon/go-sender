@@ -1,7 +1,4 @@
-//nolint:dupl // Huawei builder 和 Volc builder 结构类似但业务独立，重复为误报。
 package sms
-
-import "github.com/shellvon/go-sender/utils"
 
 // @ProviderName: Huawei Cloud / 华为云
 // @Website: https://www.huaweicloud.com
@@ -17,9 +14,6 @@ import "github.com/shellvon/go-sender/utils"
 // HuaweiSMSBuilder provides Huawei-specific SMS message creation.
 type HuaweiSMSBuilder struct {
 	*BaseBuilder[*HuaweiSMSBuilder]
-
-	from   string
-	region string
 }
 
 // newHuaweiSMSBuilder creates a new Huawei SMS builder.
@@ -33,8 +27,7 @@ func newHuaweiSMSBuilder() *HuaweiSMSBuilder {
 // 华为云短信服务中，from 字段用于指定发送方号码。
 //   - 文档地址: https://support.huaweicloud.com/api-msgsms/sms_05_0002.html
 func (b *HuaweiSMSBuilder) From(from string) *HuaweiSMSBuilder {
-	b.from = from
-	return b
+	return b.meta(huaweiFromKey, from)
 }
 
 // Region 设置华为云短信的区域, 默认为cn-north-1
@@ -49,19 +42,5 @@ func (b *HuaweiSMSBuilder) From(from string) *HuaweiSMSBuilder {
 // 对于API接入地址，您需要管理控制台，从全球短信"应用管理"或中国大陆短信"应用管理"页面获取。
 // 则最终请求地址是 https://rtcsms.${region}.myhuaweicloud.com/sms/batchSendSms/v1
 func (b *HuaweiSMSBuilder) Region(region string) *HuaweiSMSBuilder {
-	b.region = region
-	return b
-}
-
-// Build constructs the Huawei SMS message with all the configured options.
-func (b *HuaweiSMSBuilder) Build() *Message {
-	msg := b.BaseBuilder.Build()
-	fields := map[string]interface{}{
-		huaweiFromKey:   b.from,
-		huaweiRegionKey: b.region,
-	}
-	if extra := utils.BuildExtras(fields); len(extra) > 0 {
-		msg.Extras = extra
-	}
-	return msg
+	return b.meta(huaweiRegionKey, region)
 }

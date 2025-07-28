@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -9,7 +10,7 @@ import (
 	"github.com/shellvon/go-sender/providers/emailapi"
 )
 
-// GetEmailAPISubProviders 返回支持的EmailAPI子提供者列表
+// GetEmailAPISubProviders 返回支持的EmailAPI子提供者列表.
 func GetEmailAPISubProviders() []string {
 	return []string{
 		string(emailapi.SubProviderEmailJS),
@@ -19,7 +20,7 @@ func GetEmailAPISubProviders() []string {
 
 func createEmailAPIProvider(accounts []*emailapi.Account) (core.Provider, error) {
 	if len(accounts) == 0 {
-		return nil, fmt.Errorf("no valid emailapi accounts found")
+		return nil, errors.New("no valid emailapi accounts found")
 	}
 
 	cfg := &emailapi.Config{Items: accounts}
@@ -28,12 +29,14 @@ func createEmailAPIProvider(accounts []*emailapi.Account) (core.Provider, error)
 
 func buildEmailAPIMessage(flags *cli.CLIFlags) (core.Message, error) {
 	if len(flags.To) == 0 {
-		return nil, fmt.Errorf("emailapi requires at least one recipient email address")
+		return nil, errors.New("emailapi requires at least one recipient email address")
 	}
 
 	subProvider := flags.SubProvider
 	if subProvider == "" {
-		return nil, fmt.Errorf("sub-provider is required for EmailAPI, please use --sub-provider (resend, emailjs, etc.)")
+		return nil, errors.New(
+			"sub-provider is required for EmailAPI, please use --sub-provider (resend, emailjs, etc.)",
+		)
 	}
 
 	// 目前EmailAPI可能没有像SMS那样的构建器体系，先直接创建消息
@@ -77,12 +80,12 @@ func buildEmailAPIMessage(flags *cli.CLIFlags) (core.Message, error) {
 
 func validateEmailAPIFlags(flags *cli.CLIFlags) error {
 	if len(flags.To) == 0 {
-		return fmt.Errorf("emailapi requires at least one recipient (--to)")
+		return errors.New("emailapi requires at least one recipient (--to)")
 	}
 
 	// 验证子提供者
 	if flags.SubProvider == "" {
-		return fmt.Errorf("sub-provider is required for EmailAPI, please use --sub-provider (resend, emailjs, etc.)")
+		return errors.New("sub-provider is required for EmailAPI, please use --sub-provider (resend, emailjs, etc.)")
 	}
 
 	// 验证子提供者类型
@@ -110,18 +113,18 @@ func validateEmailAPIFlags(flags *cli.CLIFlags) error {
 
 	// 验证内容
 	if flags.Content == "" {
-		return fmt.Errorf("content is required for EmailAPI messages")
+		return errors.New("content is required for EmailAPI messages")
 	}
 
 	// 验证主题
 	if flags.Subject == "" {
-		return fmt.Errorf("subject is required for EmailAPI messages")
+		return errors.New("subject is required for EmailAPI messages")
 	}
 
 	return nil
 }
 
-// NewEmailAPIBuilder 创建一个新的 EmailAPI GenericBuilder
+// NewEmailAPIBuilder 创建一个新的 EmailAPI GenericBuilder.
 func NewEmailAPIBuilder() *GenericBuilder[*emailapi.Account, core.Message] {
 	return NewGenericBuilder(
 		core.ProviderTypeEmailAPI,

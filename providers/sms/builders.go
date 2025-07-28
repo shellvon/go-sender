@@ -1,7 +1,9 @@
 /*
 Package sms provides a unified API for sending SMS messages across multiple providers.
 
-Usage (链式Builder风格)：
+两种API风格：
+
+1. 提供商专用API (Provider-specific API)：
 
 	// 文本短信
 	msg := sms.Aliyun().To("***REMOVED***").Content("您的验证码是1234").SignName("签名").Build()
@@ -26,6 +28,37 @@ Usage (链式Builder风格)：
 
 	// 彩信
 	msg := sms.Aliyun().To("***REMOVED***").Type(sms.MMS).Build()
+
+2. 通用API (Generic API)：
+
+	// 文本短信
+	msg := sms.SMS().SubProvider("aliyun").To("***REMOVED***").Content("您的验证码是1234").Meta("SignName", "签名").Build()
+
+	// 模板短信
+	msg := sms.SMS().
+		SubProvider("aliyun").
+		To("***REMOVED***").
+		Template("SMS_123456", map[string]string{"code": "1234"}).
+		Meta("SignName", "签名").
+		Build()
+
+	// 平台特定参数
+	msg := sms.SMS().
+		SubProvider("aliyun").
+		To("***REMOVED***").
+		Content("验证码1234").
+		Meta("OutId", "12345").  // 阿里云特有参数
+		Meta("Region", "cn-hangzhou").
+		Build()
+
+	// 语音短信
+	msg := sms.SMS().
+		SubProvider("aliyun").
+		To("***REMOVED***").
+		Type(sms.Voice).
+		Template("TTS_123456", map[string]string{"code": "1234"}).
+		Meta("CalledShowNumber", "400xxxxxxx").
+		Build()
 
 Provider Documentation:
   - Aliyun: https://help.aliyun.com/zh/sms/developer-reference/api-dysmsapi-2017-05-25-sendsms
@@ -100,8 +133,9 @@ type BaseBuilder[T any] struct {
 	scheduledAt    *time.Time
 	extend         string
 	uid            string
+	extras         map[string]interface{} // Generic metadata field for storing provider-specific parameters
 
-	// self 持有实际的 builder 指针，用于链式调用时返回具体类型。
+	// self holds a reference to the actual builder instance for method chaining to return the concrete type
 	self T
 }
 
@@ -220,9 +254,33 @@ func (b *BaseBuilder[T]) UID(uid string) T {
 	return b.self
 }
 
+// meta sets platform-specific parameters (package internal)
+// This allows adding provider-specific parameters via a common internal method.
+func (b *BaseBuilder[T]) meta(key string, value interface{}) T {
+	if b.extras == nil {
+		b.extras = make(map[string]interface{})
+	}
+	b.extras[key] = value
+	return b.self
+}
+
+// provider sets the SMS sub-provider type (package internal).
+func (b *BaseBuilder[T]) provider(provider SubProviderType) T {
+	b.subProvider = provider
+	return b.self
+}
+
+// Template sets both template ID and parameters
+// This is a convenience method that sets both TemplateID and TemplateParams.
+func (b *BaseBuilder[T]) Template(id string, params map[string]string) T {
+	b.templateID = id
+	b.templateParams = params
+	return b.self
+}
+
 // Build assembles the final *Message with all已设置字段.
 func (b *BaseBuilder[T]) Build() *Message {
-	return &Message{
+	msg := &Message{
 		Type:           b.msgType,
 		Category:       b.category,
 		SubProvider:    string(b.subProvider),
@@ -238,6 +296,13 @@ func (b *BaseBuilder[T]) Build() *Message {
 		Extend:         b.extend,
 		UID:            b.uid,
 	}
+
+	// Merge extras into Message.Extras
+	if len(b.extras) > 0 {
+		msg.Extras = b.extras
+	}
+
+	return msg
 }
 
 // Aliyun creates a new Aliyun SMS message builder.
@@ -298,4 +363,55 @@ func Yuntongxun() *YuntongxunSMSBuilder {
 // Yunpian creates a new Yunpian SMS message builder.
 func Yunpian() *YunpianSMSBuilder {
 	return newYunpianSMSBuilder()
+}
+
+// NewMessage creates a new common SMS message builder that works with all supported providers.
+// This is part of the dual-API approach, providing a generic builder alongside provider-specific ones.
+//
+// Usage example:
+//
+//	// Generic API
+//	msg := sms.NewMessage().
+//		SubProvider("aliyun").
+//		To("13800138000").
+//		Content("Hello from go-sender!").
+//		Template("SMS_xxx", map[string]string{"code": "1234"}).
+//		Meta("OutId", "myOutId").     // Aliyun-specific parameter
+//		Meta("SignName", "签名").      // Signature
+//		Build()
+//
+//	// Equivalent to provider-specific API
+//	msg := sms.Aliyun().
+//		To("13800138000").
+//		Content("Hello from go-sender!").
+//		TemplateID("SMS_xxx").
+//		Params(map[string]string{"code": "1234"}).
+//		OutID("myOutId").
+//		SignName("签名").
+//		Build()
+
+// GeneralBuilder is a generic SMS builder that uses the same BaseBuilder but isn't tied to a specific provider
+// This allows specifying any provider via the SubProvider method.
+type GeneralBuilder struct {
+	*BaseBuilder[*GeneralBuilder]
+}
+
+func NewMessage() *GeneralBuilder {
+	b := &GeneralBuilder{}
+	b.BaseBuilder = &BaseBuilder[*GeneralBuilder]{
+		self:   b,
+		extras: make(map[string]interface{}),
+	}
+	return b
+}
+
+// SubProvider sets the SMS sub-provider type.
+func (b *GeneralBuilder) SubProvider(provider SubProviderType) *GeneralBuilder {
+	return b.BaseBuilder.provider(provider)
+}
+
+// Meta sets platform-specific parameters
+// This allows adding provider-specific parameters without using provider-specific builders.
+func (b *GeneralBuilder) Meta(key string, value interface{}) *GeneralBuilder {
+	return b.BaseBuilder.meta(key, value)
 }

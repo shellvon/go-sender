@@ -6,7 +6,7 @@ import (
 	"github.com/shellvon/go-sender/core"
 )
 
-// CLIFlags defines all command-line flags for the enhanced CLI
+// CLIFlags defines all command-line flags for the enhanced CLI.
 type CLIFlags struct {
 	// Configuration
 	ConfigFile string
@@ -38,7 +38,7 @@ type CLIFlags struct {
 	Metadata map[string]string // additional metadata
 }
 
-// OutputFormat represents the output format type
+// OutputFormat represents the output format type.
 type OutputFormat string
 
 const (
@@ -47,21 +47,21 @@ const (
 	OutputYAML    OutputFormat = "yaml"
 )
 
-// FormattedResult represents the structured result output
+// FormattedResult represents the structured result output.
 type FormattedResult struct {
-	Success    bool                   `json:"success" yaml:"success"`
-	Provider   string                 `json:"provider" yaml:"provider"`
-	Account    string                 `json:"account" yaml:"account"`
-	MessageID  string                 `json:"message_id" yaml:"message_id"`
-	RequestID  string                 `json:"request_id,omitempty" yaml:"request_id,omitempty"`
-	Duration   time.Duration          `json:"duration" yaml:"duration"`
+	Success    bool                   `json:"success"               yaml:"success"`
+	Provider   string                 `json:"provider"              yaml:"provider"`
+	Account    string                 `json:"account"               yaml:"account"`
+	MessageID  string                 `json:"message_id"            yaml:"message_id"`
+	RequestID  string                 `json:"request_id,omitempty"  yaml:"request_id,omitempty"`
+	Duration   time.Duration          `json:"duration"              yaml:"duration"`
 	StatusCode int                    `json:"status_code,omitempty" yaml:"status_code,omitempty"`
-	Error      string                 `json:"error,omitempty" yaml:"error,omitempty"`
-	DryRun     *DryRunResult          `json:"dry_run,omitempty" yaml:"dry_run,omitempty"`
-	Metadata   map[string]interface{} `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+	Error      string                 `json:"error,omitempty"       yaml:"error,omitempty"`
+	DryRun     *DryRunResult          `json:"dry_run,omitempty"     yaml:"dry_run,omitempty"`
+	Metadata   map[string]interface{} `json:"metadata,omitempty"    yaml:"metadata,omitempty"`
 }
 
-// DryRunResult represents the result of a dry-run operation
+// DryRunResult represents the result of a dry-run operation.
 type DryRunResult struct {
 	Provider         string              `json:"provider"`
 	Account          string              `json:"account"`
@@ -72,7 +72,7 @@ type DryRunResult struct {
 	EstimatedCost    *CostEstimate       `json:"estimated_cost,omitempty"`
 }
 
-// HTTPRequestCapture captures the actual HTTP request details
+// HTTPRequestCapture captures the actual HTTP request details.
 type HTTPRequestCapture struct {
 	Method    string            `json:"method"`
 	URL       string            `json:"url"`
@@ -82,14 +82,14 @@ type HTTPRequestCapture struct {
 	Duration  time.Duration     `json:"duration,omitempty"`
 }
 
-// CostEstimate provides cost estimation for the message
+// CostEstimate provides cost estimation for the message.
 type CostEstimate struct {
 	Currency string  `json:"currency"`
 	Amount   float64 `json:"amount"`
 	Unit     string  `json:"unit"`
 }
 
-// ProviderMessageBuilder defines the interface for building provider-specific messages
+// ProviderMessageBuilder defines the interface for building provider-specific messages.
 type ProviderMessageBuilder interface {
 	BuildMessage(flags *CLIFlags, config *RootConfig) (core.Message, error)
 	ValidateFlags(flags *CLIFlags) error
@@ -98,12 +98,12 @@ type ProviderMessageBuilder interface {
 	GetOptionalFlags() []string
 }
 
-// OutputFormatter handles different output formats
+// OutputFormatter handles different output formats.
 type OutputFormatter interface {
 	Format(result *FormattedResult) (string, error)
 }
 
-// ProviderInfo contains information about a provider's capabilities
+// ProviderInfo contains information about a provider's capabilities.
 type ProviderInfo struct {
 	Type              core.ProviderType `json:"type"`
 	Name              string            `json:"name"`
@@ -116,7 +116,7 @@ type ProviderInfo struct {
 	SupportsTemplates bool              `json:"supports_templates"`
 }
 
-// RootConfig defines the top-level configuration structure
+// RootConfig defines the top-level configuration structure.
 type RootConfig struct {
 	LogLevel string                   `mapstructure:"log_level"`
 	Accounts []map[string]interface{} `mapstructure:"accounts"`

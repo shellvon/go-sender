@@ -2,6 +2,7 @@ package providers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -11,7 +12,7 @@ import (
 	"github.com/shellvon/go-sender/providers/sms"
 )
 
-// GetSMSSubProviders 返回CLI支持的SMS子提供者列表
+// GetSMSSubProviders 返回CLI支持的SMS子提供者列表.
 func GetSMSSubProviders() []string {
 	return []string{
 		string(sms.SubProviderAliyun),
@@ -29,17 +30,17 @@ func GetSMSSubProviders() []string {
 	}
 }
 
-// createSMSProvider 从账户列表创建 SMS Provider
+// createSMSProvider 从账户列表创建 SMS Provider.
 func createSMSProvider(accounts []*sms.Account) (core.Provider, error) {
 	if len(accounts) == 0 {
-		return nil, fmt.Errorf("no valid sms accounts found")
+		return nil, errors.New("no valid sms accounts found")
 	}
 
 	cfg := &sms.Config{Items: accounts}
 	return sms.New(cfg)
 }
 
-// buildSMSMessage 从 CLI 标志构建 SMS 消息
+// buildSMSMessage 从 CLI 标志构建 SMS 消息.
 func buildSMSMessage(flags *cli.CLIFlags) (core.Message, error) {
 	// 检查子提供者是否受支持
 	if !isSMSSubProviderSupported(flags.SubProvider) {
@@ -79,20 +80,20 @@ func getMessageType(messageType string) sms.MessageType {
 	return types[messageType]
 }
 
-// getIntValue 安全地将字符串转换为整数
+// getIntValue 安全地将字符串转换为整数.
 func getIntValue(s string) int {
 	value, _ := strconv.Atoi(s) // 忽略错误，错误时返回0
 	return value
 }
 
-// getJSONArray 解析JSON数组字符串
+// getJSONArray 解析JSON数组字符串.
 func getJSONArray(s string) []string {
 	var result []string
 	_ = json.Unmarshal([]byte(s), &result) // 忽略错误，错误时返回空数组
 	return result
 }
 
-// isSMSSubProviderSupported 检查子提供者是否受支持
+// isSMSSubProviderSupported 检查子提供者是否受支持.
 func isSMSSubProviderSupported(subProvider string) bool {
 	for _, p := range GetSMSSubProviders() {
 		if p == subProvider {
@@ -102,15 +103,15 @@ func isSMSSubProviderSupported(subProvider string) bool {
 	return false
 }
 
-// validateSMSFlags 验证 CLI 标志是否符合 SMS 发送要求
+// validateSMSFlags 验证 CLI 标志是否符合 SMS 发送要求.
 func validateSMSFlags(flags *cli.CLIFlags) error {
 	if len(flags.To) == 0 {
-		return fmt.Errorf("sms requires at least one recipient (--to)")
+		return errors.New("sms requires at least one recipient (--to)")
 	}
 
 	// 验证子提供者
 	if flags.SubProvider == "" {
-		return fmt.Errorf("sub-provider is required for SMS, please use --sub-provider (aliyun, tencent, etc.)")
+		return errors.New("sub-provider is required for SMS, please use --sub-provider (aliyun, tencent, etc.)")
 	}
 
 	// 验证子提供者是否受支持
@@ -137,13 +138,13 @@ func validateSMSFlags(flags *cli.CLIFlags) error {
 	return nil
 }
 
-// isValidPhoneNumber 简单验证电话号码格式
+// isValidPhoneNumber 简单验证电话号码格式.
 func isValidPhoneNumber(phone string) bool {
 	// 这里提供一个简单的验证，实际应用中可能需要更复杂的逻辑
 	return len(phone) >= 7 && len(phone) <= 15
 }
 
-// NewSMSBuilder 创建一个新的 SMS GenericBuilder
+// NewSMSBuilder 创建一个新的 SMS GenericBuilder.
 func NewSMSBuilder() *GenericBuilder[*sms.Account, core.Message] {
 	return NewGenericBuilder(
 		core.ProviderTypeSMS,

@@ -2,7 +2,7 @@ package providers
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
 	"strings"
 
 	"github.com/shellvon/go-sender/cmd/gosender/internal/cli"
@@ -10,17 +10,17 @@ import (
 	"github.com/shellvon/go-sender/providers/webhook"
 )
 
-// createWebhookProvider creates a Webhook Provider from endpoints list
+// createWebhookProvider creates a Webhook Provider from endpoints list.
 func createWebhookProvider(endpoints []*webhook.Endpoint) (core.Provider, error) {
 	if len(endpoints) == 0 {
-		return nil, fmt.Errorf("no valid webhook endpoints found")
+		return nil, errors.New("no valid webhook endpoints found")
 	}
 
 	cfg := &webhook.Config{Items: endpoints}
 	return webhook.New(cfg)
 }
 
-// buildWebhookMessage builds a webhook message from CLI flags
+// buildWebhookMessage builds a webhook message from CLI flags.
 func buildWebhookMessage(flags *cli.CLIFlags) (core.Message, error) {
 	builder := webhook.Webhook()
 
@@ -39,7 +39,7 @@ func buildWebhookMessage(flags *cli.CLIFlags) (core.Message, error) {
 			builder.Header("Content-Type", "text/plain")
 		}
 	}
-	
+
 	// Support advanced features through metadata for flexibility
 	// These are optional and advanced users can use them if needed
 	if flags.Metadata != nil {
@@ -50,7 +50,7 @@ func buildWebhookMessage(flags *cli.CLIFlags) (core.Message, error) {
 				builder.PathParams(pathParams)
 			}
 		}
-		
+
 		// Support for query parameters via metadata
 		if queryParamsStr, ok := flags.Metadata["query_params"]; ok && queryParamsStr != "" {
 			queryParams := parseKeyValuePairs(queryParamsStr, "=", "&")
@@ -58,12 +58,12 @@ func buildWebhookMessage(flags *cli.CLIFlags) (core.Message, error) {
 				builder.Queries(queryParams)
 			}
 		}
-		
+
 		// Allow method override via metadata
 		if method, ok := flags.Metadata["method"]; ok && method != "" {
 			builder.Method(method)
 		}
-		
+
 		// Allow adding custom headers via metadata
 		if headersStr, ok := flags.Metadata["headers"]; ok && headersStr != "" {
 			headers := parseKeyValuePairs(headersStr, ":", ",")
@@ -91,15 +91,15 @@ func parseKeyValuePairs(s, separator, delimiter string) map[string]string {
 	return result
 }
 
-// validateWebhookFlags validates CLI flags for webhook messages
+// validateWebhookFlags validates CLI flags for webhook messages.
 func validateWebhookFlags(flags *cli.CLIFlags) error {
 	if flags.Content == "" {
-		return fmt.Errorf("webhook requires content")
+		return errors.New("webhook requires content")
 	}
 	return nil
 }
 
-// NewWebhookBuilder creates a new Webhook GenericBuilder
+// NewWebhookBuilder creates a new Webhook GenericBuilder.
 func NewWebhookBuilder() *GenericBuilder[*webhook.Endpoint, core.Message] {
 	return NewGenericBuilder(
 		core.ProviderTypeWebhook,
@@ -107,4 +107,4 @@ func NewWebhookBuilder() *GenericBuilder[*webhook.Endpoint, core.Message] {
 		buildWebhookMessage,
 		validateWebhookFlags,
 	)
-} 
+}

@@ -1,25 +1,8 @@
 package sms
 
-import (
-	"github.com/shellvon/go-sender/utils"
-)
-
 // AliyunSMSBuilder provides Aliyun-specific SMS message creation.
 type AliyunSMSBuilder struct {
 	*BaseBuilder[*AliyunSMSBuilder]
-
-	region               string
-	calledShowNumber     string
-	playTimes            int
-	volume               int
-	speed                int
-	outID                string
-	fallbackType         string
-	smsTemplateCode      string
-	digitalTemplateCode  string
-	smsTemplateParam     string
-	digitalTemplateParam string
-	cardObjects          string
 }
 
 func newAliyunSMSBuilder() *AliyunSMSBuilder {
@@ -37,8 +20,7 @@ func newAliyunSMSBuilder() *AliyunSMSBuilder {
 //
 // 当发送语音短信时，优先使用消息本身指定的显示号码，若不存在，则会使用账号信息上配置的 From 字段。
 func (b *AliyunSMSBuilder) CalledShowNumber(num string) *AliyunSMSBuilder {
-	b.calledShowNumber = num
-	return b
+	return b.meta(aliyunCalledShowNumberKey, num)
 }
 
 // PlayTimes 设置语音短信的播放次数。
@@ -46,8 +28,7 @@ func (b *AliyunSMSBuilder) CalledShowNumber(num string) *AliyunSMSBuilder {
 //   - Voice(验证码或文本转语音): https://help.aliyun.com/zh/vms/developer-reference/api-dyvmsapi-2017-05-25-singlecallbytts
 //   - Voice(通知): https://help.aliyun.com/zh/vms/developer-reference/api-dyvmsapi-2017-05-25-singlecallbyvoice
 func (b *AliyunSMSBuilder) PlayTimes(times int) *AliyunSMSBuilder {
-	b.playTimes = times
-	return b
+	return b.meta(aliyunPlayTimesKey, times)
 }
 
 // Volume 设置语音短信的音量。
@@ -55,8 +36,7 @@ func (b *AliyunSMSBuilder) PlayTimes(times int) *AliyunSMSBuilder {
 //   - Voice(验证码或文本转语音): https://help.aliyun.com/zh/vms/developer-reference/api-dyvmsapi-2017-05-25-singlecallbytts
 //   - Voice(通知): https://help.aliyun.com/zh/vms/developer-reference/api-dyvmsapi-2017-05-25-singlecallbyvoice
 func (b *AliyunSMSBuilder) Volume(volume int) *AliyunSMSBuilder {
-	b.volume = volume
-	return b
+	return b.meta(aliyunVolumeKey, volume)
 }
 
 // Speed 设置语音短信的语速。
@@ -64,8 +44,7 @@ func (b *AliyunSMSBuilder) Volume(volume int) *AliyunSMSBuilder {
 //   - Voice(验证码或文本转语音): https://help.aliyun.com/zh/vms/developer-reference/api-dyvmsapi-2017-05-25-singlecallbytts
 //   - Voice(通知): https://help.aliyun.com/zh/vms/developer-reference/api-dyvmsapi-2017-05-25-singlecallbyvoice
 func (b *AliyunSMSBuilder) Speed(speed int) *AliyunSMSBuilder {
-	b.speed = speed
-	return b
+	return b.meta(aliyunSpeedKey, speed)
 }
 
 // OutID 设置外部流水号。
@@ -74,57 +53,42 @@ func (b *AliyunSMSBuilder) Speed(speed int) *AliyunSMSBuilder {
 //   - Voice(验证码或文本转语音): https://help.aliyun.com/zh/vms/developer-reference/api-dyvmsapi-2017-05-25-singlecallbytts
 //   - Voice(通知): https://help.aliyun.com/zh/vms/developer-reference/api-dyvmsapi-2017-05-25-singlecallbyvoice
 func (b *AliyunSMSBuilder) OutID(outID string) *AliyunSMSBuilder {
-	b.outID = outID
-	return b
+	return b.meta(aliyunOutIDKey, outID)
 }
 
 // FallbackType 设置卡片短信回落类型。
 // 回落类型。取值：SMS、DIGITALSMS、NONE。
 //   - Card: https://help.aliyun.com/zh/sms/developer-reference/api-dysmsapi-2017-05-25-sendcardsms
 func (b *AliyunSMSBuilder) FallbackType(t string) *AliyunSMSBuilder {
-	b.fallbackType = t
-	return b
+	return b.meta(aliyunFallbackTypeKey, t)
 }
 
 // SmsTemplateCode 设置卡片短信回落文本短信的模板 Code。
 // FallbackType 选择 SMS 回落文本短信时，此参数必填。
 //   - Card: https://help.aliyun.com/zh/sms/developer-reference/api-dysmsapi-2017-05-25-sendcardsms
 func (b *AliyunSMSBuilder) SmsTemplateCode(code string) *AliyunSMSBuilder {
-	b.smsTemplateCode = code
-	return b
+	return b.meta(aliyunSmsTemplateCodeKey, code)
 }
 
 // DigitalTemplateCode 设置卡片短信回落数字短信的模板 Code。
 // FallbackType 选择 DIGITALSMS 回落数字短信时，此参数必填。
 //   - Card: https://help.aliyun.com/zh/sms/developer-reference/api-dysmsapi-2017-05-25-sendcardsms
 func (b *AliyunSMSBuilder) DigitalTemplateCode(code string) *AliyunSMSBuilder {
-	b.digitalTemplateCode = code
-	return b
+	return b.meta(aliyunDigitalTemplateCodeKey, code)
 }
 
 // SmsTemplateParam 设置卡片短信回落文本短信的模板变量值。
 // SmsTemplateCode 回落的文本短信模板内含有变量时，此参数必填。
 //   - Card: https://help.aliyun.com/zh/sms/developer-reference/api-dysmsapi-2017-05-25-sendcardsms
 func (b *AliyunSMSBuilder) SmsTemplateParam(param string) *AliyunSMSBuilder {
-	b.smsTemplateParam = param
-	return b
+	return b.meta(aliyunSmsTemplateParamKey, param)
 }
 
 // DigitalTemplateParam 设置卡片短信回落数字短信的模板变量值。
 // DigitalTemplateCode 回落的数字短信模板内含有变量时，此参数必填。
 //   - Card: https://help.aliyun.com/zh/sms/developer-reference/api-dysmsapi-2017-05-25-sendcardsms
 func (b *AliyunSMSBuilder) DigitalTemplateParam(param string) *AliyunSMSBuilder {
-	b.digitalTemplateParam = param
-	return b
-}
-
-// SmsUpExtendCode 设置上行短信扩展码。
-// 上行短信指发送给通信服务提供商的短信，用于定制某种服务、完成查询，或是办理某种业务等，需要收费，按运营商普通短信资费进行扣费。
-//   - SMS: https://help.aliyun.com/zh/sms/developer-reference/api-dysmsapi-2017-05-25-sendsms
-//
-// 此值和直接调用Extend等效.
-func (b *AliyunSMSBuilder) SmsUpExtendCode(code string) *AliyunSMSBuilder {
-	return b.Extend(code)
+	return b.meta(aliyunDigitalTemplateParamKey, param)
 }
 
 // CardObjects 设置卡片短信的卡片对象。
@@ -132,8 +96,7 @@ func (b *AliyunSMSBuilder) SmsUpExtendCode(code string) *AliyunSMSBuilder {
 // 每个卡片对象包含卡片的配置信息，如卡片类型、内容、样式等。
 //   - Card: https://help.aliyun.com/zh/sms/developer-reference/api-dysmsapi-2017-05-25-sendcardsms
 func (b *AliyunSMSBuilder) CardObjects(objs string) *AliyunSMSBuilder {
-	b.cardObjects = objs
-	return b
+	return b.meta(aliyunCardObjectsKey, objs)
 }
 
 // Region 设置阿里云短信的区域, 默认值为 cn-hangzhou。
@@ -163,30 +126,14 @@ func (b *AliyunSMSBuilder) CardObjects(objs string) *AliyunSMSBuilder {
 //
 // 对于语音短信，无论设置哪一个区域，目前都是固定值。
 func (b *AliyunSMSBuilder) Region(region string) *AliyunSMSBuilder {
-	b.region = region
-	return b
+	return b.meta(aliyunRegionKey, region)
 }
 
-func (b *AliyunSMSBuilder) Build() *Message {
-	msg := b.BaseBuilder.Build()
-	// 阿里云专属参数写入Extras
-	fields := map[string]interface{}{
-		aliyunCalledShowNumberKey:     b.calledShowNumber,
-		aliyunPlayTimesKey:            b.playTimes,
-		aliyunVolumeKey:               b.volume,
-		aliyunSpeedKey:                b.speed,
-		aliyunOutIDKey:                b.outID,
-		aliyunFallbackTypeKey:         b.fallbackType,
-		aliyunSmsTemplateCodeKey:      b.smsTemplateCode,
-		aliyunDigitalTemplateCodeKey:  b.digitalTemplateCode,
-		aliyunSmsTemplateParamKey:     b.smsTemplateParam,
-		aliyunDigitalTemplateParamKey: b.digitalTemplateParam,
-		aliyunCardObjectsKey:          b.cardObjects,
-		aliyunRegionKey:               b.region,
-	}
-
-	if extra := utils.BuildExtras(fields); len(extra) > 0 {
-		msg.Extras = extra
-	}
-	return msg
+// SmsUpExtendCode 设置上行短信扩展码。
+// 上行短信指发送给通信服务提供商的短信，用于定制某种服务、完成查询，或是办理某种业务等，需要收费，按运营商普通短信资费进行扣费。
+//   - SMS: https://help.aliyun.com/zh/sms/developer-reference/api-dysmsapi-2017-05-25-sendsms
+//
+// 此值和直接调用Extend等效.
+func (b *AliyunSMSBuilder) SmsUpExtendCode(code string) *AliyunSMSBuilder {
+	return b.Extend(code)
 }

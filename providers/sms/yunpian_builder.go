@@ -1,7 +1,4 @@
-//nolint:dupl // builder pattern files share similar boilerplate; acceptable duplication
 package sms
-
-import "github.com/shellvon/go-sender/utils"
 
 // YunpianSMSBuilder provides Yunpian-specific SMS message creation.
 //
@@ -17,9 +14,6 @@ import "github.com/shellvon/go-sender/utils"
 // builder 仅支持 text（普通短信）类型。
 type YunpianSMSBuilder struct {
 	*BaseBuilder[*YunpianSMSBuilder]
-
-	register   bool
-	mobileStat bool
 }
 
 func newYunpianSMSBuilder() *YunpianSMSBuilder {
@@ -32,8 +26,7 @@ func newYunpianSMSBuilder() *YunpianSMSBuilder {
 // 是否为注册验证码短信，如果传入 true，则该条短信作为注册验证码短信统计注册成功率，需联系客服开通。
 //   - https://www.yunpian.com/official/document/sms/zh_cn/domestic_single_send
 func (b *YunpianSMSBuilder) Register(register bool) *YunpianSMSBuilder {
-	b.register = register
-	return b
+	return b.meta(yunpianRegisterKey, register)
 }
 
 // MobileStat sets the mobile_stat field for Yunpian SMS.
@@ -42,18 +35,5 @@ func (b *YunpianSMSBuilder) Register(register bool) *YunpianSMSBuilder {
 // 该字段默认值为false。
 //   - https://www.yunpian.com/official/document/sms/zh_cn/domestic_single_send
 func (b *YunpianSMSBuilder) MobileStat(stat bool) *YunpianSMSBuilder {
-	b.mobileStat = stat
-	return b
-}
-
-func (b *YunpianSMSBuilder) Build() *Message {
-	msg := b.BaseBuilder.Build()
-	fields := map[string]interface{}{
-		yunpianRegisterKey:   b.register,
-		yunpianMobileStatKey: b.mobileStat,
-	}
-	if extra := utils.BuildExtras(fields); len(extra) > 0 {
-		msg.Extras = extra
-	}
-	return msg
+	return b.meta(yunpianMobileStatKey, stat)
 }

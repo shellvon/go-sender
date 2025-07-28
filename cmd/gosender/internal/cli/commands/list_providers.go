@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-// NewListProvidersCommand creates the list-providers command
+// NewListProvidersCommand creates the list-providers command.
 func NewListProvidersCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list-providers",
@@ -44,7 +44,7 @@ including their message types, required configuration fields, and capabilities.`
 	return cmd
 }
 
-// getAvailableProviders returns information about all available providers
+// getAvailableProviders returns information about all available providers.
 func getAvailableProviders() []cli.ProviderInfo {
 	return []cli.ProviderInfo{
 		{

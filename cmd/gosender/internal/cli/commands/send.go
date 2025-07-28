@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -17,7 +18,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-// NewSendCommand creates the send command
+// NewSendCommand creates the send command.
 func NewSendCommand(configLoader *config.ConfigLoader) *cobra.Command {
 	var flags cli.CLIFlags
 
@@ -67,12 +68,13 @@ configurations without actually sending messages.`,
 			// WeComBot doesn't need --to parameter as it sends to groups
 			// ServerChan doesn't need --to parameter as it sends to groups
 			// Webhook doesn't need --to parameter as it sends to webhook
-			if flags.Provider != "wecombot" && flags.Provider != "serverchan" && flags.Provider != "webhook" && len(flags.To) == 0 {
-				return fmt.Errorf("--to is required: specify at least one recipient")
+			if flags.Provider != "wecombot" && flags.Provider != "serverchan" && flags.Provider != "webhook" &&
+				len(flags.To) == 0 {
+				return errors.New("--to is required: specify at least one recipient")
 			}
 
 			if flags.Content == "" && flags.TemplateID == "" {
-				return fmt.Errorf("either --content or --template-id is required")
+				return errors.New("either --content or --template-id is required")
 			}
 
 			// Handle dry-run mode early to avoid creating real providers
@@ -89,19 +91,23 @@ configurations without actually sending messages.`,
 	cmd.Flags().StringSliceVarP(&flags.To, "to", "t", []string{}, "recipient(s) - comma separated for multiple")
 	cmd.Flags().StringVarP(&flags.Content, "content", "m", "", "message content")
 	cmd.Flags().StringVarP(&flags.Subject, "subject", "s", "", "message subject (for email and applicable providers)")
-	cmd.Flags().StringVarP(&flags.Provider, "provider", "p", "", "specific provider to use (sms, email, dingtalk, webhook, etc.)")
+	cmd.Flags().
+		StringVarP(&flags.Provider, "provider", "p", "", "specific provider to use (sms, email, dingtalk, webhook, etc.)")
 	cmd.Flags().StringVar(&flags.SubProvider, "sub-provider", "", "sub-provider type (aliyun, tencent, resend, etc.)")
 	cmd.Flags().StringVarP(&flags.Account, "account", "a", "", "specific account name to use")
-	cmd.Flags().StringVar(&flags.Strategy, "strategy", "", "provider selection strategy (round_robin, weighted, failover)")
+	cmd.Flags().
+		StringVar(&flags.Strategy, "strategy", "", "provider selection strategy (round_robin, weighted, failover)")
 	cmd.Flags().StringVar(&flags.TemplateID, "template-id", "", "template ID for SMS and applicable providers")
-	cmd.Flags().StringToStringVar(&flags.TemplateParams, "template-params", map[string]string{}, "template parameters as key=value pairs")
+	cmd.Flags().
+		StringToStringVar(&flags.TemplateParams, "template-params", map[string]string{}, "template parameters as key=value pairs")
 	cmd.Flags().StringSliceVar(&flags.Files, "file", []string{}, "file(s) to attach or send")
 	cmd.Flags().StringVar(&flags.MessageType, "message-type", "", "specific message type for the provider")
 	cmd.Flags().BoolVar(&flags.HTML, "html", false, "send as HTML (for email)")
 	cmd.Flags().BoolVar(&flags.DryRun, "dry-run", false, "validate and preview without sending")
 	cmd.Flags().IntVar(&flags.Priority, "priority", 0, "message priority")
 	cmd.Flags().DurationVar(&flags.Timeout, "timeout", 0, "request timeout")
-	cmd.Flags().StringToStringVar(&flags.Metadata, "metadata", map[string]string{}, "additional metadata as key=value pairs")
+	cmd.Flags().
+		StringToStringVar(&flags.Metadata, "metadata", map[string]string{}, "additional metadata as key=value pairs")
 
 	// Don't mark flags as required here since we want to support env vars and config files
 	// Validation will be done in RunE after viper processes all sources
@@ -109,7 +115,7 @@ configurations without actually sending messages.`,
 	return cmd
 }
 
-// handleDryRun processes dry-run requests using the same flow as real send
+// handleDryRun processes dry-run requests using the same flow as real send.
 func handleDryRun(flags *cli.CLIFlags, conf *cli.RootConfig) error {
 	// 1. Get provider registry with all registered builders
 	registry := providers.DefaultProviderRegistry()
@@ -214,7 +220,7 @@ func handleDryRun(flags *cli.CLIFlags, conf *cli.RootConfig) error {
 	return nil
 }
 
-// getDefaultMessageType returns the default message type for a provider
+// getDefaultMessageType returns the default message type for a provider.
 func getDefaultMessageType(provider string, flags *cli.CLIFlags) string {
 	switch provider {
 	case string(core.ProviderTypeSMS):
@@ -241,7 +247,7 @@ func getDefaultMessageType(provider string, flags *cli.CLIFlags) string {
 	}
 }
 
-// findMatchingAccount finds the first enabled account for the specified provider
+// findMatchingAccount finds the first enabled account for the specified provider.
 func findMatchingAccount(config *cli.RootConfig, provider string) string {
 	for _, account := range config.Accounts {
 		if providerType, ok := account["provider"].(string); ok && providerType == provider {
@@ -256,7 +262,7 @@ func findMatchingAccount(config *cli.RootConfig, provider string) string {
 	return "not-found"
 }
 
-// simulateEmailRequest creates a simulated HTTP request for email (SMTP) operations
+// simulateEmailRequest creates a simulated HTTP request for email (SMTP) operations.
 func simulateEmailRequest(flags *cli.CLIFlags, config *cli.RootConfig) *cli.HTTPRequestCapture {
 	// Find the email account
 	var emailAccount map[string]interface{}
@@ -302,7 +308,7 @@ func simulateEmailRequest(flags *cli.CLIFlags, config *cli.RootConfig) *cli.HTTP
 	}
 }
 
-// handleRealSend processes real send requests using the provider registry
+// handleRealSend processes real send requests using the provider registry.
 func handleRealSend(flags *cli.CLIFlags, conf *cli.RootConfig) error {
 	// 1. Get provider registry with all registered builders
 	registry := providers.DefaultProviderRegistry()

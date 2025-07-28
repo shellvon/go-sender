@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,13 +13,13 @@ import (
 	"github.com/spf13/viper"
 )
 
-// ConfigLoader handles loading configuration from various sources with viper
+// ConfigLoader handles loading configuration from various sources with viper.
 type ConfigLoader struct {
 	configFile string
 	viper      *viper.Viper
 }
 
-// NewConfigLoader creates a new configuration loader with viper setup
+// NewConfigLoader creates a new configuration loader with viper setup.
 func NewConfigLoader(configFile string) *ConfigLoader {
 	v := viper.New()
 
@@ -33,7 +34,7 @@ func NewConfigLoader(configFile string) *ConfigLoader {
 	}
 }
 
-// BindFlags binds CLI flags to viper for automatic configuration binding
+// BindFlags binds CLI flags to viper for automatic configuration binding.
 func (c *ConfigLoader) BindFlags(cmd *cobra.Command) error {
 	// Use global viper instance for consistency
 	globalViper := viper.GetViper()
@@ -46,7 +47,7 @@ func (c *ConfigLoader) BindFlags(cmd *cobra.Command) error {
 	return nil
 }
 
-// LoadConfig loads configuration from file, supporting multiple formats with priority
+// LoadConfig loads configuration from file, supporting multiple formats with priority.
 func (c *ConfigLoader) LoadConfig() (*cli.RootConfig, string, error) {
 	// Use global viper instance for better integration with CLI flags
 	globalViper := viper.GetViper()
@@ -71,7 +72,8 @@ func (c *ConfigLoader) LoadConfig() (*cli.RootConfig, string, error) {
 
 	if err != nil {
 		// If no config file found, try to load from environment variables only
-		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+		var configFileNotFoundError viper.ConfigFileNotFoundError
+		if errors.As(err, &configFileNotFoundError) {
 			config, envErr := c.loadFromEnvWithViper(globalViper)
 			return config, "environment variables", envErr
 		}
@@ -86,7 +88,7 @@ func (c *ConfigLoader) LoadConfig() (*cli.RootConfig, string, error) {
 	return &config, actualConfigFile, nil
 }
 
-// loadSpecificConfigFileWithViper loads a specific configuration file using provided viper instance
+// loadSpecificConfigFileWithViper loads a specific configuration file using provided viper instance.
 func (c *ConfigLoader) loadSpecificConfigFileWithViper(configFile string, v *viper.Viper) error {
 	// Determine config type from file extension
 	ext := strings.ToLower(filepath.Ext(configFile))
@@ -108,7 +110,7 @@ func (c *ConfigLoader) loadSpecificConfigFileWithViper(configFile string, v *vip
 	return v.ReadInConfig()
 }
 
-// discoverAndLoadConfigFileWithViper discovers and loads config files with priority (YAML > JSON)
+// discoverAndLoadConfigFileWithViper discovers and loads config files with priority (YAML > JSON).
 func (c *ConfigLoader) discoverAndLoadConfigFileWithViper(v *viper.Viper) (string, error) {
 	searchPaths := []string{
 		".",
@@ -158,7 +160,7 @@ func (c *ConfigLoader) discoverAndLoadConfigFileWithViper(v *viper.Viper) (strin
 	return "", viper.ConfigFileNotFoundError{}
 }
 
-// loadFromEnvWithViper loads configuration from environment variables only using provided viper instance
+// loadFromEnvWithViper loads configuration from environment variables only using provided viper instance.
 func (c *ConfigLoader) loadFromEnvWithViper(v *viper.Viper) (*cli.RootConfig, error) {
 	config := &cli.RootConfig{
 		LogLevel: v.GetString("log_level"),
@@ -175,7 +177,7 @@ func (c *ConfigLoader) loadFromEnvWithViper(v *viper.Viper) (*cli.RootConfig, er
 	return config, nil
 }
 
-// loadFromEnvFileToViperInstance loads configuration from a .env file into provided viper instance
+// loadFromEnvFileToViperInstance loads configuration from a .env file into provided viper instance.
 func (c *ConfigLoader) loadFromEnvFileToViperInstance(filename string, v *viper.Viper) error {
 	// Read .env file
 	content, err := os.ReadFile(filename)
@@ -207,10 +209,23 @@ func (c *ConfigLoader) loadFromEnvFileToViperInstance(filename string, v *viper.
 	return nil
 }
 
-// loadSMSAccountsFromEnvWithViper loads SMS accounts from environment variables using provided viper instance
+// loadSMSAccountsFromEnvWithViper loads SMS accounts from environment variables using provided viper instance.
 func (c *ConfigLoader) loadSMSAccountsFromEnvWithViper(config *cli.RootConfig, v *viper.Viper) {
 	// Support multiple SMS providers through indexed environment variables
-	providers := []string{"aliyun", "tencent", "huawei", "cl253", "juhe", "luosimao", "smsbao", "submail", "ucp", "volc", "yunpian", "yuntongxun"}
+	providers := []string{
+		"aliyun",
+		"tencent",
+		"huawei",
+		"cl253",
+		"juhe",
+		"luosimao",
+		"smsbao",
+		"submail",
+		"ucp",
+		"volc",
+		"yunpian",
+		"yuntongxun",
+	}
 
 	for _, provider := range providers {
 		keyPrefix := fmt.Sprintf("sms_%s", provider)
@@ -244,7 +259,7 @@ func (c *ConfigLoader) loadSMSAccountsFromEnvWithViper(config *cli.RootConfig, v
 	}
 }
 
-// loadEmailAccountsFromEnvWithViper loads Email accounts from environment variables using provided viper instance
+// loadEmailAccountsFromEnvWithViper loads Email accounts from environment variables using provided viper instance.
 func (c *ConfigLoader) loadEmailAccountsFromEnvWithViper(config *cli.RootConfig, v *viper.Viper) {
 	if host := v.GetString("email_host"); host != "" {
 		account := map[string]interface{}{
@@ -277,7 +292,7 @@ func (c *ConfigLoader) loadEmailAccountsFromEnvWithViper(config *cli.RootConfig,
 	}
 }
 
-// loadDingTalkAccountsFromEnvWithViper loads DingTalk accounts from environment variables using provided viper instance
+// loadDingTalkAccountsFromEnvWithViper loads DingTalk accounts from environment variables using provided viper instance.
 func (c *ConfigLoader) loadDingTalkAccountsFromEnvWithViper(config *cli.RootConfig, v *viper.Viper) {
 	if apiKey := v.GetString("dingtalk_api_key"); apiKey != "" {
 		account := map[string]interface{}{
@@ -304,7 +319,7 @@ func (c *ConfigLoader) loadDingTalkAccountsFromEnvWithViper(config *cli.RootConf
 	}
 }
 
-// loadTelegramAccountsFromEnvWithViper loads Telegram accounts from environment variables using provided viper instance
+// loadTelegramAccountsFromEnvWithViper loads Telegram accounts from environment variables using provided viper instance.
 func (c *ConfigLoader) loadTelegramAccountsFromEnvWithViper(config *cli.RootConfig, v *viper.Viper) {
 	if apiKey := v.GetString("telegram_api_key"); apiKey != "" {
 		account := map[string]interface{}{
@@ -330,7 +345,7 @@ func (c *ConfigLoader) loadTelegramAccountsFromEnvWithViper(config *cli.RootConf
 	}
 }
 
-// loadWebhookAccountsFromEnvWithViper loads Webhook accounts from environment variables using provided viper instance
+// loadWebhookAccountsFromEnvWithViper loads Webhook accounts from environment variables using provided viper instance.
 func (c *ConfigLoader) loadWebhookAccountsFromEnvWithViper(config *cli.RootConfig, v *viper.Viper) {
 	if url := v.GetString("webhook_url"); url != "" {
 		account := map[string]interface{}{
@@ -373,7 +388,7 @@ func (c *ConfigLoader) loadWebhookAccountsFromEnvWithViper(config *cli.RootConfi
 	}
 }
 
-// loadSpecificConfigFile loads a specific configuration file
+// loadSpecificConfigFile loads a specific configuration file.
 func (c *ConfigLoader) loadSpecificConfigFile(configFile string) error {
 	// Determine config type from file extension
 	ext := strings.ToLower(filepath.Ext(configFile))
@@ -395,7 +410,7 @@ func (c *ConfigLoader) loadSpecificConfigFile(configFile string) error {
 	return c.viper.ReadInConfig()
 }
 
-// discoverAndLoadConfigFile discovers and loads config files with priority (YAML > JSON)
+// discoverAndLoadConfigFile discovers and loads config files with priority (YAML > JSON).
 func (c *ConfigLoader) discoverAndLoadConfigFile() error {
 	searchPaths := []string{
 		".",
@@ -444,7 +459,7 @@ func (c *ConfigLoader) discoverAndLoadConfigFile() error {
 	return viper.ConfigFileNotFoundError{}
 }
 
-// loadFromEnv loads configuration from environment variables only
+// loadFromEnv loads configuration from environment variables only.
 func (c *ConfigLoader) loadFromEnv() (*cli.RootConfig, error) {
 	config := &cli.RootConfig{
 		LogLevel: c.viper.GetString("log_level"),
@@ -461,10 +476,23 @@ func (c *ConfigLoader) loadFromEnv() (*cli.RootConfig, error) {
 	return config, nil
 }
 
-// loadSMSAccountsFromEnv loads SMS accounts from environment variables
+// loadSMSAccountsFromEnv loads SMS accounts from environment variables.
 func (c *ConfigLoader) loadSMSAccountsFromEnv(config *cli.RootConfig) {
 	// Support multiple SMS providers through indexed environment variables
-	providers := []string{"aliyun", "tencent", "huawei", "cl253", "juhe", "luosimao", "smsbao", "submail", "ucp", "volc", "yunpian", "yuntongxun"}
+	providers := []string{
+		"aliyun",
+		"tencent",
+		"huawei",
+		"cl253",
+		"juhe",
+		"luosimao",
+		"smsbao",
+		"submail",
+		"ucp",
+		"volc",
+		"yunpian",
+		"yuntongxun",
+	}
 
 	for _, provider := range providers {
 		keyPrefix := fmt.Sprintf("sms_%s", provider)
@@ -498,7 +526,7 @@ func (c *ConfigLoader) loadSMSAccountsFromEnv(config *cli.RootConfig) {
 	}
 }
 
-// loadEmailAccountsFromEnv loads Email accounts from environment variables
+// loadEmailAccountsFromEnv loads Email accounts from environment variables.
 func (c *ConfigLoader) loadEmailAccountsFromEnv(config *cli.RootConfig) {
 	if host := c.viper.GetString("email_host"); host != "" {
 		account := map[string]interface{}{
@@ -531,7 +559,7 @@ func (c *ConfigLoader) loadEmailAccountsFromEnv(config *cli.RootConfig) {
 	}
 }
 
-// loadDingTalkAccountsFromEnv loads DingTalk accounts from environment variables
+// loadDingTalkAccountsFromEnv loads DingTalk accounts from environment variables.
 func (c *ConfigLoader) loadDingTalkAccountsFromEnv(config *cli.RootConfig) {
 	if apiKey := c.viper.GetString("dingtalk_api_key"); apiKey != "" {
 		account := map[string]interface{}{
@@ -558,7 +586,7 @@ func (c *ConfigLoader) loadDingTalkAccountsFromEnv(config *cli.RootConfig) {
 	}
 }
 
-// loadTelegramAccountsFromEnv loads Telegram accounts from environment variables
+// loadTelegramAccountsFromEnv loads Telegram accounts from environment variables.
 func (c *ConfigLoader) loadTelegramAccountsFromEnv(config *cli.RootConfig) {
 	if apiKey := c.viper.GetString("telegram_api_key"); apiKey != "" {
 		account := map[string]interface{}{
@@ -584,7 +612,7 @@ func (c *ConfigLoader) loadTelegramAccountsFromEnv(config *cli.RootConfig) {
 	}
 }
 
-// loadWebhookAccountsFromEnv loads Webhook accounts from environment variables
+// loadWebhookAccountsFromEnv loads Webhook accounts from environment variables.
 func (c *ConfigLoader) loadWebhookAccountsFromEnv(config *cli.RootConfig) {
 	if url := c.viper.GetString("webhook_url"); url != "" {
 		account := map[string]interface{}{
@@ -627,7 +655,7 @@ func (c *ConfigLoader) loadWebhookAccountsFromEnv(config *cli.RootConfig) {
 	}
 }
 
-// loadFromEnvFileToViper loads configuration from a .env file into viper
+// loadFromEnvFileToViper loads configuration from a .env file into viper.
 func (c *ConfigLoader) loadFromEnvFileToViper(filename string) error {
 	// Read .env file
 	content, err := os.ReadFile(filename)
@@ -659,7 +687,7 @@ func (c *ConfigLoader) loadFromEnvFileToViper(filename string) error {
 	return nil
 }
 
-// loadFromEnvFile loads configuration from a .env file
+// loadFromEnvFile loads configuration from a .env file.
 func (c *ConfigLoader) loadFromEnvFile(filename string) (*cli.RootConfig, error) {
 	// Read .env file
 	content, err := os.ReadFile(filename)
@@ -692,7 +720,7 @@ func (c *ConfigLoader) loadFromEnvFile(filename string) (*cli.RootConfig, error)
 	return c.loadFromEnv()
 }
 
-// NeedsConfig determines if a command requires configuration
+// NeedsConfig determines if a command requires configuration.
 func NeedsConfig(commandName string) bool {
 	configRequiredCommands := []string{
 		"send",

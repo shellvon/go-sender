@@ -2,28 +2,30 @@ package mock
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/shellvon/go-sender/cmd/gosender/internal/cli"
 )
 
-// MockTransport is a custom RoundTripper that captures HTTP requests
+// MockTransport is a custom RoundTripper that captures HTTP requests.
 type MockTransport struct {
 	capturedRequests []*cli.HTTPRequestCapture
 }
 
-// NewMockTransport creates a new mock transport
+// NewMockTransport creates a new mock transport.
 func NewMockTransport() *MockTransport {
 	return &MockTransport{
 		capturedRequests: make([]*cli.HTTPRequestCapture, 0),
 	}
 }
 
-// NewHTTPClient creates a new http.Client with mock transport
+// NewHTTPClient creates a new http.Client with mock transport.
 func NewHTTPClient() *http.Client {
 	transport := NewMockTransport()
 	return &http.Client{
@@ -32,7 +34,7 @@ func NewHTTPClient() *http.Client {
 	}
 }
 
-// GetMockTransport extracts the mock transport from an http.Client
+// GetMockTransport extracts the mock transport from an http.Client.
 func GetMockTransport(client *http.Client) *MockTransport {
 	if transport, ok := client.Transport.(*MockTransport); ok {
 		return transport
@@ -40,7 +42,7 @@ func GetMockTransport(client *http.Client) *MockTransport {
 	return nil
 }
 
-// RoundTrip implements the http.RoundTripper interface
+// RoundTrip implements the http.RoundTripper interface.
 func (m *MockTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	start := time.Now()
 
@@ -90,7 +92,7 @@ func (m *MockTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 
 	response := &http.Response{
 		Status:        "200 OK",
-		StatusCode:    200,
+		StatusCode:    http.StatusOK,
 		Proto:         "HTTP/1.1",
 		ProtoMajor:    1,
 		ProtoMinor:    1,
@@ -103,17 +105,17 @@ func (m *MockTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	response.Header.Set("Content-Type", "application/json")
 	response.Header.Set("X-Mock-Response", "true")
 	response.Header.Set("X-Request-Captured", "true")
-	response.Header.Set("Content-Length", fmt.Sprintf("%d", len(mockResponseBody)))
+	response.Header.Set("Content-Length", strconv.Itoa(len(mockResponseBody)))
 
 	return response, nil
 }
 
-// GetCapturedRequests returns all captured requests
+// GetCapturedRequests returns all captured requests.
 func (m *MockTransport) GetCapturedRequests() []*cli.HTTPRequestCapture {
 	return m.capturedRequests
 }
 
-// GetLastCapturedRequest returns the most recent captured request
+// GetLastCapturedRequest returns the most recent captured request.
 func (m *MockTransport) GetLastCapturedRequest() *cli.HTTPRequestCapture {
 	if len(m.capturedRequests) == 0 {
 		return nil
@@ -121,12 +123,12 @@ func (m *MockTransport) GetLastCapturedRequest() *cli.HTTPRequestCapture {
 	return m.capturedRequests[len(m.capturedRequests)-1]
 }
 
-// Clear clears all captured requests
+// Clear clears all captured requests.
 func (m *MockTransport) Clear() {
 	m.capturedRequests = make([]*cli.HTTPRequestCapture, 0)
 }
 
-// generateMockResponse generates a mock response based on the request
+// generateMockResponse generates a mock response based on the request.
 func (m *MockTransport) generateMockResponse(req *http.Request) string {
 	// Generate different mock responses based on the URL pattern
 	url := req.URL.String()
@@ -150,12 +152,18 @@ func (m *MockTransport) generateMockResponse(req *http.Request) string {
 		return `{"args":{},"data":"","files":{},"form":{},"headers":{"Content-Type":"application/json"},"json":null,"origin":"127.0.0.1","url":"` + url + `"}`
 	default:
 		// Generic successful response for any other URL
-		return fmt.Sprintf(`{"status":"success","message":"Mock response for %s %s","timestamp":"%s","request_id":"mock-%d","url":"%s"}`,
-			req.Method, req.URL.Path, time.Now().Format(time.RFC3339), time.Now().Unix(), url)
+		return fmt.Sprintf(
+			`{"status":"success","message":"Mock response for %s %s","timestamp":"%s","request_id":"mock-%d","url":"%s"}`,
+			req.Method,
+			req.URL.Path,
+			time.Now().Format(time.RFC3339),
+			time.Now().Unix(),
+			url,
+		)
 	}
 }
 
-// parseJSONBody attempts to parse JSON body content
+// parseJSONBody attempts to parse JSON body content.
 func parseJSONBody(bodyBytes []byte, target *interface{}) error {
 	// This is a simplified JSON parser - in practice you might want more robust parsing
 	bodyStr := strings.TrimSpace(string(bodyBytes))
@@ -167,5 +175,5 @@ func parseJSONBody(bodyBytes []byte, target *interface{}) error {
 		}
 		return nil
 	}
-	return fmt.Errorf("not valid JSON")
+	return errors.New("not valid JSON")
 }

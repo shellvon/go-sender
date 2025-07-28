@@ -32,7 +32,7 @@ func DefaultProviderRegistry() *ProviderRegistry {
 	return registry
 }
 
-// GetProviderType 将字符串转换为 ProviderType 并进行验证
+// GetProviderType 将字符串转换为 ProviderType 并进行验证.
 func GetProviderType(provider string) (core.ProviderType, error) {
 	if provider == "" {
 		return core.ProviderTypeSMS, nil // 默认

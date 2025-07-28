@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"log"
 
 	"github.com/shellvon/go-sender/cmd/gosender/internal/cli/commands"
@@ -47,7 +48,7 @@ dry-run mode, and structured output formats.`,
 	}
 }
 
-// initializeConfig initializes viper configuration with CLI flag binding
+// initializeConfig initializes viper configuration with CLI flag binding.
 func initializeConfig(cmd *cobra.Command) error {
 	// Set up viper with GO_SENDER prefix for environment variables
 	viper.SetEnvPrefix("GO_SENDER")
@@ -71,7 +72,8 @@ func initializeConfig(cmd *cobra.Command) error {
 	// If a config file is found, read it in
 	if err := viper.ReadInConfig(); err != nil {
 		// It's okay if no config file is found, we can work with env vars and flags
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+		var configFileNotFoundError viper.ConfigFileNotFoundError
+		if errors.As(err, &configFileNotFoundError) {
 			return err
 		}
 	}

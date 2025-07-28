@@ -9,7 +9,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// ConsoleFormatter formats output for console display
+// ConsoleFormatter formats output for console display.
 type ConsoleFormatter struct{}
 
 func (f *ConsoleFormatter) Format(result *cli.FormattedResult) (string, error) {
@@ -51,7 +51,9 @@ func (f *ConsoleFormatter) Format(result *cli.FormattedResult) (string, error) {
 				output.WriteString(fmt.Sprintf("   Message Types: %s\n", strings.Join(provider.SupportedTypes, ", ")))
 				output.WriteString(fmt.Sprintf("   Required Fields: %s\n", strings.Join(provider.RequiredFields, ", ")))
 				if len(provider.OptionalFields) > 0 {
-					output.WriteString(fmt.Sprintf("   Optional Fields: %s\n", strings.Join(provider.OptionalFields, ", ")))
+					output.WriteString(
+						fmt.Sprintf("   Optional Fields: %s\n", strings.Join(provider.OptionalFields, ", ")),
+					)
 				}
 
 				var capabilities []string
@@ -100,10 +102,12 @@ func (f *ConsoleFormatter) Format(result *cli.FormattedResult) (string, error) {
 		}
 
 		if result.DryRun.HTTPRequest != nil {
-			output.WriteString(fmt.Sprintf("\nHTTP Request Captured:\n"))
+			output.WriteString("\nHTTP Request Captured:\n")
 			output.WriteString(fmt.Sprintf("Method: %s\n", result.DryRun.HTTPRequest.Method))
 			output.WriteString(fmt.Sprintf("URL: %s\n", result.DryRun.HTTPRequest.URL))
-			output.WriteString(fmt.Sprintf("Timestamp: %s\n", result.DryRun.HTTPRequest.Timestamp.Format("2006-01-02 15:04:05")))
+			output.WriteString(
+				fmt.Sprintf("Timestamp: %s\n", result.DryRun.HTTPRequest.Timestamp.Format("2006-01-02 15:04:05")),
+			)
 			if result.DryRun.HTTPRequest.Duration > 0 {
 				output.WriteString(fmt.Sprintf("Duration: %s\n", result.DryRun.HTTPRequest.Duration))
 			}
@@ -125,7 +129,7 @@ func (f *ConsoleFormatter) Format(result *cli.FormattedResult) (string, error) {
 	return output.String(), nil
 }
 
-// JSONFormatter formats output as JSON
+// JSONFormatter formats output as JSON.
 type JSONFormatter struct{}
 
 func (f *JSONFormatter) Format(result *cli.FormattedResult) (string, error) {
@@ -136,7 +140,7 @@ func (f *JSONFormatter) Format(result *cli.FormattedResult) (string, error) {
 	return string(data) + "\n", nil
 }
 
-// YAMLFormatter formats output as YAML
+// YAMLFormatter formats output as YAML.
 type YAMLFormatter struct{}
 
 func (f *YAMLFormatter) Format(result *cli.FormattedResult) (string, error) {
@@ -147,7 +151,7 @@ func (f *YAMLFormatter) Format(result *cli.FormattedResult) (string, error) {
 	return string(data), nil
 }
 
-// GetFormatter returns the appropriate formatter for the given format
+// GetFormatter returns the appropriate formatter for the given format.
 func GetFormatter(format cli.OutputFormat) (cli.OutputFormatter, error) {
 	switch format {
 	case cli.OutputConsole:

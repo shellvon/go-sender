@@ -1,9 +1,5 @@
 package sms
 
-import (
-	"github.com/shellvon/go-sender/utils"
-)
-
 // @ProviderName: Cl253 (Chuanglan) / 创蓝253
 // @Website: https://www.253.com
 // @APIDoc: https://www.253.com/api
@@ -22,10 +18,6 @@ import (
 // Cl253SMSBuilder provides CL253-specific SMS message creation.
 type Cl253SMSBuilder struct {
 	*BaseBuilder[*Cl253SMSBuilder]
-
-	senderID string
-	tdFlag   int    // 退订开启标识，1 开启；0 或 null 关闭
-	report   string // 状态报告参数
 }
 
 // newCl253SMSBuilder creates a new CL253 SMS builder.
@@ -41,8 +33,7 @@ func newCl253SMSBuilder() *Cl253SMSBuilder {
 //
 // 此参数仅国际短信支持.
 func (b *Cl253SMSBuilder) SenderID(id string) *Cl253SMSBuilder {
-	b.senderID = id
-	return b
+	return b.meta(cl253SenderIDKey, id)
 }
 
 // TDFlag sets the international SMS TD flag for CL253.
@@ -51,27 +42,12 @@ func (b *Cl253SMSBuilder) SenderID(id string) *Cl253SMSBuilder {
 //
 // 此参数仅国际短信支持.
 func (b *Cl253SMSBuilder) TDFlag(flag int) *Cl253SMSBuilder {
-	b.tdFlag = flag
-	return b
+	return b.meta(cl253TDFlagKey, flag)
 }
 
 // Report sets the report parameter for CL253 SMS.
 // 状态报告参数，用于接收短信发送状态回调。
 //   - 国内短信 API: https://doc.chuanglan.com/document/HAQYSZKH9HT5Z50L
 func (b *Cl253SMSBuilder) Report(report string) *Cl253SMSBuilder {
-	b.report = report
-	return b
-}
-
-func (b *Cl253SMSBuilder) Build() *Message {
-	msg := b.BaseBuilder.Build()
-	fields := map[string]interface{}{
-		cl253SenderIDKey: b.senderID,
-		cl253TDFlagKey:   b.tdFlag,
-		cl253ReportKey:   b.report,
-	}
-	if extra := utils.BuildExtras(fields); len(extra) > 0 {
-		msg.Extras = extra
-	}
-	return msg
+	return b.meta(cl253ReportKey, report)
 }

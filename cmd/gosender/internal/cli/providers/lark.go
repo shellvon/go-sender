@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/shellvon/go-sender/cmd/gosender/internal/cli"
@@ -8,17 +9,17 @@ import (
 	"github.com/shellvon/go-sender/providers/lark"
 )
 
-// createLarkProvider 从账户列表创建 Lark Provider
+// createLarkProvider 从账户列表创建 Lark Provider.
 func createLarkProvider(accounts []*lark.Account) (core.Provider, error) {
 	if len(accounts) == 0 {
-		return nil, fmt.Errorf("no valid lark accounts found")
+		return nil, errors.New("no valid lark accounts found")
 	}
 
 	cfg := &lark.Config{Items: accounts}
 	return lark.New(cfg)
 }
 
-// buildLarkMessage 从 CLI 标志构建 Lark 消息
+// buildLarkMessage 从 CLI 标志构建 Lark 消息.
 func buildLarkMessage(flags *cli.CLIFlags) (core.Message, error) {
 	messageType := flags.MessageType
 	if messageType == "" {
@@ -34,10 +35,10 @@ func buildLarkMessage(flags *cli.CLIFlags) (core.Message, error) {
 	}
 }
 
-// validateLarkFlags 验证 CLI 标志是否符合 Lark 发送要求
+// validateLarkFlags 验证 CLI 标志是否符合 Lark 发送要求.
 func validateLarkFlags(flags *cli.CLIFlags) error {
 	if flags.Content == "" {
-		return fmt.Errorf("lark requires content")
+		return errors.New("lark requires content")
 	}
 
 	if flags.MessageType != "" && flags.MessageType != "text" {
@@ -47,7 +48,7 @@ func validateLarkFlags(flags *cli.CLIFlags) error {
 	return nil
 }
 
-// NewLarkBuilder 创建一个新的 Lark GenericBuilder
+// NewLarkBuilder 创建一个新的 Lark GenericBuilder.
 func NewLarkBuilder() *GenericBuilder[*lark.Account, core.Message] {
 	return NewGenericBuilder(
 		core.ProviderTypeLark,
@@ -56,4 +57,3 @@ func NewLarkBuilder() *GenericBuilder[*lark.Account, core.Message] {
 		validateLarkFlags,
 	)
 }
- 

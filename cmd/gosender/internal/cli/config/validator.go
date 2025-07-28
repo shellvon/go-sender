@@ -7,15 +7,15 @@ import (
 	"github.com/shellvon/go-sender/core"
 )
 
-// Validator handles configuration validation
+// Validator handles configuration validation.
 type Validator struct{}
 
-// NewValidator creates a new configuration validator
+// NewValidator creates a new configuration validator.
 func NewValidator() *Validator {
 	return &Validator{}
 }
 
-// ValidateConfiguration validates the entire configuration
+// ValidateConfiguration validates the entire configuration.
 func (v *Validator) ValidateConfiguration(config *cli.RootConfig) []string {
 	var errors []string
 

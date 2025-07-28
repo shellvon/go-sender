@@ -1,7 +1,5 @@
 package sms
 
-import "github.com/shellvon/go-sender/utils"
-
 // @ProviderName: Yuntongxun / 容联云
 // @Website: https://www.yuntongxun.com
 // @APIDoc: https://www.yuntongxun.com/doc/rest/sms/3_2_2_1.html
@@ -14,24 +12,6 @@ import "github.com/shellvon/go-sender/utils"
 
 type YuntongxunSMSBuilder struct {
 	*BaseBuilder[*YuntongxunSMSBuilder]
-
-	// 语音通知
-	playTimes     string
-	mediaName     string
-	mediaNameType string
-	displayNum    string
-	userData      string
-	region        string
-	txtSpeed      string
-	txtPitch      string
-	txtVolume     string
-	txtBgsound    string
-	playMode      string
-
-	// 验证码
-	maxCallTime    string
-	welcomePrompt  string
-	playVerifyCode string
 }
 
 func newYuntongxunSMSBuilder() *YuntongxunSMSBuilder {
@@ -44,8 +24,7 @@ func newYuntongxunSMSBuilder() *YuntongxunSMSBuilder {
 // 语音文件名的类型，默认值为0，表示用户语音文件；　值为1表示平台通用文件。
 //   - 语音通知: https://doc.yuntongxun.com/pe/5a5342c73b8496dd00dce139
 func (b *YuntongxunSMSBuilder) MediaNameType(mediaNameType string) *YuntongxunSMSBuilder {
-	b.mediaNameType = mediaNameType
-	return b
+	return b.meta(yuntongxunMediaNameTypeKey, mediaNameType)
 }
 
 // MediaTxt sets the mediaTxt field for YunTongXun voice SMS.
@@ -60,64 +39,56 @@ func (b *YuntongxunSMSBuilder) MediaTxt(txt string) *YuntongxunSMSBuilder {
 // 循环播放次数，1－3次，默认播放1次。
 //   - 语音通知: https://doc.yuntongxun.com/pe/5a5342c73b8496dd00dce139
 func (b *YuntongxunSMSBuilder) PlayTimes(times string) *YuntongxunSMSBuilder {
-	b.playTimes = times
-	return b
+	return b.meta(yuntongxunPlayTimesKey, times)
 }
 
 // MediaName sets the mediaName field for YunTongXun voice SMS.
 // 语音文件名称，格式 wav，播放多个文件用英文分号隔开。与mediaTxt不能同时为空。当不为空时mediaTxt属性失效。测试用默认语音：ccp_marketingcall.wav
 //   - 语音通知: https://doc.yuntongxun.com/pe/5a5342c73b8496dd00dce139
 func (b *YuntongxunSMSBuilder) MediaName(name string) *YuntongxunSMSBuilder {
-	b.mediaName = name
-	return b
+	return b.meta(yuntongxunMediaNameKey, name)
 }
 
 // DisplayNum sets the displayNum field for YunTongXun voice SMS.
 // 来电显示的号码，根据平台侧显号规则控制(有显号需求请联系云通讯商务，并且说明显号的方式)，不在平台规则内或空则显示云通讯平台默认号码。默认值空。
 //   - 语音通知: https://doc.yuntongxun.com/pe/5a5342c73b8496dd00dce139
 func (b *YuntongxunSMSBuilder) DisplayNum(num string) *YuntongxunSMSBuilder {
-	b.displayNum = num
-	return b
+	return b.meta(yuntongxunDisplayNumKey, num)
 }
 
 // UserData sets the userData field for YunTongXun voice SMS.
 // 可选 用户数据，透传字段，可填入任意字符串，如：用户id，用户名等。
 //   - 语音通知: https://doc.yuntongxun.com/pe/5a5342c73b8496dd00dce139
 func (b *YuntongxunSMSBuilder) UserData(data string) *YuntongxunSMSBuilder {
-	b.userData = data
-	return b
+	return b.meta(yuntongxunUserDataKey, data)
 }
 
 // TxtSpeed sets the txtSpeed field for YunTongXun voice SMS.
 // 文本转语音的语速，默认值为空。文本转语音后的发音速度，取值范围：-50至50，当mediaTxt有效才生效,默认值为0。
 //   - 语音通知: https://doc.yuntongxun.com/pe/5a5342c73b8496dd00dce139
 func (b *YuntongxunSMSBuilder) TxtSpeed(speed string) *YuntongxunSMSBuilder {
-	b.txtSpeed = speed
-	return b
+	return b.meta(yuntongxunTxtSpeedKey, speed)
 }
 
 // TxtPitch sets the txtPitch field for YunTongXun voice SMS.
 // 文本转语音后的音调，取值范围：-500至500，当mediaTxt有效才生效，默认值为0。
 //   - 语音通知: https://doc.yuntongxun.com/pe/5a5342c73b8496dd00dce139
 func (b *YuntongxunSMSBuilder) TxtPitch(pitch string) *YuntongxunSMSBuilder {
-	b.txtPitch = pitch
-	return b
+	return b.meta(yuntongxunTxtPitchKey, pitch)
 }
 
 // TxtVolume sets the txtVolume field for YunTongXun voice SMS.
 // 文本转语音后的音量大小，取值范围：-20至20，当mediaTxt有效才生效，默认值为0。
 //   - 语音通知: https://doc.yuntongxun.com/pe/5a5342c73b8496dd00dce139
 func (b *YuntongxunSMSBuilder) TxtVolume(volume string) *YuntongxunSMSBuilder {
-	b.txtVolume = volume
-	return b
+	return b.meta(yuntongxunTxtVolumeKey, volume)
 }
 
 // TxtBgsound sets the txtBgsound field for YunTongXun voice SMS.
 // 文本转语音后的背景音编号，目前云通讯平台支持6种背景音，1到6的六种背景音编码，0为不需要背景音。暂时不支持第三方自定义背景音。当mediaTxt有效才生效。
 //   - 语音通知: https://doc.yuntongxun.com/pe/5a5342c73b8496dd00dce139
 func (b *YuntongxunSMSBuilder) TxtBgsound(bgsound string) *YuntongxunSMSBuilder {
-	b.txtBgsound = bgsound
-	return b
+	return b.meta(yuntongxunTxtBgsoundKey, bgsound)
 }
 
 // PlayMode sets the playMode field for YunTongXun voice SMS.
@@ -125,32 +96,28 @@ func (b *YuntongxunSMSBuilder) TxtBgsound(bgsound string) *YuntongxunSMSBuilder 
 // 是否同时播放文本和语音文件 , 0、否 1、是，默认0。优先播放文本。
 //   - 语音通知: https://doc.yuntongxun.com/pe/5a5342c73b8496dd00dce139
 func (b *YuntongxunSMSBuilder) PlayMode(mode string) *YuntongxunSMSBuilder {
-	b.playMode = mode
-	return b
+	return b.meta(yuntongxunPlayModeKey, mode)
 }
 
 // MaxCallTime sets the maxCallTime field for YunTongXun voice SMS.
 // 该通通话最大通话时长，到时间自动挂机
 //   - 语音验证码: https://doc.yuntongxun.com/pe/5a533de43b8496dd00dce07e
 func (b *YuntongxunSMSBuilder) MaxCallTime(time string) *YuntongxunSMSBuilder {
-	b.maxCallTime = time
-	return b
+	return b.meta(yuntongxunMaxCallTimeKey, time)
 }
 
 // WelcomePrompt sets the welcomePrompt field for YunTongXun voice SMS.
 // wav格式的文件名，欢迎提示音，在播放验证码语音前播放此内容，配合verifyCode使用，默认值为空。
 //   - 语音验证码: https://doc.yuntongxun.com/pe/5a533de43b8496dd00dce07e
 func (b *YuntongxunSMSBuilder) WelcomePrompt(prompt string) *YuntongxunSMSBuilder {
-	b.welcomePrompt = prompt
-	return b
+	return b.meta(yuntongxunWelcomePromptKey, prompt)
 }
 
 // PlayVerifyCode sets the playVerifyCode field for YunTongXun voice SMS.
 // 播放验证码语音，默认值为空。
 //   - 语音验证码: https://doc.yuntongxun.com/pe/5a533de43b8496dd00dce07e
 func (b *YuntongxunSMSBuilder) PlayVerifyCode(code string) *YuntongxunSMSBuilder {
-	b.playVerifyCode = code
-	return b
+	return b.meta(yuntongxunPlayVerifyCodeKey, code)
 }
 
 // Region 设置云通讯短信的区域, 默认为国内, cn，否则使用港澳台以及境外的接入点
@@ -163,29 +130,5 @@ func (b *YuntongxunSMSBuilder) PlayVerifyCode(code string) *YuntongxunSMSBuilder
 //
 // 此值目前影响国际短信的请求地址.
 func (b *YuntongxunSMSBuilder) Region(region string) *YuntongxunSMSBuilder {
-	b.region = region
-	return b
-}
-
-func (b *YuntongxunSMSBuilder) Build() *Message {
-	msg := b.BaseBuilder.Build()
-	fields := map[string]interface{}{
-		yuntongxunPlayTimesKey:      b.playTimes,
-		yuntongxunMediaNameKey:      b.mediaName,
-		yuntongxunDisplayNumKey:     b.displayNum,
-		yuntongxunUserDataKey:       b.userData,
-		yuntongxunRegionKey:         b.region,
-		yuntongxunTxtSpeedKey:       b.txtSpeed,
-		yuntongxunTxtPitchKey:       b.txtPitch,
-		yuntongxunTxtVolumeKey:      b.txtVolume,
-		yuntongxunTxtBgsoundKey:     b.txtBgsound,
-		yuntongxunPlayModeKey:       b.playMode,
-		yuntongxunMaxCallTimeKey:    b.maxCallTime,
-		yuntongxunWelcomePromptKey:  b.welcomePrompt,
-		yuntongxunPlayVerifyCodeKey: b.playVerifyCode,
-	}
-	if extra := utils.BuildExtras(fields); len(extra) > 0 {
-		msg.Extras = extra
-	}
-	return msg
+	return b.meta(yuntongxunRegionKey, region)
 }

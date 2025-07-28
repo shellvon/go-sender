@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/shellvon/go-sender/cmd/gosender/internal/cli"
@@ -10,7 +11,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-// NewValidateConfigCommand creates the validate-config command
+// NewValidateConfigCommand creates the validate-config command.
 func NewValidateConfigCommand(configLoader *config.ConfigLoader) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "validate-config",
@@ -62,7 +63,7 @@ issues before attempting to send messages.`,
 			fmt.Print(output)
 
 			if len(validationErrors) > 0 {
-				return fmt.Errorf("configuration validation failed")
+				return errors.New("configuration validation failed")
 			}
 
 			return nil

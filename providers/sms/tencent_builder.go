@@ -1,9 +1,5 @@
 package sms
 
-import (
-	"github.com/shellvon/go-sender/utils"
-)
-
 // @ProviderName: Tencent / 腾讯云
 // @Website: https://cloud.tencent.com
 // @APIDoc: https://cloud.tencent.com/document/product/382/55981
@@ -17,19 +13,11 @@ import (
 // TencentSMSBuilder provides Tencent-specific SMS message creation.
 type TencentSMSBuilder struct {
 	*BaseBuilder[*TencentSMSBuilder]
-
-	senderID      string
-	region        string
-	playTimes     int
-	smsSdkAppID   string
-	voiceSdkAppID string
 }
 
 // newTencentSMSBuilder creates a new Tencent SMS builder.
 func newTencentSMSBuilder() *TencentSMSBuilder {
-	b := &TencentSMSBuilder{
-		region: tencentDefaultRegion,
-	}
+	b := &TencentSMSBuilder{}
 	b.BaseBuilder = &BaseBuilder[*TencentSMSBuilder]{subProvider: SubProviderTencent, self: b}
 	return b
 }
@@ -40,8 +28,7 @@ func newTencentSMSBuilder() *TencentSMSBuilder {
 //
 // 示例值：Qsms.
 func (b *TencentSMSBuilder) SenderID(id string) *TencentSMSBuilder {
-	b.senderID = id
-	return b
+	return b.meta(tencentSenderIDKey, id)
 }
 
 // Region sets the Region for Tencent SMS.
@@ -50,8 +37,7 @@ func (b *TencentSMSBuilder) SenderID(id string) *TencentSMSBuilder {
 //   - 华南地区（广州） ap-guangzhou (default)
 //   - 华东地区（南京） ap-nanjing
 func (b *TencentSMSBuilder) Region(region string) *TencentSMSBuilder {
-	b.region = region
-	return b
+	return b.meta(tencentRegionKey, region)
 }
 
 // PlayTimes sets the play times for Tencent voice SMS.
@@ -59,37 +45,19 @@ func (b *TencentSMSBuilder) Region(region string) *TencentSMSBuilder {
 // - 取值范围：1~3，默认值为2。
 // - 仅语音短信有效，文本短信无效。
 func (b *TencentSMSBuilder) PlayTimes(times int) *TencentSMSBuilder {
-	b.playTimes = times
-	return b
+	return b.meta(tencentPlayTimesKey, times)
 }
 
 // SmsSdkAppID sets the SmsSdkAppId for Tencent SMS.
 //   - This is required for most Tencent SMS API calls.
 //   - See: https://cloud.tencent.com/document/product/382/55981.
 func (b *TencentSMSBuilder) SmsSdkAppID(appID string) *TencentSMSBuilder {
-	b.smsSdkAppID = appID
-	return b
+	return b.meta(tencentSmsSdkAppIDKey, appID)
 }
 
 // VoiceSdkAppID sets the Voice SdkAppId for Tencent voice SMS.
 // This should be used for voice SMS scenarios only.
 //   - https://cloud.tencent.com/document/product/1128/51559.
 func (b *TencentSMSBuilder) VoiceSdkAppID(appID string) *TencentSMSBuilder {
-	b.voiceSdkAppID = appID
-	return b
-}
-
-func (b *TencentSMSBuilder) Build() *Message {
-	msg := b.BaseBuilder.Build()
-	fields := map[string]interface{}{
-		tencentSenderIDKey:      b.senderID,
-		tencentRegionKey:        b.region,
-		tencentPlayTimesKey:     b.playTimes,
-		tencentSmsSdkAppIDKey:   b.smsSdkAppID,
-		tencentVoiceSdkAppIDKey: b.voiceSdkAppID,
-	}
-	if extra := utils.BuildExtras(fields); len(extra) > 0 {
-		msg.Extras = extra
-	}
-	return msg
+	return b.meta(tencentVoiceSdkAppIDKey, appID)
 }
