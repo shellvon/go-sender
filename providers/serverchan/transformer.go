@@ -50,6 +50,8 @@ func newServerChanTransformer() *serverChanTransformer {
 		Path:      "code",
 		Expect:    "0",
 		Mode:      core.MatchEq,
+		CodePath:  "code",
+		MsgPath:   "message",
 	}
 
 	st := &serverChanTransformer{}

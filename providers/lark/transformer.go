@@ -68,6 +68,8 @@ func newLarkTransformer() *larkTransformer {
 		Path:      "code",
 		Expect:    "0",
 		Mode:      core.MatchEq,
+		CodePath:  "code",
+		MsgPath:   "msg",
 	}
 
 	lt := &larkTransformer{}

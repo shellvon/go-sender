@@ -51,9 +51,16 @@ type ResponseHandlerConfig struct {
 // ---------------- Core handler -------------------------------------------
 
 // NewSendResultHandler builds a SendResultHandler based on cfg.
+//
+//nolint:gocognit // complexity acceptable for response handling
 func NewSendResultHandler(cfg *ResponseHandlerConfig) SendResultHandler {
 	if cfg == nil {
 		cfg = &ResponseHandlerConfig{CheckBody: false}
+	}
+
+	// If CodePath is not specified but Path is, use Path as the default value for CodePath
+	if cfg.CheckBody && cfg.CodePath == "" && cfg.Path != "" {
+		cfg.CodePath = cfg.Path
 	}
 
 	return func(result *SendResult) error {

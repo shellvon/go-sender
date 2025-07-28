@@ -59,6 +59,8 @@ func newAliyunTransformer() *aliyunTransformer {
 			Path:      "Code",
 			Expect:    "OK",
 			Mode:      core.MatchEq,
+			CodePath:  "Code",
+			MsgPath:   "Message",
 		},
 		HTTPOptions{
 			AddBeforeHook(func(_ context.Context, msg *Message, account *Account) error {

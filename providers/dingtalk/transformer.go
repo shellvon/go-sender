@@ -63,6 +63,8 @@ func newDingTalkTransformer() *dingTalkTransformer {
 		Path:      "errcode",
 		Expect:    "0",
 		Mode:      core.MatchEq,
+		CodePath:  "errcode",
+		MsgPath:   "errmsg",
 	}
 
 	dt := &dingTalkTransformer{}

@@ -61,6 +61,8 @@ func newWecombotTransformer() core.HTTPTransformer[*Account] {
 		Path:      "errcode",
 		Expect:    "0",
 		Mode:      core.MatchEq,
+		CodePath:  "errcode",
+		MsgPath:   "errmsg",
 	}
 
 	wt := &wecombotTransformer{}
