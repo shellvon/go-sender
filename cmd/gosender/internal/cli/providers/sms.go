@@ -48,27 +48,63 @@ func buildSMSMessage(flags *cli.CLIFlags) (core.Message, error) {
 			flags.SubProvider, strings.Join(GetSMSSubProviders(), ", "))
 	}
 
-	// 直接创建消息对象
-	msg := &sms.Message{
-		SubProvider:    flags.SubProvider,
-		Mobiles:        flags.To,
-		Content:        flags.Content,
-		TemplateID:     flags.TemplateID,
-		TemplateParams: flags.TemplateParams,
-		// 基于MessageType设置类型
-		Type: getMessageType(flags.MessageType),
-		// 从Metadata提取常用字段
-		SignName:    flags.Metadata["sign_name"],
-		RegionCode:  getIntValue(flags.Metadata["region_code"]),
-		CallbackURL: flags.Metadata["callback_url"],
-		Extend:      flags.Metadata["extend"],
-		UID:         flags.Metadata["uid"],
+	// 使用Generic Builder API构建消息
+	builder := sms.NewMessage().
+		SubProvider(sms.SubProviderType(flags.SubProvider)).
+		To(flags.To...).
+		Content(flags.Content)
+
+	// 添加模板ID和参数(如果有)
+	if flags.TemplateID != "" {
+		if len(flags.TemplateParams) > 0 {
+			builder.Template(flags.TemplateID, flags.TemplateParams)
+		} else {
+			builder.TemplateID(flags.TemplateID)
+		}
 	}
 
-	// 解析参数顺序
-	msg.ParamsOrder = getJSONArray(flags.Metadata["params_order"])
+	// 设置消息类型
+	if flags.MessageType != "" {
+		builder.Type(getMessageType(flags.MessageType))
+	}
 
-	return msg, nil
+	// 添加常用元数据字段
+	if signName := flags.Metadata["sign_name"]; signName != "" {
+		builder.SignName(signName)
+	}
+
+	if regionCode := getIntValue(flags.Metadata["region_code"]); regionCode > 0 {
+		builder.RegionCode(regionCode)
+	}
+
+	if callbackURL := flags.Metadata["callback_url"]; callbackURL != "" {
+		builder.CallbackURL(callbackURL)
+	}
+
+	if extend := flags.Metadata["extend"]; extend != "" {
+		builder.Extend(extend)
+	}
+
+	if uid := flags.Metadata["uid"]; uid != "" {
+		builder.UID(uid)
+	}
+
+	// 处理参数顺序
+	if paramsOrder := getJSONArray(flags.Metadata["params_order"]); len(paramsOrder) > 0 {
+		builder.ParamsOrder(paramsOrder)
+	}
+
+	// 添加其他元数据
+	for key, value := range flags.Metadata {
+		// 跳过已处理的常用字段
+		if key == "sign_name" || key == "region_code" || key == "callback_url" ||
+			key == "extend" || key == "uid" || key == "params_order" {
+			continue
+		}
+		builder.Meta(key, value)
+	}
+
+	return builder.Build(), nil
 }
 
 func getMessageType(messageType string) sms.MessageType {
