@@ -25,27 +25,15 @@ import (
 )
 
 func main() {
-    // Create SMS provider
-    config := sms.Config{
-        ProviderMeta: core.ProviderMeta{
-            Strategy: core.StrategyRoundRobin,
-        },
-        Items: []*sms.Account{{
-            BaseAccount: core.BaseAccount{
-                AccountMeta: core.AccountMeta{
-                    Name:   "default",
-                    SubType: "aliyun",
-                },
-                Credentials: core.Credentials{
-                    APIKey:    "your-access-key",
-                    APISecret: "your-secret-key",
-                },
-            },
-            // 可选: Region, Callback 等 sms.Account 字段
-        }},
-    }
+    // Create SMS account with the new simple API
+    account := sms.NewAccount("aliyun", "your-access-key", "your-secret-key",
+        sms.Name("aliyun-default"),        // Custom account name
+        sms.WithSignName("MyApp"),         // Optional SMS-specific settings
+        sms.WithRegion("cn-hangzhou"))
 
-    provider, err := sms.New(config)
+    // Create provider
+    provider, err := sms.NewProvider([]*sms.Account{account},
+        sms.Strategy(core.StrategyRoundRobin)) // Round-robin strategy
     if err != nil {
         panic(err)
     }
@@ -83,26 +71,11 @@ func main() {
     sender := gosender.NewSender()
 
     // Create and register SMS provider
-    config := sms.Config{
-        ProviderMeta: core.ProviderMeta{
-            Strategy: core.StrategyRoundRobin,
-        },
-        Items: []*sms.Account{{
-            BaseAccount: core.BaseAccount{
-                AccountMeta: core.AccountMeta{
-                    Name:   "default",
-                    SubType: "aliyun",
-                },
-                Credentials: core.Credentials{
-                    APIKey:    "your-access-key",
-                    APISecret: "your-secret-key",
-                },
-            },
-            // 可选: Region, Callback 等 sms.Account 字段
-        }},
-    }
+    account := sms.NewAccount("aliyun", "your-access-key", "your-secret-key",
+        sms.Name("aliyun-default"),
+        sms.WithSignName("MyApp"))
 
-    smsProvider, err := sms.New(config)
+    smsProvider, err := sms.NewProvider([]*sms.Account{account})
     if err != nil {
         panic(err)
     }

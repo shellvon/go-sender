@@ -107,19 +107,11 @@ func runTelegramDemo() {
 		log.Println("Please set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID environment variables.")
 		return
 	}
-	cfg := telegram.Config{
-		Items: []*telegram.Account{{
-			BaseAccount: core.BaseAccount{
-				AccountMeta: core.AccountMeta{
-					Name: "default",
-				},
-				Credentials: core.Credentials{
-					APIKey: botToken,
-				},
-			},
-		}},
-	}
-	prov, err := telegram.New(&cfg)
+	// Create telegram account and provider with new simple API
+	account := telegram.NewAccount(botToken,
+		telegram.Name("telegram-default"))
+
+	prov, err := telegram.NewProvider([]*telegram.Account{account})
 	if err != nil {
 		log.Println("Init telegram provider failed:", err)
 		return
@@ -275,19 +267,11 @@ func runWecombotDemo() {
 		log.Println("Please set WECOM_BOT_KEY environment variable.")
 		return
 	}
-	cfg := wecombot.Config{
-		Items: []*wecombot.Account{{
-			BaseAccount: core.BaseAccount{
-				AccountMeta: core.AccountMeta{
-					Name: "default",
-				},
-				Credentials: core.Credentials{
-					APIKey: key,
-				},
-			},
-		}},
-	}
-	prov, err := wecombot.New(&cfg)
+	// Create wecombot account and provider with new simple API
+	account := wecombot.NewAccount(key,
+		wecombot.Name("wecombot-default"))
+
+	prov, err := wecombot.NewProvider([]*wecombot.Account{account})
 	if err != nil {
 		log.Println("Init wecom bot provider failed:", err)
 		return
@@ -429,23 +413,12 @@ func runEmailDemo() {
 		log.Println("EMAIL_PORT must be an integer.")
 		return
 	}
-	cfg := email.Config{
-		Items: []*email.Account{{
-			BaseAccount: core.BaseAccount{
-				AccountMeta: core.AccountMeta{
-					Name: "default",
-				},
-				Credentials: core.Credentials{
-					APIKey:    user,
-					APISecret: pass,
-				},
-			},
-			Host: host,
-			Port: port,
-			From: user,
-		}},
-	}
-	prov, err := email.New(&cfg)
+	// Create email account and provider with new simple API
+	account := email.NewAccount(host, port, user, pass,
+		email.Name("email-default"),
+		email.WithFrom(user))
+
+	prov, err := email.NewProvider([]*email.Account{account})
 	if err != nil {
 		log.Println("Init email provider failed:", err)
 		return
@@ -567,23 +540,13 @@ func runSMSDemo() {
 		)
 		return
 	}
-	cfg := sms.Config{
-		Items: []*sms.Account{{
-			BaseAccount: core.BaseAccount{
-				AccountMeta: core.AccountMeta{
-					Name:    "default",
-					SubType: providerType,
-				},
-				Credentials: core.Credentials{
-					AppID:     appID,
-					APIKey:    key,
-					APISecret: secret,
-				},
-			},
-			SignName: from, // 使用环境变量中的签名作为默认签名
-		}},
-	}
-	prov, err := sms.New(&cfg)
+	// Create sms account and provider with new simple API
+	account := sms.NewAccount(providerType, key, secret,
+		sms.Name("sms-default"),
+		sms.AppID(appID),
+		sms.WithSignName(from)) // 使用环境变量中的签名作为默认签名
+
+	prov, err := sms.NewProvider([]*sms.Account{account})
 	if err != nil {
 		log.Println("Init sms provider failed:", err)
 		return
@@ -650,20 +613,11 @@ func runDingTalkDemo() {
 		log.Println("Please set DINGTALK_BOT_TOKEN and DINGTALK_BOT_SECRET environment variables.")
 		return
 	}
-	cfg := dingtalk.Config{
-		Items: []*dingtalk.Account{{
-			BaseAccount: core.BaseAccount{
-				AccountMeta: core.AccountMeta{
-					Name: "default",
-				},
-				Credentials: core.Credentials{
-					APIKey:    key,
-					APISecret: secret,
-				},
-			},
-		}},
-	}
-	prov, _ := dingtalk.New(&cfg)
+	// Create dingtalk account and provider with new simple API
+	account := dingtalk.NewAccount(key,
+		dingtalk.Name("dingtalk-default"))
+
+	prov, _ := dingtalk.NewProvider([]*dingtalk.Account{account})
 	demos := []struct {
 		name string
 		msg  core.Message
@@ -778,23 +732,12 @@ func runServerChanDemo() {
 		return
 	}
 
-	cfg := serverchan.Config{
-		ProviderMeta: core.ProviderMeta{
-			Strategy: core.StrategyRoundRobin,
-		},
-		Items: []*serverchan.Account{{
-			BaseAccount: core.BaseAccount{
-				AccountMeta: core.AccountMeta{
-					Name: "default",
-				},
-				Credentials: core.Credentials{
-					APIKey: key,
-				},
-			},
-		}},
-	}
+	// Create serverchan account and provider with new simple API
+	account := serverchan.NewAccount(key,
+		serverchan.Name("serverchan-default"))
 
-	prov, _ := serverchan.New(&cfg)
+	prov, _ := serverchan.NewProvider([]*serverchan.Account{account},
+		serverchan.Strategy(core.StrategyRoundRobin))
 	demos := []struct {
 		name string
 		msg  core.Message
