@@ -148,3 +148,38 @@ func (p *Provider) uploadMediaType(
 	}
 	return result.MediaID, selectedAccount, nil
 }
+
+// ProviderOption represents a function that modifies WeCom Bot Provider configuration.
+type ProviderOption func(*Config)
+
+// NewProvider creates a new WeCom Bot provider with the given accounts and options.
+//
+// At least one account is required.
+//
+// Example:
+//
+//	provider, err := wecombot.NewProvider([]*wecombot.Account{account1, account2},
+//	    wecombot.Strategy(core.StrategyWeighted))
+func NewProvider(accounts []*Account, opts ...ProviderOption) (*Provider, error) {
+	return core.CreateProvider(
+		accounts,
+		core.ProviderTypeWecombot,
+		func(meta core.ProviderMeta, items []*Account) *Config {
+			return &Config{
+				ProviderMeta: meta,
+				Items:        items,
+			}
+		},
+		func(config *Config) (*Provider, error) {
+			return New(config)
+		},
+		opts...,
+	)
+}
+
+// Re-exported core provider options for cleaner API
+// These provide convenient aliases: wecombot.Strategy(core.StrategyWeighted) instead of core.WithStrategy[*wecombot.Config](core.StrategyWeighted).
+var (
+	Strategy         = core.WithStrategy[*Config]
+	ProviderDisabled = core.WithProviderDisabled[*Config]
+)

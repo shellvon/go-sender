@@ -29,3 +29,38 @@ func New(config *Config) (*Provider, error) {
 func (p *Provider) Name() string {
 	return string(core.ProviderTypeWebhook)
 }
+
+// ProviderOption represents a function that modifies Webhook Provider configuration.
+type ProviderOption func(*Config)
+
+// NewProvider creates a new Webhook provider with the given endpoints and options.
+//
+// At least one endpoint is required.
+//
+// Example:
+//
+//	provider, err := webhook.NewProvider([]*webhook.Endpoint{endpoint1, endpoint2},
+//	    webhook.Strategy(core.StrategyWeighted))
+func NewProvider(endpoints []*Endpoint, opts ...ProviderOption) (*Provider, error) {
+	return core.CreateProvider(
+		endpoints,
+		core.ProviderTypeWebhook,
+		func(meta core.ProviderMeta, items []*Endpoint) *Config {
+			return &Config{
+				ProviderMeta: meta,
+				Items:        items,
+			}
+		},
+		func(config *Config) (*Provider, error) {
+			return New(config)
+		},
+		opts...,
+	)
+}
+
+// Re-exported core provider options for cleaner API
+// These provide convenient aliases: webhook.Strategy(core.StrategyWeighted) instead of core.WithStrategy[*webhook.Config](core.StrategyWeighted).
+var (
+	Strategy         = core.WithStrategy[*Config]
+	ProviderDisabled = core.WithProviderDisabled[*Config]
+)

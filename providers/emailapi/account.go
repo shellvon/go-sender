@@ -2,6 +2,7 @@ package emailapi
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/shellvon/go-sender/core"
 )
@@ -31,3 +32,65 @@ func (a *Account) Validate() error {
 	}
 	return a.BaseAccount.Validate()
 }
+
+// AccountOption represents a function that modifies Email API Account configuration.
+type AccountOption func(*Account)
+
+// NewAccount creates a new Email API account with the given configuration and options.
+//
+// The subType parameter specifies the Email API provider (e.g., "resend", "sendgrid").
+//
+// Example:
+//
+//	account := emailapi.NewAccount("resend", "your-api-key",
+//	    emailapi.Name("resend-main"),
+//	    emailapi.Weight(3),
+//	    emailapi.WithRegion("us-east-1"),
+//	    emailapi.WithCallback("https://example.com/webhook"))
+func NewAccount(subType, apiKey string, opts ...AccountOption) *Account {
+	return core.CreateAccount(
+		core.ProviderTypeEmailAPI,
+		"emailapi-default",
+		subType,
+		core.Credentials{
+			APIKey: apiKey,
+		},
+		func(baseAccount core.BaseAccount) *Account {
+			return &Account{
+				BaseAccount: baseAccount,
+			}
+		},
+		func(defaultName, subType string) string {
+			if subType != "" {
+				return fmt.Sprintf("%s-default", subType)
+			}
+			return defaultName
+		},
+		opts...,
+	)
+}
+
+// EmailAPI-specific account options
+
+// WithRegion sets the email API service region.
+func WithRegion(region string) AccountOption {
+	return func(account *Account) {
+		account.Region = region
+	}
+}
+
+// WithCallback sets the callback URL for webhooks.
+func WithCallback(callback string) AccountOption {
+	return func(account *Account) {
+		account.Callback = callback
+	}
+}
+
+// Re-exported core account options for cleaner API
+// These provide convenient aliases: emailapi.Name("test") instead of core.WithName[*emailapi.Account]("test").
+var (
+	Name     = core.WithName[*Account]
+	Weight   = core.WithWeight[*Account]
+	Disabled = core.WithDisabled[*Account]
+	AppID    = core.WithAppID[*Account]
+)

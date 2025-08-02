@@ -68,3 +68,115 @@ func (e *Endpoint) Validate() error {
 	}
 	return nil
 }
+
+// EndpointOption represents a function that modifies Webhook Endpoint configuration.
+type EndpointOption func(*Endpoint)
+
+// NewEndpoint creates a new webhook endpoint with the given URL and options.
+//
+// Example:
+//
+//	endpoint := webhook.NewEndpoint("https://api.example.com/webhook",
+//	    webhook.Name("primary-webhook"),
+//	    webhook.Weight(2),
+//	    webhook.WithMethod("POST"),
+//	    webhook.WithHeader("Content-Type", "application/json"))
+func NewEndpoint(url string, opts ...EndpointOption) *Endpoint {
+	endpoint := &Endpoint{
+		Name:        "webhook-default",
+		URL:         url,
+		Method:      "POST", // Default to POST
+		Headers:     make(map[string]string),
+		QueryParams: make(map[string]string),
+		Weight:      1,
+		Disabled:    false,
+	}
+
+	// Apply all options
+	for _, opt := range opts {
+		opt(endpoint)
+	}
+
+	return endpoint
+}
+
+// Webhook-specific endpoint options
+
+// Name sets the endpoint name.
+func Name(name string) EndpointOption {
+	return func(endpoint *Endpoint) {
+		endpoint.Name = name
+	}
+}
+
+// Weight sets the endpoint weight for load balancing.
+func Weight(weight int) EndpointOption {
+	return func(endpoint *Endpoint) {
+		endpoint.Weight = weight
+	}
+}
+
+// Disabled disables the endpoint.
+func Disabled() EndpointOption {
+	return func(endpoint *Endpoint) {
+		endpoint.Disabled = true
+	}
+}
+
+// WithMethod sets the HTTP method (GET, POST, PUT, DELETE, etc.)
+func WithMethod(method string) EndpointOption {
+	return func(endpoint *Endpoint) {
+		endpoint.Method = method
+	}
+}
+
+// WithHeader adds a header to the webhook request.
+func WithHeader(key, value string) EndpointOption {
+	return func(endpoint *Endpoint) {
+		if endpoint.Headers == nil {
+			endpoint.Headers = make(map[string]string)
+		}
+		endpoint.Headers[key] = value
+	}
+}
+
+// WithHeaders sets multiple headers at once.
+func WithHeaders(headers map[string]string) EndpointOption {
+	return func(endpoint *Endpoint) {
+		if endpoint.Headers == nil {
+			endpoint.Headers = make(map[string]string)
+		}
+		for k, v := range headers {
+			endpoint.Headers[k] = v
+		}
+	}
+}
+
+// WithQueryParam adds a query parameter to the webhook URL.
+func WithQueryParam(key, value string) EndpointOption {
+	return func(endpoint *Endpoint) {
+		if endpoint.QueryParams == nil {
+			endpoint.QueryParams = make(map[string]string)
+		}
+		endpoint.QueryParams[key] = value
+	}
+}
+
+// WithQueryParams sets multiple query parameters at once.
+func WithQueryParams(params map[string]string) EndpointOption {
+	return func(endpoint *Endpoint) {
+		if endpoint.QueryParams == nil {
+			endpoint.QueryParams = make(map[string]string)
+		}
+		for k, v := range params {
+			endpoint.QueryParams[k] = v
+		}
+	}
+}
+
+// WithResponseConfig sets the response handling configuration.
+func WithResponseConfig(config *ResponseConfig) EndpointOption {
+	return func(endpoint *Endpoint) {
+		endpoint.ResponseConfig = config
+	}
+}

@@ -35,25 +35,14 @@ func main() {
     // 1️⃣ 创建 Sender 实例（可按需再设置中间件）
     sender := gosender.NewSender()
 
-    // 2️⃣ 初始化并注册短信 Provider（以阿里云为例）
-    cfg := sms.Config{
-        ProviderMeta: core.ProviderMeta{
-            Strategy: core.StrategyRoundRobin,
-        },
-        Items: []*sms.Account{{
-            BaseAccount: core.BaseAccount{
-                AccountMeta: core.AccountMeta{
-                    Name:   "aliyun-default",
-                    SubType: "aliyun",
-                },
-                Credentials: core.Credentials{
-                    APIKey:    "your-access-key",
-                    APISecret: "your-secret-key",
-                },
-            },
-        }},
-    }
-    aliyunProvider, err := sms.New(cfg)
+    // 2️⃣ 创建短信账号和 Provider（以阿里云为例）
+    account := sms.NewAccount("aliyun", "your-access-key", "your-secret-key",
+        sms.Name("aliyun-default"),        // 自定义账号名称
+        sms.WithSignName("MyApp"),         // 可选的短信配置
+        sms.WithRegion("cn-hangzhou"))
+
+    aliyunProvider, err := sms.NewProvider([]*sms.Account{account},
+        sms.Strategy(core.StrategyRoundRobin)) // 轮询策略
     if err != nil {
         log.Fatalf("创建 Provider 失败: %v", err)
     }

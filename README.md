@@ -35,28 +35,14 @@ func main() {
 	// 1️⃣ Initialize a new sender instance (middleware can be added later)
 	sender := gosender.NewSender()
 
-	// 2️⃣ Prepare and register an SMS provider (Aliyun as an example)
-	config := sms.Config{
-		ProviderMeta: core.ProviderMeta{   // provider-level config
-			Strategy: core.StrategyRoundRobin, // account selection strategy
-		},
-		Items: []*sms.Account{             // one or more sub-accounts (AK/SK)
-			{
-				BaseAccount: core.BaseAccount{
-					AccountMeta: core.AccountMeta{
-						Name:    "aliyun-default", // custom account name
-						SubType: "aliyun",        // sms sub-provider
-					},
-					Credentials: core.Credentials{
-						APIKey:    "your-access-key",
-						APISecret: "your-secret-key",
-					},
-				},
-				// Optional: Region, Callback, SignName ...
-			},
-		},
-	}
-	aliyunProvider, err := sms.New(config)
+	// 2️⃣ Create an SMS account and provider (Aliyun as an example)
+	account := sms.NewAccount("aliyun", "your-access-key", "your-secret-key",
+		sms.Name("aliyun-default"),        // Custom account name
+		sms.WithSignName("MyApp"),         // Optional SMS-specific settings
+		sms.WithRegion("cn-hangzhou"))
+
+	aliyunProvider, err := sms.NewProvider([]*sms.Account{account},
+		sms.Strategy(core.StrategyRoundRobin)) // Round-robin strategy
 	if err != nil {
 		log.Fatalf("failed to create provider: %v", err)
 	}

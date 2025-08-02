@@ -41,6 +41,16 @@ func (_dummySelectable) GetType() string { return "" }
 
 var _ ProviderConfig[_dummySelectable] = (*BaseConfig[_dummySelectable])(nil)
 
+// Ensure BaseConfig implements ProviderMetaAccessor interface.
+var _ ProviderMetaAccessor = (*BaseConfig[_dummySelectable])(nil)
+
+// GetProviderMeta implements ProviderMetaAccessor interface.
+func (c *BaseConfig[T]) GetProviderMeta() *ProviderMeta {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return &c.ProviderMeta
+}
+
 // Validate performs provider-level and item-level sanity checks.
 //
 //  1. provider must not be disabled

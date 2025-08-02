@@ -33,3 +33,38 @@ func New(config *Config) (*Provider, error) {
 func (p *Provider) Name() string {
 	return string(core.ProviderTypeTelegram)
 }
+
+// ProviderOption represents a function that modifies Telegram Provider configuration.
+type ProviderOption func(*Config)
+
+// NewProvider creates a new Telegram provider with the given accounts and options.
+//
+// At least one account is required.
+//
+// Example:
+//
+//	provider, err := telegram.NewProvider([]*telegram.Account{account1, account2},
+//	    telegram.Strategy(core.StrategyWeighted))
+func NewProvider(accounts []*Account, opts ...ProviderOption) (*Provider, error) {
+	return core.CreateProvider(
+		accounts,
+		core.ProviderTypeTelegram,
+		func(meta core.ProviderMeta, items []*Account) *Config {
+			return &Config{
+				ProviderMeta: meta,
+				Items:        items,
+			}
+		},
+		func(config *Config) (*Provider, error) {
+			return New(config)
+		},
+		opts...,
+	)
+}
+
+// Re-exported core provider options for cleaner API
+// These provide convenient aliases: telegram.Strategy(core.StrategyWeighted) instead of core.WithStrategy[*telegram.Config](core.StrategyWeighted).
+var (
+	Strategy         = core.WithStrategy[*Config]
+	ProviderDisabled = core.WithProviderDisabled[*Config]
+)

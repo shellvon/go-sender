@@ -87,3 +87,38 @@ func New(config *Config) (*Provider, error) {
 func (p *Provider) Name() string {
 	return string(core.ProviderTypeEmailAPI)
 }
+
+// ProviderOption represents a function that modifies Email API Provider configuration.
+type ProviderOption func(*Config)
+
+// NewProvider creates a new EmailAPI provider with the given accounts and options.
+//
+// At least one account is required.
+//
+// Example:
+//
+//	provider, err := emailapi.NewProvider([]*emailapi.Account{account1, account2},
+//	    emailapi.Strategy(core.StrategyWeighted))
+func NewProvider(accounts []*Account, opts ...ProviderOption) (*Provider, error) {
+	return core.CreateProvider(
+		accounts,
+		core.ProviderTypeEmailAPI,
+		func(meta core.ProviderMeta, items []*Account) *Config {
+			return &Config{
+				ProviderMeta: meta,
+				Items:        items,
+			}
+		},
+		func(config *Config) (*Provider, error) {
+			return New(config)
+		},
+		opts...,
+	)
+}
+
+// Re-exported core provider options for cleaner API
+// These provide convenient aliases: emailapi.Strategy(core.StrategyWeighted) instead of core.WithStrategy[*emailapi.Config](core.StrategyWeighted).
+var (
+	Strategy         = core.WithStrategy[*Config]
+	ProviderDisabled = core.WithProviderDisabled[*Config]
+)

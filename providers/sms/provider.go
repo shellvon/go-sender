@@ -86,3 +86,40 @@ func New(config *Config) (*Provider, error) {
 func (p *Provider) Name() string {
 	return string(core.ProviderTypeSMS)
 }
+
+// Simplified API for Provider creation - using generics for type safety
+
+// ProviderOption represents a function that modifies SMS Provider configuration.
+type ProviderOption func(*Config)
+
+// NewProvider creates a new SMS provider with the given accounts and options.
+//
+// At least one account is required.
+//
+// Example:
+//
+//	provider, err := sms.NewProvider([]*sms.Account{account1, account2},
+//	    sms.Strategy(core.StrategyWeighted))
+func NewProvider(accounts []*Account, opts ...ProviderOption) (*Provider, error) {
+	return core.CreateProvider(
+		accounts,
+		core.ProviderTypeSMS,
+		func(meta core.ProviderMeta, items []*Account) *Config {
+			return &Config{
+				ProviderMeta: meta,
+				Items:        items,
+			}
+		},
+		func(config *Config) (*Provider, error) {
+			return New(config)
+		},
+		opts...,
+	)
+}
+
+// Re-exported core provider options for cleaner API
+// These provide convenient aliases: sms.Strategy(core.StrategyWeighted) instead of core.WithStrategy[*sms.Config](core.StrategyWeighted).
+var (
+	Strategy         = core.WithStrategy[*Config]
+	ProviderDisabled = core.WithProviderDisabled[*Config]
+)

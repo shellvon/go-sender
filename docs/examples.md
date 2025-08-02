@@ -319,9 +319,16 @@ import (
     "github.com/shellvon/go-sender/core"
 )
 
-// Custom transport with monitoring
-type MonitoredTransport struct {
-    base http.RoundTripper
+if err != nil {
+    log.Printf("SMS failed: %v, trying email...", err)
+
+    emailMsg := email.New().
+        To("user@example.com").
+        Subject("Alert").
+        Content("Alert message").
+        Build()
+
+    err = sender.Send(ctx, emailMsg)
 }
 
 func (t *MonitoredTransport) RoundTrip(req *http.Request) (*http.Response, error) {
