@@ -297,21 +297,35 @@ func (pd *ProviderDecorator) sendAsync(ctx context.Context, message Message, opt
 	}
 
 	// Fallback to goroutine if no queue is configured
+	pd.workers.Add(1)
 	go func() {
+		defer pd.workers.Done()
+		
 		// If DelayUntil is set, wait until that time
 		if opts.DelayUntil != nil && opts.DelayUntil.After(time.Now()) {
 			select {
 			case <-time.After(time.Until(*opts.DelayUntil)):
 				// Waited successfully
-			case <-context.Background().Done(): // Use background context to prevent premature cancellation
+			case <-pd.ctx.Done(): // Use provider context to respect shutdown signals
 				// Context cancelled while waiting, do not send
 				if opts.Callback != nil {
-					opts.Callback(nil, context.Background().Err())
+					opts.Callback(nil, pd.ctx.Err())
 				}
 				return
 			}
 		}
-		_, errSend := pd.executeWithMiddleware(context.Background(), message, opts)
+		
+		// Check if provider is being shut down before proceeding
+		select {
+		case <-pd.ctx.Done():
+			if opts.Callback != nil {
+				opts.Callback(nil, pd.ctx.Err())
+			}
+			return
+		default:
+		}
+		
+		_, errSend := pd.executeWithMiddleware(pd.ctx, message, opts)
 		if errSend != nil && pd.logger != nil {
 			_ = pd.logger.Log(
 				LevelError,
