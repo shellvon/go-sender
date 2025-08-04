@@ -22,6 +22,7 @@ import (
     gosender "github.com/shellvon/go-sender"
     "github.com/shellvon/go-sender/core"
     "github.com/shellvon/go-sender/providers/sms"
+    "log"
 )
 
 func main() {
@@ -40,15 +41,16 @@ func main() {
 
     // Create and send message
     msg := sms.Aliyun().
-        To("***REMOVED***").
+        To("13800138000").
         Content("Hello from go-sender!").
         TemplateID("SMS_xxx").
         Build()
 
-    err = provider.Send(context.Background(), msg)
+    result, err := provider.Send(context.Background(), msg, &core.ProviderSendOptions{})
     if err != nil {
         panic(err)
     }
+    log.Printf("Message sent successfully! Request ID: %s", result.RequestID)
 }
 ```
 
@@ -83,7 +85,7 @@ func main() {
 
     // Create and send message
     msg := sms.Aliyun().
-        To("***REMOVED***").
+        To("13800138000").
         Content("Hello from go-sender!").
         TemplateID("SMS_xxx").
         Build()

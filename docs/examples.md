@@ -21,7 +21,7 @@ Some providers support sending to multiple recipients in a single API call:
 ```go
 // SMS providers that support multiple recipients
 msg := sms.Aliyun().
-    To("***REMOVED***,13800138001,13800138002").  // Multiple numbers separated by comma
+    To("13800138000,13800138001,13800138002").  // Multiple numbers separated by comma
     Content("Hello everyone!").
     Build()
 
@@ -33,7 +33,7 @@ err := sender.Send(ctx, msg)
 For providers that don't support batch sending, use a loop:
 
 ```go
-mobiles := []string{"***REMOVED***", "13800138001", "13800138002"}
+mobiles := []string{"13800138000", "13800138001", "13800138002"}
 
 for _, mobile := range mobiles {
     msg := sms.Aliyun().
@@ -58,7 +58,7 @@ import (
     "context"
 )
 
-mobiles := []string{"***REMOVED***", "13800138001", "13800138002"}
+mobiles := []string{"13800138000", "13800138001", "13800138002"}
 var wg sync.WaitGroup
 errChan := make(chan error, len(mobiles))
 
