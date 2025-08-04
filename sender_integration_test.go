@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"net/http/httptest"
 	"sync"
 	"testing"
 	"time"
@@ -750,20 +751,21 @@ func TestRetryPolicy(t *testing.T) {
 //
 //nolint:gocognit // test
 func TestCallbackHandling(t *testing.T) {
-	sender := gosender.NewSender(gosender.WithLogger(&testLogger{t: t}))
-	// 修改关闭方式，添加一个延迟，确保异步操作有足够的时间完成
-	defer func() {
-		// 给异步操作额外的时间完成
-		time.Sleep(500 * time.Millisecond)
-		sender.Close()
-	}()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(100 * time.Millisecond)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Mock server error"))
+	}))
+	defer server.Close()
 
-	// 注册 webhook provider (所有子测试复用)
+	sender := gosender.NewSender(gosender.WithLogger(&testLogger{t: t}))
+	defer sender.Close()
+
 	webhookConfig := &webhook.Config{
 		Items: []*webhook.Endpoint{
 			{
 				Name:    "callback-endpoint",
-				URL:     "http://example.com/webhook",
+				URL:     server.URL,
 				Method:  http.MethodPost,
 				Headers: map[string]string{"Content-Type": "application/json"},
 			},
@@ -837,7 +839,7 @@ func TestCallbackHandling(t *testing.T) {
 			t.Fatalf("Failed to send message: %v", sendErr)
 		}
 
-		// 使用 WaitGroup 等待回调执行，增加最大等待时间到30秒
+		// 使用 WaitGroup 等待回调执行
 		done := make(chan struct{})
 		go func() {
 			wg.Wait()
@@ -856,8 +858,10 @@ func TestCallbackHandling(t *testing.T) {
 				t.Error("Callback was not executed")
 			} else if err == nil {
 				t.Error("Expected error in callback, got nil")
+			} else {
+				t.Logf("Callback executed successfully with expected error: %v", err)
 			}
-		case <-time.After(30 * time.Second): // 增加等待时间，从10秒到30秒
+		case <-time.After(10 * time.Second): // Reasonable timeout for mock server
 			mu.Lock()
 			executed := callbackExecuted
 			mu.Unlock()
@@ -895,8 +899,6 @@ func TestCallbackHandling(t *testing.T) {
 		); sendErr != nil {
 			t.Fatalf("Failed to send message: %v", sendErr)
 		}
-
-		// 使用 WaitGroup 等待回调执行，考虑延迟时间，增加最大等待时间到15秒
 		done := make(chan struct{})
 		go func() {
 			wg.Wait()
@@ -915,8 +917,10 @@ func TestCallbackHandling(t *testing.T) {
 				t.Error("Delayed callback was not executed")
 			} else if err == nil {
 				t.Error("Expected error in delayed callback, got nil")
+			} else {
+				t.Logf("Delayed callback executed successfully with expected error: %v", err)
 			}
-		case <-time.After(15 * time.Second): // 增加等待时间，从5秒到15秒
+		case <-time.After(10 * time.Second): // Reasonable timeout including delay
 			mu.Lock()
 			executed := callbackExecuted
 			mu.Unlock()
@@ -927,9 +931,6 @@ func TestCallbackHandling(t *testing.T) {
 			}
 		}
 	})
-
-	// 在测试结尾添加一个小延迟，确保异步操作有机会完成
-	time.Sleep(500 * time.Millisecond)
 }
 
 // testCircuitBreaker 是一个用于测试的熔断器实现.

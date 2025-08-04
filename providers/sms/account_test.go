@@ -62,6 +62,12 @@ func TestAccount_Validate_WithSignName(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected no validation error, got %v", err)
 	}
+
+	// 验证 SignName 字段是否被正确设置
+	expectedSignName := "测试签名"
+	if account.SignName != expectedSignName {
+		t.Errorf("Expected SignName '%s', got '%s'", expectedSignName, account.SignName)
+	}
 }
 
 func TestAccount_JSON_Serialization(t *testing.T) {
