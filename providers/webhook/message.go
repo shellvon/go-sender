@@ -37,9 +37,12 @@ func (m *Message) buildURL(baseURL string) (string, error) {
 		return "", fmt.Errorf("failed to parse URL: %w", err)
 	}
 
-	// Add query parameters
+	// Add query parameters (message params override existing params with same key)
 	query := parsedURL.Query()
 	for key, values := range m.QueryParams {
+		// Delete existing values for this key first (override behavior)
+		query.Del(key)
+		// Then add all new values
 		for _, v := range values {
 			query.Add(key, v)
 		}
