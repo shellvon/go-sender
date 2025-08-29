@@ -44,19 +44,6 @@ type HTTPRequestOptions struct {
 	Client *http.Client // Optional: custom HTTP client (proxy, timeout, etc.)
 }
 
-func prepareContext(ctx context.Context, options *HTTPRequestOptions) (context.Context, context.CancelFunc) {
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	if options.Timeout == 0 {
-		options.Timeout = core.DefaultTimeout
-	}
-	if options.Timeout > 0 {
-		return context.WithTimeout(ctx, options.Timeout)
-	}
-	return ctx, nil
-}
-
 // buildFinalURL builds the final request URL by appending query parameters to the base URL.
 // Supports string and []string values in the query map. Returns the final URL or an error.
 func buildFinalURL(requestURL string, query url.Values) (string, error) {
@@ -217,10 +204,6 @@ func addFileToMultipart(writer *multipart.Writer, fieldName, filePath string) er
 // SendRequest sends an HTTP request and returns the raw *http.Response.
 // The caller is responsible for closing resp.Body (or delegating to ReadAndClose).
 func SendRequest(ctx context.Context, requestURL string, options HTTPRequestOptions) (*http.Response, error) {
-	ctx, cancel := prepareContext(ctx, &options)
-	if cancel != nil {
-		defer cancel()
-	}
 
 	reqBody, contentType, err := buildRequestBody(options)
 	if err != nil {
@@ -239,6 +222,11 @@ func SendRequest(ctx context.Context, requestURL string, options HTTPRequestOpti
 	}
 	setRequestHeaders(req, options.Headers, contentType)
 	client := core.EnsureHTTPClient(options.Client)
+	timeOut := options.Timeout
+	if timeOut == 0 {
+		timeOut = core.DefaultHTTPTimeout
+	}
+	client.Timeout = options.Timeout
 	return client.Do(req)
 }
 

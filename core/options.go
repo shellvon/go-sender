@@ -141,8 +141,11 @@ func DefaultHTTPClient() *http.Client {
 	}
 }
 
-// EnsureHTTPClient ensures that the HTTP client has a default User-Agent.
-// If the provided client is nil, a default client is created.
+// EnsureHTTPClient validates and initializes the provided HTTP client.
+//
+// If the provided client is nil, this function creates and returns a new default client
+// with a predefined timeout. It also ensures the client has a non-nil Transport,
+// which is required for making HTTP requests.
 func EnsureHTTPClient(client *http.Client) *http.Client {
 	if client == nil {
 		client = DefaultHTTPClient()
@@ -153,6 +156,9 @@ func EnsureHTTPClient(client *http.Client) *http.Client {
 		client.Transport = &http.Transport{}
 	}
 
+	if client.Timeout == 0 {
+		client.Timeout = DefaultHTTPTimeout
+	}
 	return client
 }
 
