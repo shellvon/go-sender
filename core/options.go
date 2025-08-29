@@ -13,7 +13,7 @@ import (
 
 const (
 	// DefaultUserAgent is the default User-Agent for HTTP requests.
-	DefaultUserAgent = "go-sender/1.0.0"
+	DefaultUserAgent = "go-sender/0.1.3"
 	// DefaultHTTPTimeout is the default timeout for HTTP requests.
 	DefaultHTTPTimeout = 30 * time.Second
 	// defaultMaxAttempts specifies the default maximum number of retry attempts.
