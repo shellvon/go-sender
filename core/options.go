@@ -149,6 +149,7 @@ func DefaultHTTPClient() *http.Client {
 func EnsureHTTPClient(client *http.Client) *http.Client {
 	if client == nil {
 		client = DefaultHTTPClient()
+		client.Timeout = DefaultHTTPTimeout
 	}
 
 	// Ensure User-Agent is set.
@@ -156,9 +157,6 @@ func EnsureHTTPClient(client *http.Client) *http.Client {
 		client.Transport = &http.Transport{}
 	}
 
-	if client.Timeout == 0 {
-		client.Timeout = DefaultHTTPTimeout
-	}
 	return client
 }
 

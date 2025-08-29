@@ -222,11 +222,9 @@ func SendRequest(ctx context.Context, requestURL string, options HTTPRequestOpti
 	}
 	setRequestHeaders(req, options.Headers, contentType)
 	client := core.EnsureHTTPClient(options.Client)
-	timeOut := options.Timeout
-	if timeOut == 0 {
-		timeOut = core.DefaultHTTPTimeout
+	if options.Timeout != 0 {
+		client.Timeout = options.Timeout
 	}
-	client.Timeout = options.Timeout
 	return client.Do(req)
 }
 
