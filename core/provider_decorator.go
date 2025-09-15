@@ -300,7 +300,7 @@ func (pd *ProviderDecorator) sendAsync(ctx context.Context, message Message, opt
 	pd.workers.Add(1)
 	go func() {
 		defer pd.workers.Done()
-		
+
 		// If DelayUntil is set, wait until that time
 		if opts.DelayUntil != nil && opts.DelayUntil.After(time.Now()) {
 			select {
@@ -314,7 +314,7 @@ func (pd *ProviderDecorator) sendAsync(ctx context.Context, message Message, opt
 				return
 			}
 		}
-		
+
 		// Check if provider is being shut down before proceeding
 		select {
 		case <-pd.ctx.Done():
@@ -324,7 +324,7 @@ func (pd *ProviderDecorator) sendAsync(ctx context.Context, message Message, opt
 			return
 		default:
 		}
-		
+
 		_, errSend := pd.executeWithMiddleware(pd.ctx, message, opts)
 		if errSend != nil && pd.logger != nil {
 			_ = pd.logger.Log(

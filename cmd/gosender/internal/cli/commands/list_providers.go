@@ -125,6 +125,17 @@ func getAvailableProviders() []cli.ProviderInfo {
 			SupportsTemplates: true,
 		},
 		{
+			Type:              core.ProviderTypeWecomApp,
+			Name:              "WeComApp",
+			Description:       "Send messages via WecomApp API",
+			SupportedTypes:    []string{"text", "markdown", "image", "news", "voice", "file", "template_card"},
+			RequiredFields:    []string{"api_key", "api_secret", "app_id"},
+			OptionalFields:    []string{"name", "enabled", "weight"},
+			SupportsFiles:     true,
+			SupportsHTML:      false,
+			SupportsTemplates: true,
+		},
+		{
 			Type:              core.ProviderTypeServerChan,
 			Name:              "ServerChan",
 			Description:       "Send notifications via ServerChan service",

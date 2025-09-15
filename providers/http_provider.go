@@ -3,6 +3,7 @@ package providers
 import (
 	"context"
 	"fmt"
+	"maps"
 
 	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/utils"
@@ -71,14 +72,14 @@ func (p *HTTPProvider[T]) Send(
 	}
 
 	// Execute HTTP request capturing detailed response
-	result, err := p.executeHTTPRequest(ctx, reqSpec, handler, opts)
+	result, err := p.ExecuteHTTPRequest(ctx, reqSpec, handler, opts)
 	if result != nil {
 		result.Config = selectedConfig // attach config for observability
 	}
 	return result, err
 }
 
-func (p *HTTPProvider[T]) executeHTTPRequest(
+func (p *HTTPProvider[T]) ExecuteHTTPRequest(
 	ctx context.Context,
 	reqSpec *core.HTTPRequestSpec,
 	handler core.SendResultHandler,
@@ -86,8 +87,8 @@ func (p *HTTPProvider[T]) executeHTTPRequest(
 ) (*core.SendResult, error) {
 	// Prepare headers map (ensure non-nil so we can mutate)
 	headers := make(map[string]string)
-	for k, v := range reqSpec.Headers {
-		headers[k] = v
+	if reqSpec.Headers != nil {
+		maps.Copy(headers, reqSpec.Headers)
 	}
 
 	httpOpts := utils.HTTPRequestOptions{

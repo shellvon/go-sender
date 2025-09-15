@@ -34,6 +34,8 @@ const (
 	ProviderTypeServerChan ProviderType = "serverchan"
 	// ProviderTypeEmailAPI represents an emailapi notification provider.
 	ProviderTypeEmailAPI ProviderType = "emailapi"
+	// ProviderTypeWecomApp represents a WeChat Work Application notification provider.
+	ProviderTypeWecomApp ProviderType = "wecomapp"
 )
 
 // HealthStatus represents the health status of a component.

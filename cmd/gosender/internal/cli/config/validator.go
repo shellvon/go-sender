@@ -68,6 +68,10 @@ func (v *Validator) ValidateConfiguration(config *cli.RootConfig) []string {
 			if errs := v.validateEmailAPIAccount(account, i); len(errs) > 0 {
 				errors = append(errors, errs...)
 			}
+		case string(core.ProviderTypeWecomApp):
+			if errs := v.validateWeComAppAccount(account, i); len(errs) > 0 {
+				errors = append(errors, errs...)
+			}
 		default:
 			errors = append(errors, fmt.Sprintf("account[%d]: unsupported provider type: %s", i, provider))
 		}
@@ -211,5 +215,12 @@ func (v *Validator) validateEmailAPIAccount(account map[string]interface{}, inde
 		errors = append(errors, fmt.Sprintf("account[%d]: unsupported EmailAPI subtype: %s", index, subtype))
 	}
 
+	return errors
+}
+
+func (v *Validator) validateWeComAppAccount(account map[string]interface{}, index int) []string {
+
+	var errors []string
+	// todo.
 	return errors
 }

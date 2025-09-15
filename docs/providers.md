@@ -26,6 +26,7 @@ go-sender supports a wide range of notification channels. Below is a summary of 
 
 ## IM/Bot/Enterprise Notification
 
+- WeCom App (企业微信应用) ([README](../providers/wecomapp/README.md))
 - WeCom Bot (企业微信机器人) ([README](../providers/wecombot/README.md))
 - DingTalk Bot (钉钉机器人) ([README](../providers/dingtalk/README.md))
 - Lark/Feishu (飞书/国际版) ([README](../providers/lark/README.md))

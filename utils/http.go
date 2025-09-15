@@ -204,7 +204,6 @@ func addFileToMultipart(writer *multipart.Writer, fieldName, filePath string) er
 // SendRequest sends an HTTP request and returns the raw *http.Response.
 // The caller is responsible for closing resp.Body (or delegating to ReadAndClose).
 func SendRequest(ctx context.Context, requestURL string, options HTTPRequestOptions) (*http.Response, error) {
-
 	reqBody, contentType, err := buildRequestBody(options)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build request body: %w", err)

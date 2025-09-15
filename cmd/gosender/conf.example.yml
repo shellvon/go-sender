@@ -112,6 +112,21 @@ accounts:
     enabled: true
     weight: 10
 
+  # WeComApp (Enterprise WeChat Application)
+  - provider: wecomapp
+    name: wecom-app
+    api_key: "YOUR_CORP_ID" # 企业ID
+    api_secret: "YOUR_CORP_SECRET" # 应用密钥
+    app_id: "YOUR_AGENT_ID" # 应用ID
+    enabled: true
+    weight: 10
+    # 使用方式:
+    # 文本消息: gosender send --provider wecomapp --to "@all" --content "Hello, World!"
+    # Markdown消息: gosender send --provider wecomapp --to "user1|user2" --message-type markdown --content "**Hello**, World!"
+    # 图片消息: gosender send --provider wecomapp --to "@all" --message-type image --files "/path/to/image.jpg"
+    # 文件消息: gosender send --provider wecomapp --to "@all" --message-type file --files "/path/to/document.pdf"
+    # 模板卡片: gosender send --provider wecomapp --to "@all" --message-type template_card --content "Card Title"
+
   # Webhook Endpoints
   - provider: webhook
     name: slack-webhook

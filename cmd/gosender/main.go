@@ -18,7 +18,7 @@ func main() {
 		Short: "Enhanced go-sender CLI - Send notifications via multiple providers",
 		Long: `Enhanced go-sender CLI provides a comprehensive interface to send notifications
 through various providers including SMS, Email, DingTalk, Telegram, Lark, WeComBot, 
-Webhook, and ServerChan. Supports configuration files, environment variables, 
+WeComApp, Webhook, and ServerChan. Supports configuration files, environment variables, 
 dry-run mode, and structured output formats.`,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			return initializeConfig(cmd)

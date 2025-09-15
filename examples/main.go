@@ -19,6 +19,7 @@ import (
 	"github.com/shellvon/go-sender/providers/serverchan"
 	"github.com/shellvon/go-sender/providers/sms"
 	"github.com/shellvon/go-sender/providers/telegram"
+	"github.com/shellvon/go-sender/providers/wecomapp"
 	"github.com/shellvon/go-sender/providers/wecombot"
 	"github.com/shellvon/go-sender/utils"
 )
@@ -64,11 +65,16 @@ func newLoggingHTTPClient() *http.Client {
 //	go run main.go --provider=telegram  # Test telegram bot
 //	go run main.go --provider=sms       # Test SMS (aliyun/tencent/cl253)
 //	go run main.go --provider=lark      # Test lark (TODO)
+//	go run main.go --provider=wecomapp  # Test WeChat Work App
 //	go run main.go --provider=serverchan # Test ServerChan
 //
 // Each demo requires you to set the corresponding environment variables.
 func main() {
-	provider := flag.String("provider", "", "Provider to demo: telegram, lark, email, sms, dingtalk, serverchan")
+	provider := flag.String(
+		"provider",
+		"",
+		"Provider to demo: telegram, lark, wecomapp, email, sms, dingtalk, serverchan",
+	)
 	flag.Parse()
 
 	switch *provider {
@@ -76,6 +82,8 @@ func main() {
 		runTelegramDemo()
 	case "lark":
 		runLarkDemo()
+	case "wecomapp":
+		runWecomappDemo()
 	case "wecombot":
 		runWecombotDemo()
 	case "email":
@@ -87,7 +95,7 @@ func main() {
 	case "serverchan":
 		runServerChanDemo()
 	default:
-		log.Println("Usage: go run main.go --provider=[telegram|lark|email|sms|dingtalk|serverchan]")
+		log.Println("Usage: go run main.go --provider=[telegram|lark|wecomapp|email|sms|dingtalk|serverchan]")
 		os.Exit(1)
 	}
 }
@@ -252,6 +260,176 @@ func runTelegramDemo() {
 // This demo will send a simple text message to the specified chat.
 func runLarkDemo() {
 	log.Println("[DEMO] Lark provider")
+}
+
+// runWecomappDemo demonstrates how to send messages using the WeChat Work App provider.
+// Required environment variables:
+//
+//	WECOM_CORP_ID     - WeChat Work Corp ID
+//	WECOM_CORP_SECRET - WeChat Work Corp Secret
+//	WECOM_AGENT_ID    - WeChat Work Agent ID
+//	WECOM_TO_USER     - Target user ID (optional, defaults to @all)
+//
+// This demo will send various types of messages to the specified WeChat Work users.
+func runWecomappDemo() {
+	log.Println("[DEMO] WeChat Work App provider")
+	corpID := os.Getenv("WECOM_CORP_ID")
+	corpSecret := os.Getenv("WECOM_CORP_SECRET")
+	agentID := os.Getenv("WECOM_AGENT_ID")
+	toUser := os.Getenv("WECOM_TO_USER")
+	if toUser == "" {
+		toUser = "@all"
+	}
+
+	if corpID == "" || corpSecret == "" || agentID == "" {
+		log.Println("Please set WECOM_CORP_ID, WECOM_CORP_SECRET, WECOM_AGENT_ID environment variables.")
+		return
+	}
+
+	// Create wecomapp account and provider
+	account := wecomapp.NewAccount(corpID, corpSecret, agentID,
+		wecomapp.Name("wecomapp-default"))
+
+	prov, err := wecomapp.NewProvider([]*wecomapp.Account{account})
+	if err != nil {
+		log.Println("Init WeChat Work App provider failed:", err)
+		return
+	}
+
+	// Test all message types
+	messages := []struct {
+		name string
+		msg  core.Message
+	}{
+		{
+			name: "Text Message",
+			msg: wecomapp.Text().
+				ToUser(toUser).
+				Content("Hello from go-sender! This is a text message test from WeChat Work App.").
+				Build(),
+		},
+		{
+			name: "Markdown Message",
+			msg: wecomapp.Markdown().
+				ToUser(toUser).
+				Content("# Go-Sender WeChat Work App Demo\n\n" +
+					"## Features\n" +
+					"- **Text Messages**: Send plain text messages\n" +
+					"- **Markdown**: Rich text formatting support\n" +
+					"- **Media**: Images, files, and more\n\n" +
+					"Visit [GitHub](https://github.com/shellvon/go-sender) for more info.").
+				Build(),
+		},
+		{
+			name: "TextCard Message",
+			msg: wecomapp.TextCard().
+				ToUser(toUser).
+				Title("System Alert").
+				Description("Server CPU usage is above 90%. Please check immediately.").
+				URL("https://monitor.example.com").
+				BtnTxt("详情").
+				Build(),
+		},
+		{
+			name: "Image Message",
+			msg: func() core.Message {
+				// Skip image message if no image file is available
+				// To test: replace with actual image file path like "demo.png" or "demo.jpg"
+				log.Printf("Skipping Image Message - no image file available")
+				return nil
+			}(),
+		},
+		{
+			name: "Voice Message (skipped - requires audio file)",
+			msg: func() core.Message {
+				// Skip voice message if no audio file is available
+				// To test: replace with actual audio file path like "demo.amr" or "demo.mp3"
+				log.Printf("Skipping Voice Message - no audio file available")
+				return nil
+			}(),
+		},
+		{
+			name: "Video Message (skipped - requires video file)",
+			msg: func() core.Message {
+				// Skip video message if no video file is available
+				// To test: replace with actual video file path like "demo.mp4"
+				log.Printf("Skipping Video Message - no video file available")
+				return nil
+			}(),
+		},
+		{
+			name: "File Message",
+			msg: wecomapp.File().
+				ToUser(toUser).
+				LocalPath("main.go").
+				Build(),
+		},
+		{
+			name: "News Message",
+			msg: wecomapp.News().
+				ToUser(toUser).
+				AddArticle(
+					"Go-Sender Release",
+					"New WeChat Work App provider is now available!",
+					"https://github.com/shellvon/go-sender",
+					"https://picsum.photos/200/300",
+				).
+				AddArticle(
+					"Documentation",
+					"Check out the complete documentation and examples",
+					"https://github.com/shellvon/go-sender/blob/main/README.md",
+					"https://picsum.photos/300/400",
+				).
+				Build(),
+		},
+		{
+			name: "MPNews Message (skipped - requires thumb media ID)",
+			msg: func() core.Message {
+				// Skip MPNews message as it requires a pre-uploaded thumb media ID
+				// To test: first upload an image to get media_id, then use:
+				// wecomapp.MPNews().ToUser(toUser).AddArticleWithDetails(...)
+				log.Printf("Skipping MPNews Message - requires pre-uploaded thumb media ID")
+				return nil
+			}(),
+		},
+		{
+			name: "Template Card Message",
+			msg: wecomapp.NewTemplateCardBuilder(wecomapp.CardTypeTextNotice).
+				ToUser(toUser).
+				MainTitle("Go-Sender Demo", "Testing Template Card").
+				SubTitle("This is a text notice template card from WeChat Work App.\nClick to view more details.").
+				JumpURL("https://github.com/shellvon/go-sender").
+				Build(),
+		},
+		{
+			name: "Miniprogram Notice Message (skipped - requires mini-program)",
+			msg: func() core.Message {
+				// Skip miniprogram notice as it requires a valid mini-program app ID
+				// To test: replace with actual mini-program app ID associated with your WeChat Work app
+				log.Printf("Skipping Miniprogram Notice Message - requires valid mini-program app ID")
+				return nil
+			}(),
+		},
+	}
+
+	// Send all messages
+	for _, m := range messages {
+		if m.msg == nil {
+			// Skip messages that are nil (e.g., skipped due to missing resources)
+			continue
+		}
+
+		log.Printf("Sending %s...", m.name)
+		_, err = prov.Send(context.Background(), m.msg, &core.ProviderSendOptions{
+			HTTPClient: newLoggingHTTPClient(),
+		})
+		if err != nil {
+			log.Printf("Failed to send %s: %v", m.name, err)
+		} else {
+			log.Printf("Successfully sent %s!", m.name)
+		}
+		time.Sleep(defaultDelay)
+	}
 }
 
 // runLarkDemo demonstrates how to send a message using the Lark provider.
