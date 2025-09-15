@@ -13,12 +13,12 @@ import (
 //   - Extra: 企业微信应用不需要额外字段
 //
 // 它嵌入了core.BaseAccount，因此自动满足core.BasicAccount
-// 和core.Selectable接口
+// 和core.Selectable接口.
 type Account struct {
 	core.BaseAccount
 }
 
-// AccountOption 代表修改企业微信应用Account配置的函数
+// AccountOption 代表修改企业微信应用Account配置的函数.
 type AccountOption func(*Account)
 
 // NewAccount 使用给定的凭据和选项创建新的企业微信应用账号
@@ -50,23 +50,23 @@ func NewAccount(corpID, corpSecret, agentID string, opts ...AccountOption) *Acco
 	)
 }
 
-// CorpID 返回企业ID
+// CorpID 返回企业ID.
 func (a *Account) CorpID() string {
 	return a.Credentials.APIKey
 }
 
-// CorpSecret 返回应用密钥
+// CorpSecret 返回应用密钥.
 func (a *Account) CorpSecret() string {
 	return a.Credentials.APISecret
 }
 
-// AgentID 返回应用ID
+// AgentID 返回应用ID.
 func (a *Account) AgentID() string {
 	return a.Credentials.AppID
 }
 
 // Validate 验证企业微信应用账号配置
-// 确保提供了所有必需的企业微信凭据
+// 确保提供了所有必需的企业微信凭据.
 func (a *Account) Validate() error {
 	// 首先运行基础验证
 	if err := a.BaseAccount.Validate(); err != nil {

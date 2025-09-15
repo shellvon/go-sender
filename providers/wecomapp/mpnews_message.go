@@ -26,7 +26,7 @@ type MPNewsArticle struct {
 	ShowCoverPic int `json:"show_cover_pic,omitempty"`
 }
 
-// MPNewsMessageContent 代表企业微信应用API的mpnews内容
+// MPNewsMessageContent 代表企业微信应用API的mpnews内容.
 type MPNewsMessageContent struct {
 	Articles []*MPNewsArticle `json:"articles"`
 }
@@ -43,7 +43,7 @@ type MPNewsMessage struct {
 	MPNews MPNewsMessageContent `json:"mpnews"`
 }
 
-// NewMPNewsMessage 创建新的MPNewsMessage
+// NewMPNewsMessage 创建新的MPNewsMessage.
 func NewMPNewsMessage(articles []*MPNewsArticle) *MPNewsMessage {
 	return &MPNewsMessage{
 		BaseMessage: BaseMessage{
@@ -55,7 +55,7 @@ func NewMPNewsMessage(articles []*MPNewsArticle) *MPNewsMessage {
 	}
 }
 
-// Validate 验证MPNewsMessage以确保满足企业微信API要求
+// Validate 验证MPNewsMessage以确保满足企业微信API要求.
 func (m *MPNewsMessage) Validate() error {
 	if err := m.BaseMessage.Validate(); err != nil {
 		return err

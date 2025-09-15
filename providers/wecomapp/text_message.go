@@ -6,7 +6,7 @@ import (
 
 // 无需长度常量 - 企业微信会在需要时自动截断
 
-// TextMessageContent 代表企业微信应用API的文本内容
+// TextMessageContent 代表企业微信应用API的文本内容.
 type TextMessageContent struct {
 	// Content 文本消息的内容
 	Content string `json:"content"`
@@ -21,7 +21,7 @@ type TextMessage struct {
 	Text TextMessageContent `json:"text"`
 }
 
-// NewTextMessage 创建新的TextMessage
+// NewTextMessage 创建新的TextMessage.
 func NewTextMessage(content string) *TextMessage {
 	return &TextMessage{
 		BaseMessage: BaseMessage{
@@ -33,7 +33,7 @@ func NewTextMessage(content string) *TextMessage {
 	}
 }
 
-// Validate 验证TextMessage以确保满足企业微信API要求
+// Validate 验证TextMessage以确保满足企业微信API要求.
 func (m *TextMessage) Validate() error {
 	if err := m.BaseMessage.Validate(); err != nil {
 		return err

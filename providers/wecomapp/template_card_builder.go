@@ -24,7 +24,7 @@ type TemplateCardBuilder struct {
 	message *TemplateCardMessage
 }
 
-// NewTemplateCardBuilder 使用给定的卡片类型创建新的TemplateCardBuilder
+// NewTemplateCardBuilder 使用给定的卡片类型创建新的TemplateCardBuilder.
 func NewTemplateCardBuilder(cardType TemplateCardType) *TemplateCardBuilder {
 	return &TemplateCardBuilder{
 		message: NewTemplateCardMessage(cardType),
@@ -147,7 +147,7 @@ func (b *TemplateCardBuilder) QuoteAreaWithMiniProgram(title, quoteText, appID, 
 }
 
 // CardImage sets the card image section (news_notice only).
-// aspectRatio 图片的宽高比
+// aspectRatio 图片的宽高比.
 func (b *TemplateCardBuilder) CardImage(url string, aspectRatio float64) *TemplateCardBuilder {
 	b.message.TemplateCard.CardImage = &CardImage{
 		URL:         url,

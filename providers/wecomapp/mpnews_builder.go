@@ -10,7 +10,7 @@ package wecomapp
 //	         ToUser("user1|user2").
 //	         Build()
 //
-// mpnews消息支持1-8篇文章。这遵循与其他provider相同的构建器风格模式以保持一致性
+// mpnews消息支持1-8篇文章。这遵循与其他provider相同的构建器风格模式以保持一致性.
 type MPNewsBuilder struct {
 	articles               []*MPNewsArticle
 	toUser                 string
@@ -22,7 +22,7 @@ type MPNewsBuilder struct {
 	duplicateCheckInterval int
 }
 
-// MPNews 创建新的MPNewsBuilder实例
+// MPNews 创建新的MPNewsBuilder实例.
 func MPNews() *MPNewsBuilder {
 	return &MPNewsBuilder{}
 }

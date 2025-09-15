@@ -8,7 +8,7 @@ import (
 
 // 无需长度常量 - 企业微信会在需要时自动截断
 
-// NewsArticle 代表图文消息中的单篇文章
+// NewsArticle 代表图文消息中的单篇文章.
 type NewsArticle struct {
 	// Title 文章标题
 	Title string `json:"title"`
@@ -26,7 +26,7 @@ type NewsArticle struct {
 	PagePath string `json:"pagepath"`
 }
 
-// NewsMessageContent 代表企业微信应用API的图文内容
+// NewsMessageContent 代表企业微信应用API的图文内容.
 type NewsMessageContent struct {
 	Articles []*NewsArticle `json:"articles"`
 }
@@ -40,7 +40,7 @@ type NewsMessage struct {
 	News NewsMessageContent `json:"news"`
 }
 
-// NewNewsMessage 创建新的NewsMessage
+// NewNewsMessage 创建新的NewsMessage.
 func NewNewsMessage(articles []*NewsArticle) *NewsMessage {
 	return &NewsMessage{
 		BaseMessage: BaseMessage{
@@ -52,7 +52,7 @@ func NewNewsMessage(articles []*NewsArticle) *NewsMessage {
 	}
 }
 
-// Validate 验证NewsMessage以确保满足企业微信API要求
+// Validate 验证NewsMessage以确保满足企业微信API要求.
 func (m *NewsMessage) Validate() error {
 	if err := m.BaseMessage.Validate(); err != nil {
 		return err

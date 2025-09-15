@@ -14,7 +14,7 @@ package wecomapp
 //
 // 注意: AgentID会在发送过程中从账号配置自动设置
 //
-// 这遵循与其他provider相同的构建器风格模式以保持一致性
+// 这遵循与其他provider相同的构建器风格模式以保持一致性.
 type TextCardBuilder struct {
 	title                  string
 	description            string
@@ -29,60 +29,60 @@ type TextCardBuilder struct {
 	duplicateCheckInterval int
 }
 
-// TextCard 创建新的TextCardBuilder实例
+// TextCard 创建新的TextCardBuilder实例.
 func TextCard() *TextCardBuilder {
 	return &TextCardBuilder{}
 }
 
-// Title 设置文本卡片标题（最大128字节）
+// Title 设置文本卡片标题（最大128字节）.
 func (b *TextCardBuilder) Title(title string) *TextCardBuilder {
 	b.title = title
 	return b
 }
 
-// Description 设置文本卡片描述（最大512字节）
+// Description 设置文本卡片描述（最大512字节）.
 func (b *TextCardBuilder) Description(description string) *TextCardBuilder {
 	b.description = description
 	return b
 }
 
-// URL 设置点击卡片时跳转的URL（最大2048字节）
+// URL 设置点击卡片时跳转的URL（最大2048字节）.
 func (b *TextCardBuilder) URL(url string) *TextCardBuilder {
 	b.url = url
 	return b
 }
 
-// BtnTxt 设置按钮文本。如果未指定，默认为"详情"
+// BtnTxt 设置按钮文本。如果未指定，默认为"详情".
 func (b *TextCardBuilder) BtnTxt(btnTxt string) *TextCardBuilder {
 	b.btnTxt = btnTxt
 	return b
 }
 
-// ToUser 设置发送给的用户ID，用"|"分隔。使用"@all"发送给所有用户
+// ToUser 设置发送给的用户ID，用"|"分隔。使用"@all"发送给所有用户.
 func (b *TextCardBuilder) ToUser(toUser string) *TextCardBuilder {
 	b.toUser = toUser
 	return b
 }
 
-// ToParty 设置发送给的部门ID，用"|"分隔
+// ToParty 设置发送给的部门ID，用"|"分隔.
 func (b *TextCardBuilder) ToParty(toParty string) *TextCardBuilder {
 	b.toParty = toParty
 	return b
 }
 
-// ToTag 设置发送给的标签ID，用"|"分隔
+// ToTag 设置发送给的标签ID，用"|"分隔.
 func (b *TextCardBuilder) ToTag(toTag string) *TextCardBuilder {
 	b.toTag = toTag
 	return b
 }
 
-// Safe 设置是否启用安全模式（0：否，1：是）
+// Safe 设置是否启用安全模式（0：否，1：是）.
 func (b *TextCardBuilder) Safe(safe int) *TextCardBuilder {
 	b.safe = safe
 	return b
 }
 
-// EnableIDTrans 设置是否启用ID转换（0：否，1：是）
+// EnableIDTrans 设置是否启用ID转换（0：否，1：是）.
 func (b *TextCardBuilder) EnableIDTrans(enable int) *TextCardBuilder {
 	b.enableIDTrans = enable
 	return b

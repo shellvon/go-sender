@@ -4,13 +4,13 @@ import (
 	"github.com/shellvon/go-sender/core"
 )
 
-// MediaMessageContent 代表媒体消息的通用结构
+// MediaMessageContent 代表媒体消息的通用结构.
 type MediaMessageContent struct {
 	// MediaID 从媒体上传API获得的媒体文件ID
 	MediaID string `json:"media_id"`
 }
 
-// VideoMediaMessageContent 使用视频特定字段扩展MediaMessageContent
+// VideoMediaMessageContent 使用视频特定字段扩展MediaMessageContent.
 type VideoMediaMessageContent struct {
 	MediaMessageContent
 
@@ -20,7 +20,7 @@ type VideoMediaMessageContent struct {
 	Description string `json:"description,omitempty"`
 }
 
-// BaseMediaMessage 为所有媒体消息提供通用功能
+// BaseMediaMessage 为所有媒体消息提供通用功能.
 type BaseMediaMessage struct {
 	BaseMessage
 
@@ -56,7 +56,7 @@ type MediaMessage interface {
 	getMediaContent() *MediaMessageContent
 }
 
-// ImageMessage 代表企业微信应用的图片消息
+// ImageMessage 代表企业微信应用的图片消息.
 type ImageMessage struct {
 	BaseMediaMessage
 
@@ -78,7 +78,7 @@ func (m *ImageMessage) Validate() error {
 	return nil
 }
 
-// VoiceMessage 代表企业微信应用的语音消息
+// VoiceMessage 代表企业微信应用的语音消息.
 type VoiceMessage struct {
 	BaseMediaMessage
 
@@ -100,7 +100,7 @@ func (m *VoiceMessage) Validate() error {
 	return nil
 }
 
-// VideoMessage 代表企业微信应用的视频消息
+// VideoMessage 代表企业微信应用的视频消息.
 type VideoMessage struct {
 	BaseMediaMessage
 
@@ -122,7 +122,7 @@ func (m *VideoMessage) Validate() error {
 	return nil
 }
 
-// FileMessage 代表企业微信应用的文件消息
+// FileMessage 代表企业微信应用的文件消息.
 type FileMessage struct {
 	BaseMediaMessage
 

@@ -18,7 +18,7 @@ package wecomapp
 //
 // 注意: AgentID会在发送过程中从账号配置自动设置
 //
-// 这遵循与其他provider相同的构建器风格模式以保持一致性
+// 这遵循与其他provider相同的构建器风格模式以保持一致性.
 type MiniprogramNoticeBuilder struct {
 	appID                  string
 	page                   string
@@ -36,7 +36,7 @@ type MiniprogramNoticeBuilder struct {
 	duplicateCheckInterval int
 }
 
-// MiniprogramNotice 创建新的MiniprogramNoticeBuilder实例
+// MiniprogramNotice 创建新的MiniprogramNoticeBuilder实例.
 func MiniprogramNotice() *MiniprogramNoticeBuilder {
 	return &MiniprogramNoticeBuilder{}
 }
@@ -65,7 +65,7 @@ func (b *MiniprogramNoticeBuilder) Description(description string) *MiniprogramN
 	return b
 }
 
-// EmphasisFirst 设置第一个强调项（值最大10字节）
+// EmphasisFirst 设置第一个强调项（值最大10字节）.
 func (b *MiniprogramNoticeBuilder) EmphasisFirst(key, value string) *MiniprogramNoticeBuilder {
 	b.emphasisFirstItem = &MiniprogramNoticeEmphasisFirstItem{
 		Key:   key,
@@ -74,7 +74,7 @@ func (b *MiniprogramNoticeBuilder) EmphasisFirst(key, value string) *Miniprogram
 	return b
 }
 
-// EmphasisSecond 设置第二个强调项（值最大30字节）
+// EmphasisSecond 设置第二个强调项（值最大30字节）.
 func (b *MiniprogramNoticeBuilder) EmphasisSecond(key, value string) *MiniprogramNoticeBuilder {
 	b.emphasisSecondItem = &MiniprogramNoticeEmphasisSecondItem{
 		Key:   key,

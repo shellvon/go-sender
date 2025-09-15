@@ -15,22 +15,22 @@ import (
 	"github.com/shellvon/go-sender/utils"
 )
 
-// 企业微信应用API端点
+// 企业微信应用API端点.
 const (
-	// SendMessageEndpoint 发送消息的API端点
+	// SendMessageEndpoint 发送消息的API端点.
 	SendMessageEndpoint = "https://qyapi.weixin.qq.com/cgi-bin/message/send"
-	// UploadMediaEndpoint 上传媒体文件的API端点
+	// UploadMediaEndpoint 上传媒体文件的API端点.
 	UploadMediaEndpoint = "https://qyapi.weixin.qq.com/cgi-bin/media/upload"
-	// GetTokenEndpoint 获取访问令牌的API端点
+	// GetTokenEndpoint 获取访问令牌的API端点.
 	GetTokenEndpoint = "https://qyapi.weixin.qq.com/cgi-bin/gettoken"
 )
 
-// wecomappTransformer 为企业微信应用利用共享的BaseHTTPTransformer
+// wecomappTransformer 为企业微信应用利用共享的BaseHTTPTransformer.
 type wecomappTransformer struct {
 	*transformer.BaseHTTPTransformer[Message, *Account]
 }
 
-// transform 为企业微信应用消息构建HTTPRequestSpec
+// transform 为企业微信应用消息构建HTTPRequestSpec.
 func (wt *wecomappTransformer) transform(
 	ctx context.Context,
 	msg Message,
@@ -83,7 +83,7 @@ func newWecomAppTransformer() core.HTTPTransformer[*Account] {
 	return wt
 }
 
-// validateMessage 在转换前执行消息验证
+// validateMessage 在转换前执行消息验证.
 func (wt *wecomappTransformer) validateMessage(msg Message) error {
 	if msg == nil {
 		return errors.New("message cannot be nil")
@@ -115,7 +115,7 @@ func (wt *wecomappTransformer) validateMessage(msg Message) error {
 }
 
 // SendRequest 代表通过企业微信应用API发送消息的请求结构
-// 它使用json.RawMessage在转换过程中保留原始消息结构
+// 它使用json.RawMessage在转换过程中保留原始消息结构.
 type SendRequest struct {
 	ToUser  string `json:"touser,omitempty"`
 	ToParty string `json:"toparty,omitempty"`
@@ -128,13 +128,14 @@ type SendRequest struct {
 	Content json.RawMessage `json:"-"`
 }
 
-// WecomAppTransformer 具备完整企业微信API能力的transformer
+// WecomAppTransformer 具备完整企业微信API能力的transformer.
 type WecomAppTransformer struct {
 	*wecomappTransformer // 嵌入原有的transformer
-	tokenCache           TokenCache
+
+	tokenCache TokenCache
 }
 
-// NewWecomAppTransformer 创建企业微信应用transformer
+// NewWecomAppTransformer 创建企业微信应用transformer.
 func NewWecomAppTransformer(tokenCache TokenCache) *WecomAppTransformer {
 	if tokenCache == nil {
 		tokenCache = NewMemoryTokenCache()
@@ -145,7 +146,7 @@ func NewWecomAppTransformer(tokenCache TokenCache) *WecomAppTransformer {
 	}
 }
 
-// Transform 简化的Transform方法，只构建基础请求
+// Transform 简化的Transform方法，只构建基础请求.
 func (t *WecomAppTransformer) Transform(
 	ctx context.Context,
 	msg core.Message,
@@ -172,7 +173,7 @@ func (t *WecomAppTransformer) Transform(
 	return reqSpec, handler, nil
 }
 
-// UploadMediaWithClient 使用指定的HTTP客户端上传媒体文件
+// UploadMediaWithClient 使用指定的HTTP客户端上传媒体文件.
 func (t *WecomAppTransformer) UploadMediaWithClient(
 	ctx context.Context,
 	account *Account,
@@ -233,7 +234,7 @@ func (t *WecomAppTransformer) UploadMediaWithClient(
 	return uploadResp.MediaID, nil
 }
 
-// GetValidAccessToken 从缓存获取或刷新access token（公开方法供Provider调用）
+// GetValidAccessToken 从缓存获取或刷新access token（公开方法供Provider调用）.
 func (t *WecomAppTransformer) GetValidAccessToken(
 	ctx context.Context,
 	account *Account,
@@ -266,7 +267,7 @@ func (t *WecomAppTransformer) GetValidAccessToken(
 	return newToken.Token, nil
 }
 
-// fetchAccessToken 从API获取新的access token
+// fetchAccessToken 从API获取新的access token.
 func (t *WecomAppTransformer) fetchAccessToken(
 	ctx context.Context,
 	account *Account,
@@ -319,12 +320,12 @@ func (t *WecomAppTransformer) fetchAccessToken(
 	}, nil
 }
 
-// getTokenKey 根据账号凭据生成访问令牌的缓存键
+// getTokenKey 根据账号凭据生成访问令牌的缓存键.
 func (t *WecomAppTransformer) getTokenKey(account *Account) string {
 	return fmt.Sprintf("wecomapp:%s:%s", account.CorpID(), account.AgentID())
 }
 
-// wrapHandler 包装响应处理器以支持认证错误处理
+// wrapHandler 包装响应处理器以支持认证错误处理.
 func (t *WecomAppTransformer) wrapHandler(
 	_ context.Context,
 	account *Account,

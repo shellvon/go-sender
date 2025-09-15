@@ -1,6 +1,6 @@
 package wecomapp
 
-// BaseMediaBuilder 为所有媒体消息构建器提供通用功能
+// BaseMediaBuilder 为所有媒体消息构建器提供通用功能.
 type BaseMediaBuilder struct {
 	mediaID   string
 	localPath string
@@ -11,19 +11,19 @@ type BaseMediaBuilder struct {
 	safe      int
 }
 
-// MediaID 设置从媒体上传API获得的媒体文件ID
+// MediaID 设置从媒体上传API获得的媒体文件ID.
 func (b *BaseMediaBuilder) MediaID(mediaID string) *BaseMediaBuilder {
 	b.mediaID = mediaID
 	return b
 }
 
-// LocalPath 设置本地文件路径用于自动上传
+// LocalPath 设置本地文件路径用于自动上传.
 func (b *BaseMediaBuilder) LocalPath(localPath string) *BaseMediaBuilder {
 	b.localPath = localPath
 	return b
 }
 
-// ToUser 设置发送给的用户ID，用"|"分隔。使用"@all"发送给所有用户
+// ToUser 设置发送给的用户ID，用"|"分隔。使用"@all"发送给所有用户.
 func (b *BaseMediaBuilder) ToUser(toUser string) *BaseMediaBuilder {
 	b.toUser = toUser
 	return b

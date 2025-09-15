@@ -8,7 +8,7 @@ import (
 
 // 无需长度常量 - 企业微信会在需要时自动截断
 
-// MiniprogramNoticeContentItem 代表小程序通知中的内容项
+// MiniprogramNoticeContentItem 代表小程序通知中的内容项.
 type MiniprogramNoticeContentItem struct {
 	// Key 内容项的键
 	Key string `json:"key"`
@@ -16,7 +16,7 @@ type MiniprogramNoticeContentItem struct {
 	Value string `json:"value"`
 }
 
-// MiniprogramNoticeEmphasisFirstItem 代表第一个强调项
+// MiniprogramNoticeEmphasisFirstItem 代表第一个强调项.
 type MiniprogramNoticeEmphasisFirstItem struct {
 	// Key 强调项的键
 	Key string `json:"key"`
@@ -24,7 +24,7 @@ type MiniprogramNoticeEmphasisFirstItem struct {
 	Value string `json:"value"`
 }
 
-// MiniprogramNoticeEmphasisSecondItem 代表第二个强调项
+// MiniprogramNoticeEmphasisSecondItem 代表第二个强调项.
 type MiniprogramNoticeEmphasisSecondItem struct {
 	// Key 强调项的键
 	Key string `json:"key"`
@@ -32,7 +32,7 @@ type MiniprogramNoticeEmphasisSecondItem struct {
 	Value string `json:"value"`
 }
 
-// MiniprogramNoticeMessageContent 代表企业微信应用API的小程序通知内容
+// MiniprogramNoticeMessageContent 代表企业微信应用API的小程序通知内容.
 type MiniprogramNoticeMessageContent struct {
 	// AppID 小程序应用ID
 	AppID string `json:"appid"`
@@ -59,7 +59,7 @@ type MiniprogramNoticeMessage struct {
 	MiniprogramNotice MiniprogramNoticeMessageContent `json:"miniprogram_notice"`
 }
 
-// NewMiniprogramNoticeMessage 创建新的MiniprogramNoticeMessage
+// NewMiniprogramNoticeMessage 创建新的MiniprogramNoticeMessage.
 func NewMiniprogramNoticeMessage(appID, title string) *MiniprogramNoticeMessage {
 	return &MiniprogramNoticeMessage{
 		BaseMessage: BaseMessage{
@@ -72,7 +72,7 @@ func NewMiniprogramNoticeMessage(appID, title string) *MiniprogramNoticeMessage 
 	}
 }
 
-// Validate 验证MiniprogramNoticeMessage以确保满足企业微信API要求
+// Validate 验证MiniprogramNoticeMessage以确保满足企业微信API要求.
 func (m *MiniprogramNoticeMessage) Validate() error {
 	if err := m.BaseMessage.Validate(); err != nil {
 		return err

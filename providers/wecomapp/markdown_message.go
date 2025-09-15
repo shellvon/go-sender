@@ -6,7 +6,7 @@ import (
 
 // 无需长度常量 - 企业微信会在需要时自动截断
 
-// MarkdownMessageContent 代表企业微信应用API的markdown内容
+// MarkdownMessageContent 代表企业微信应用API的markdown内容.
 type MarkdownMessageContent struct {
 	// Content markdown消息的内容
 	Content string `json:"content"`
@@ -21,7 +21,7 @@ type MarkdownMessage struct {
 	Markdown MarkdownMessageContent `json:"markdown"`
 }
 
-// NewMarkdownMessage 创建新的MarkdownMessage
+// NewMarkdownMessage 创建新的MarkdownMessage.
 func NewMarkdownMessage(content string) *MarkdownMessage {
 	return &MarkdownMessage{
 		BaseMessage: BaseMessage{
@@ -33,7 +33,7 @@ func NewMarkdownMessage(content string) *MarkdownMessage {
 	}
 }
 
-// Validate 验证MarkdownMessage以确保满足企业微信API要求
+// Validate 验证MarkdownMessage以确保满足企业微信API要求.
 func (m *MarkdownMessage) Validate() error {
 	if err := m.BaseMessage.Validate(); err != nil {
 		return err

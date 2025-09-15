@@ -11,7 +11,7 @@ package wecomapp
 //	         AgentID("1000001").
 //	         Build()
 //
-// 图文消息支持1-8篇文章。这遵循与其他provider相同的构建器风格模式以保持一致性
+// 图文消息支持1-8篇文章。这遵循与其他provider相同的构建器风格模式以保持一致性.
 type NewsBuilder struct {
 	articles               []*NewsArticle
 	toUser                 string
@@ -23,7 +23,7 @@ type NewsBuilder struct {
 	duplicateCheckInterval int
 }
 
-// News 创建新的NewsBuilder实例
+// News 创建新的NewsBuilder实例.
 func News() *NewsBuilder {
 	return &NewsBuilder{}
 }
@@ -66,25 +66,25 @@ func (b *NewsBuilder) AddArticleWithMiniprogram(title, description, appID, pageP
 	return b
 }
 
-// Articles 设置完整的文章列表（覆盖之前的文章）
+// Articles 设置完整的文章列表（覆盖之前的文章）.
 func (b *NewsBuilder) Articles(articles []*NewsArticle) *NewsBuilder {
 	b.articles = articles
 	return b
 }
 
-// ToUser 设置发送给的用户ID，用"|"分隔。使用"@all"发送给所有用户
+// ToUser 设置发送给的用户ID，用"|"分隔。使用"@all"发送给所有用户.
 func (b *NewsBuilder) ToUser(toUser string) *NewsBuilder {
 	b.toUser = toUser
 	return b
 }
 
-// ToParty 设置发送给的部门ID，用"|"分隔
+// ToParty 设置发送给的部门ID，用"|"分隔.
 func (b *NewsBuilder) ToParty(toParty string) *NewsBuilder {
 	b.toParty = toParty
 	return b
 }
 
-// ToTag 设置发送给的标签ID，用"|"分隔
+// ToTag 设置发送给的标签ID，用"|"分隔.
 func (b *NewsBuilder) ToTag(toTag string) *NewsBuilder {
 	b.toTag = toTag
 	return b

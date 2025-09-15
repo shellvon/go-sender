@@ -6,17 +6,17 @@ import (
 	"github.com/shellvon/go-sender/core"
 )
 
-// TemplateCardType 定义模板卡片允许的类型
+// TemplateCardType 定义模板卡片允许的类型.
 type TemplateCardType string
 
 const (
-	// CardTypeTextNotice 代表文本通知模板卡片
+	// CardTypeTextNotice 代表文本通知模板卡片.
 	CardTypeTextNotice TemplateCardType = "text_notice"
-	// CardTypeNewsNotice 代表图文通知模板卡片
+	// CardTypeNewsNotice 代表图文通知模板卡片.
 	CardTypeNewsNotice TemplateCardType = "news_notice"
-	// CardTypeButtonInteraction 代表按钮交互模板卡片
+	// CardTypeButtonInteraction 代表按钮交互模板卡片.
 	CardTypeButtonInteraction TemplateCardType = "button_interaction"
-	// CardTypeVoteInteraction 代表投票交互模板卡片
+	// CardTypeVoteInteraction 代表投票交互模板卡片.
 	CardTypeVoteInteraction TemplateCardType = "vote_interaction"
 )
 
@@ -27,7 +27,7 @@ const (
 	HorizontalTypeMember  = 3
 )
 
-// Source 代表模板卡片的来源区域
+// Source 代表模板卡片的来源区域.
 type Source struct {
 	// IconURL 来源图标图片的URL
 	IconURL string `json:"icon_url"`
@@ -38,7 +38,7 @@ type Source struct {
 	DescColor int `json:"desc_color"`
 }
 
-// MainTitle 代表模板卡片的主标题区域
+// MainTitle 代表模板卡片的主标题区域.
 type MainTitle struct {
 	// Title 主标题，建议不超过26个字符
 	// 模板卡片必须提供main_title.title或sub_title_text之一
@@ -47,7 +47,7 @@ type MainTitle struct {
 	Desc string `json:"desc"`
 }
 
-// EmphasisContent 代表强调内容区域（仅适用于text_notice）
+// EmphasisContent 代表强调内容区域（仅适用于text_notice）.
 type EmphasisContent struct {
 	// Title 关键数据样式的数据内容，建议不超过10个字符
 	Title string `json:"title"`
@@ -55,7 +55,7 @@ type EmphasisContent struct {
 	Desc string `json:"desc"`
 }
 
-// QuoteArea 代表引用区域样式，通常不建议与EmphasisContent同时使用
+// QuoteArea 代表引用区域样式，通常不建议与EmphasisContent同时使用.
 type QuoteArea struct {
 	// Type 引用区域的点击事件类型：0或空表示无点击事件，
 	// 1表示跳转到URL，2表示跳转到小程序
@@ -72,7 +72,7 @@ type QuoteArea struct {
 	QuoteText string `json:"quote_text"`
 }
 
-// CardImage 代表卡片图片区域（仅适用于news_notice）
+// CardImage 代表卡片图片区域（仅适用于news_notice）.
 type CardImage struct {
 	// URL 图片的URL
 	URL string `json:"url"`
@@ -80,7 +80,7 @@ type CardImage struct {
 	AspectRatio float64 `json:"aspect_ratio"`
 }
 
-// ImageTextArea 代表图文区域部分（仅适用于news_notice）
+// ImageTextArea 代表图文区域部分（仅适用于news_notice）.
 type ImageTextArea struct {
 	// Type 图文区域的类型
 	Type int `json:"type"`
@@ -96,7 +96,7 @@ type ImageTextArea struct {
 
 // HorizontalContent 代表水平内容列表中的一项
 // 该字段可以是空数组，但如果有数据，必须验证相应字段
-// 列表长度不得超过6项
+// 列表长度不得超过6项.
 type HorizontalContent struct {
 	// Keyname 次标题，建议不超过5个字符
 	Keyname string `json:"keyname"`
@@ -112,7 +112,7 @@ type HorizontalContent struct {
 	MediaID string `json:"media_id,omitempty"`
 }
 
-// VerticalContent 代表垂直内容列表中的一项（仅适用于news_notice）
+// VerticalContent 代表垂直内容列表中的一项（仅适用于news_notice）.
 type VerticalContent struct {
 	// Title 垂直内容项的标题
 	Title string `json:"title"`
@@ -120,7 +120,7 @@ type VerticalContent struct {
 	Desc string `json:"desc"`
 }
 
-// Jump 代表跳转列表中的一项
+// Jump 代表跳转列表中的一项.
 type Jump struct {
 	// Type 跳转的类型
 	Type int `json:"type"`
@@ -134,7 +134,7 @@ type Jump struct {
 	Title string `json:"title"`
 }
 
-// CardAction 代表卡片动作区域
+// CardAction 代表卡片动作区域.
 type CardAction struct {
 	// Type 卡片动作的类型
 	Type int `json:"type"`
@@ -146,7 +146,7 @@ type CardAction struct {
 	PagePath string `json:"pagepath,omitempty"`
 }
 
-// TemplateCard 代表消息的template_card部分
+// TemplateCard 代表消息的template_card部分.
 type TemplateCard struct {
 	CardType              TemplateCardType    `json:"card_type"`
 	Source                *Source             `json:"source"`

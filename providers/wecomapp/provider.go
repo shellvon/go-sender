@@ -10,18 +10,19 @@ import (
 	"github.com/shellvon/go-sender/providers"
 )
 
-// Config 代表企业微信应用provider的配置结构
+// Config 代表企业微信应用provider的配置结构.
 type Config = core.BaseConfig[*Account]
 
-// Provider 实现企业微信应用provider
+// Provider 实现企业微信应用provider.
 type Provider struct {
 	*providers.HTTPProvider[*Account]
+
 	transformer *WecomAppTransformer
 }
 
 var _ core.Provider = (*Provider)(nil)
 
-// uploadTarget 抽象需要自动上传媒体文件的消息接口
+// uploadTarget 抽象需要自动上传媒体文件的消息接口.
 type uploadTarget interface {
 	getLocalPath() string
 	getMediaID() string
@@ -29,10 +30,10 @@ type uploadTarget interface {
 	mediaType() string // "image", "voice", "video", or "file"
 }
 
-// ProviderOption 代表修改企业微信应用Provider配置的函数
+// ProviderOption 代表修改企业微信应用Provider配置的函数.
 type ProviderOption func(*Config)
 
-// New 创建一个使用WecomAppTransformer的企业微信应用provider实例
+// New 创建一个使用WecomAppTransformer的企业微信应用provider实例.
 func New(config *Config, tokenCache TokenCache) (*Provider, error) {
 	// 创建transformer，传入用户设置的tokenCache
 	wecomTransformer := NewWecomAppTransformer(tokenCache)
@@ -55,7 +56,7 @@ func New(config *Config, tokenCache TokenCache) (*Provider, error) {
 	return provider, nil
 }
 
-// Name 返回provider名称
+// Name 返回provider名称.
 func (p *Provider) Name() string {
 	return string(core.ProviderTypeWecomApp)
 }
@@ -124,7 +125,7 @@ func (p *Provider) Send(
 	return p.ExecuteHTTPRequest(ctx, reqSpec, handler, opts)
 }
 
-// handleMediaUpload 手动处理媒体文件上传
+// handleMediaUpload 手动处理媒体文件上传.
 func (p *Provider) handleMediaUpload(
 	ctx context.Context,
 	msg core.Message,

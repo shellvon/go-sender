@@ -6,7 +6,7 @@ import (
 
 // 无需长度常量 - 企业微信会在需要时自动截断
 
-// TextCardMessageContent 代表企业微信应用API的文本卡片内容
+// TextCardMessageContent 代表企业微信应用API的文本卡片内容.
 type TextCardMessageContent struct {
 	// Title 文本卡片的标题。最大长度128字节
 	Title string `json:"title"`
@@ -27,7 +27,7 @@ type TextCardMessage struct {
 	TextCard TextCardMessageContent `json:"textcard"`
 }
 
-// NewTextCardMessage 创建新的TextCardMessage
+// NewTextCardMessage 创建新的TextCardMessage.
 func NewTextCardMessage(title, description, url string) *TextCardMessage {
 	return &TextCardMessage{
 		BaseMessage: BaseMessage{
@@ -41,7 +41,7 @@ func NewTextCardMessage(title, description, url string) *TextCardMessage {
 	}
 }
 
-// Validate 验证TextCardMessage以确保满足企业微信API要求
+// Validate 验证TextCardMessage以确保满足企业微信API要求.
 func (m *TextCardMessage) Validate() error {
 	if err := m.BaseMessage.Validate(); err != nil {
 		return err
