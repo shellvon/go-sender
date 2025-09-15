@@ -4,24 +4,21 @@ import (
 	"github.com/shellvon/go-sender/core"
 )
 
-// Account represents a WeCom Bot account.
-// It follows the three-tier design: AccountMeta + Credentials + extra
-//   - AccountMeta: Name, Weight, Disabled (from core.BaseAccount)
-//   - Credentials: APIKey (bot key), APISecret (optional), AppID (optional) (from core.BaseAccount)
-//   - Extra: No additional fields needed for WeCom Bot
-//
-// It embeds core.BaseAccount so it automatically satisfies core.BasicAccount
-// and core.Selectable interfaces.
+// Account 表示一个企业微信机器人账户。
+// 它遵循三层设计：账户元数据 + 凭证 + 额外字段
+//   - 账户元数据：名称、权重、禁用状态（来自 core.BaseAccount）
+//   - 凭证：APIKey（机器人密钥）、APISecret（可选）、AppID（可选）（来自 core.BaseAccount）
+//   - 额外字段：企业微信机器人不需要额外的字段
 type Account struct {
 	core.BaseAccount
 }
 
-// AccountOption represents a function that modifies WeCom Bot Account configuration.
+// AccountOption 表示一个修改企业微信机器人账户配置的函数。
 type AccountOption func(*Account)
 
-// NewAccount creates a new WeCom Bot account with the given bot key and options.
+// NewAccount 创建一个新的企业微信机器人账户，使用给定的机器人密钥和选项。
 //
-// Example:
+// 示例：
 //
 //	account := wecombot.NewAccount("your-bot-key",
 //	    wecombot.Name("wecom-main"),
@@ -30,7 +27,7 @@ func NewAccount(botKey string, opts ...AccountOption) *Account {
 	return core.CreateAccount(
 		core.ProviderTypeWecombot,
 		"wecombot-default",
-		"", // WeCom Bot doesn't use subType
+		"", // 企业微信机器人不使用子类型
 		core.Credentials{
 			APIKey: botKey,
 		},
@@ -40,14 +37,14 @@ func NewAccount(botKey string, opts ...AccountOption) *Account {
 			}
 		},
 		func(defaultName, subType string) string {
-			return defaultName // WeCom Bot uses fixed default name
+			return defaultName // 企业微信机器人使用固定的默认名称
 		},
 		opts...,
 	)
 }
 
-// Re-exported core account options for cleaner API
-// These provide convenient aliases: wecombot.Name("test") instead of core.WithName[*wecombot.Account]("test").
+// 重新导出的核心账户选项，以提供更简洁的 API
+// 这些选项提供了便捷的别名：wecombot.Name("test") 而不是 core.WithName[*wecombot.Account]("test")。
 var (
 	Name     = core.WithName[*Account]
 	Weight   = core.WithWeight[*Account]

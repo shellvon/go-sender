@@ -8,24 +8,26 @@ import (
 
 const maxMarkdownContentLength = 4096
 
-// MarkdownVersion represents the version of markdown format.
+// MarkdownVersion 表示 Markdown 格式的版本。
 type MarkdownVersion string
 
 const (
-	// MarkdownVersionLegacy is the legacy version of markdown format.
+	// MarkdownVersionLegacy 是 Markdown 格式的旧版本。
 	MarkdownVersionLegacy MarkdownVersion = "legacy"
-	// MarkdownVersionV2 is the new version of markdown format.
-	// It is recommended to use the latest client version to experience the message.
-	// only available on client version 4.1.36 or higher (Android 4.1.38 or higher), lower version will be treated as plain text.
+	// MarkdownVersionV2 是 Markdown 格式的新版本。
+	// 建议使用最新的客户端版本以体验该消息。
+	// 仅在客户端版本 4.1.36 或更高版本（Android 4.1.38 或更高版本）上可用，低版本将被视为纯文本。
 	MarkdownVersionV2 MarkdownVersion = "v2"
 )
 
-// String implements the Stringer interface.
+// String 实现 Stringer 接口，将 MarkdownVersion 转换为字符串。
+// 返回值：string - MarkdownVersion 的字符串表示。
 func (v MarkdownVersion) String() string {
 	return string(v)
 }
 
-// IsValid checks if the markdown version is valid.
+// IsValid 检查 Markdown 版本是否有效。
+// 返回值：bool - 如果版本是 MarkdownVersionLegacy 或 MarkdownVersionV2，则返回 true；否则返回 false。
 func (v MarkdownVersion) IsValid() bool {
 	switch v {
 	case MarkdownVersionLegacy, MarkdownVersionV2:
@@ -35,17 +37,17 @@ func (v MarkdownVersion) IsValid() bool {
 	}
 }
 
-// MarkdownContent represents the markdown content for a WeCom message.
+// MarkdownContent 表示企业微信消息的 Markdown 内容。
 type MarkdownContent struct {
-	// Content of the markdown message. Maximum length is 4096 bytes, and it must be UTF-8 encoded.
+	// Markdown 消息的内容。最大长度为 4096 字节，且必须是 UTF-8 编码。
 	Content string `json:"content"`
-	// Version of the markdown message.
-	// Currently, v2 or legacy is supported.
+	// Markdown 消息的版本。
+	// 当前支持 v2 或 legacy。
 	Version MarkdownVersion `json:"version,omitempty"`
 }
 
-// MarkdownMessage represents a markdown message for WeCom.
-// For more details, refer to the WeCom API documentation:
+// MarkdownMessage 表示企业微信的 Markdown 消息。
+// 更多详情，请参考企业微信 API 文档：
 // https://developer.work.weixin.qq.com/document/path/91770#markdown%E7%B1%BB%E5%9E%8B
 type MarkdownMessage struct {
 	BaseMessage
@@ -53,37 +55,45 @@ type MarkdownMessage struct {
 	Markdown MarkdownContent `json:"markdown"`
 }
 
-// NewMarkdownMessage creates a new MarkdownMessage.
-// Based on SendMarkdownParams from WeCom Bot API
-// https://developer.work.weixin.qq.com/document/path/91770#markdown%E7%B1%BB%E5%9E%8B
-//   - Only content and version are required.
-//   - version is "legacy" if not provided or empty.
-//   - version is "v2" if provided version is "v2".
+// NewMarkdownMessage 创建一个新的 MarkdownMessage 实例。
+// 基于企业微信机器人 API 的 SendMarkdownParams
+// 参考：https://developer.work.weixin.qq.com/document/path/91770#markdown%E7%B1%BB%E5%9E%8B
+//   - 仅 content 和 version 是必需的。
+//   - 如果未提供或版本为空，则版本为 "legacy"。
+//   - 如果提供的版本为 "v2"，则版本为 "v2"。
 //
-// See https://developer.work.weixin.qq.com/document/path/91770#markdown%E7%B1%BB%E5%9E%8B for more details.
+// 更多详情请参见 https://developer.work.weixin.qq.com/document/path/91770#markdown%E7%B1%BB%E5%9E%8B
+//
+// 参数：
+//   - content string - Markdown 消息内容；
+//   - version MarkdownVersion - Markdown 版本。
+//
+// 返回值：*MarkdownMessage - 新创建的 Markdown 消息实例。
 func NewMarkdownMessage(content string, version MarkdownVersion) *MarkdownMessage {
 	return Markdown().Content(content).Version(version).Build()
 }
 
-// Validate validates the MarkdownMessage to ensure it meets WeCom API requirements.
+// Validate 验证 MarkdownMessage 是否满足企业微信 API 的要求。
+// 该方法检查内容是否为空、内容长度是否超过 4096 字符，以及版本是否有效。
+// 返回值：error - 如果验证失败，返回具体的参数错误；否则返回 nil。
 func (m *MarkdownMessage) Validate() error {
 	if m.Markdown.Content == "" {
-		return core.NewParamError("markdown content cannot be empty")
+		return core.NewParamError("Markdown 内容不能为空")
 	}
 	if len([]rune(m.Markdown.Content)) > maxMarkdownContentLength {
-		return core.NewParamError("markdown content exceeds 4096 characters")
+		return core.NewParamError("Markdown 内容超过 4096 个字符")
 	}
 	if m.Markdown.Version != "" && !m.Markdown.Version.IsValid() {
-		return core.NewParamError("invalid markdown version: " + string(m.Markdown.Version))
+		return core.NewParamError("无效的 Markdown 版本：" + string(m.Markdown.Version))
 	}
 	return nil
 }
 
-// MarshalJSON implements custom JSON marshalling to accommodate the v2 API which
-// expects the field name "markdown_v2" instead of "markdown" while keeping the
-// payload structure identical.
+// MarshalJSON 实现自定义 JSON 序列化，以适应 v2 API 的要求。
+// v2 API 期望字段名为 "markdown_v2" 而不是 "markdown"，但负载结构保持一致。
+// 返回值：[]byte - 序列化后的 JSON 数据；error - 如果序列化失败，返回错误。
 func (m *MarkdownMessage) MarshalJSON() ([]byte, error) {
-	// Build map for final JSON.
+	// 构建最终 JSON 的映射。
 	data := map[string]interface{}{
 		"msgtype": m.MsgType,
 	}

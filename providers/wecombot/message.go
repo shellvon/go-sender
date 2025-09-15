@@ -5,48 +5,51 @@ import (
 	"github.com/shellvon/go-sender/providers"
 )
 
-// WeCom group robot message, distinct from app messages (https://developer.work.weixin.qq.com/document/path/90236)
-// The robot is based on group chats with simpler and more simple parameters:
+// 企业微信群机器人消息，与应用消息不同（https://developer.work.weixin.qq.com/document/path/90236）
+// 群机器人基于群聊，参数更简单：
 // https://developer.work.weixin.qq.com/document/path/91770
 
-// MessageType defines the message types supported by WeCom.
+// MessageType 定义企业微信支持的消息类型。
 type MessageType string
 
 const (
-	// TypeText represents text message type.
+	// TypeText 表示文本消息类型。
 	TypeText MessageType = providers.MsgTypeText
-	// TypeMarkdown represents markdown message type.
+	// TypeMarkdown 表示 Markdown 消息类型。
 	TypeMarkdown MessageType = providers.MsgTypeMarkdown
-	// TypeImage represents image message type.
+	// TypeImage 表示图片消息类型。
 	TypeImage MessageType = providers.MsgTypeImage
-	// TypeNews represents news message type.
+	// TypeNews 表示新闻消息类型。
 	TypeNews MessageType = providers.MsgTypeNews
-	// TypeTemplateCard represents template card message type.
+	// TypeTemplateCard 表示模板卡片消息类型。
 	TypeTemplateCard MessageType = providers.MsgTypeTemplateCard
-	// TypeVoice represents voice message type.
+	// TypeVoice 表示语音消息类型。
 	TypeVoice MessageType = providers.MsgTypeVoice
-	// TypeFile represents file message type.
+	// TypeFile 表示文件消息类型。
 	TypeFile MessageType = providers.MsgTypeFile
 )
 
-// Message interface definition.
+// Message 接口定义。
 type Message interface {
 	core.Message
 	GetMsgType() MessageType
 }
 
-// BaseMessage is the base message structure.
+// BaseMessage 是消息的基础结构。
 type BaseMessage struct {
 	core.DefaultMessage
 
 	MsgType MessageType `json:"msgtype"`
 }
 
-// GetMsgType implements the Message interface.
+// GetMsgType 实现 Message 接口，返回消息类型。
+// 返回值：MessageType - 当前消息的类型。
 func (m *BaseMessage) GetMsgType() MessageType {
 	return m.MsgType
 }
 
+// ProviderType 返回提供者类型，表示企业微信群机器人。
+// 返回值：core.ProviderType - 提供者类型，固定为 ProviderTypeWecombot。
 func (m *BaseMessage) ProviderType() core.ProviderType {
 	return core.ProviderTypeWecombot
 }

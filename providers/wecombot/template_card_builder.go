@@ -1,11 +1,11 @@
 package wecombot
 
-// TemplateCardBuilder provides the sole, fluent API for creating WeCom `template_card` messages.
-// It focuses on the most common fields: card type, main title, subtitle and a URL jump action.
+// TemplateCardBuilder 提供用于创建企业微信 `template_card` 消息的流式API
+// 专注于最常用的字段：卡片类型、主标题、副标题和URL跳转动作
 //
-// Example:
+// 示例：
 //   msg := wecombot.Card(wecombot.CardTypeTextNotice).
-//            MainTitle("Server Alert", "High CPU").
+//            MainTitle("服务器告警", "CPU使用率过高").
 //            SubTitle("点击查看详情").
 //            JumpURL("https://example.com/alert/123").
 //            Build()
@@ -16,34 +16,34 @@ type TemplateCardBuilder struct {
 	mainTitle MainTitle
 	subTitle  string
 
-	// For news_notice type
+	// 用于 news_notice 类型
 	cardImage           *CardImage
 	imageTextArea       *ImageTextArea
 	verticalContentList []VerticalContent
 
-	// currently support only URL jump
+	// 目前仅支持URL跳转
 	jumpURL string
 }
 
-// Card creates a new TemplateCardBuilder with the given card type.
+// Card 使用给定的卡片类型创建新的TemplateCardBuilder.
 func Card(cardType TemplateCardType) *TemplateCardBuilder {
 	return &TemplateCardBuilder{cardType: cardType}
 }
 
-// MainTitle sets the main title section (title + desc).
+// MainTitle 设置主标题部分（标题 + 描述）.
 func (b *TemplateCardBuilder) MainTitle(title, desc string) *TemplateCardBuilder {
 	b.mainTitle = MainTitle{Title: title, Desc: desc}
 	return b
 }
 
-// SubTitle sets optional sub title text (text_notice only).
+// SubTitle 设置可选的副标题文本（仅text_notice类型支持）.
 func (b *TemplateCardBuilder) SubTitle(text string) *TemplateCardBuilder {
 	b.subTitle = text
 	return b
 }
 
-// CardImage sets the card image section (news_notice only).
-// aspectRatio is the width/height ratio of the image.
+// CardImage 设置卡片图片部分（仅news_notice类型支持）
+// aspectRatio 是图片的宽高比.
 func (b *TemplateCardBuilder) CardImage(url string, aspectRatio float64) *TemplateCardBuilder {
 	b.cardImage = &CardImage{
 		URL:         url,
@@ -52,10 +52,10 @@ func (b *TemplateCardBuilder) CardImage(url string, aspectRatio float64) *Templa
 	return b
 }
 
-// ImageTextArea sets the image text area section (news_notice only).
+// ImageTextArea 设置左图右文区域（仅news_notice类型支持）.
 func (b *TemplateCardBuilder) ImageTextArea(title, desc, imageURL, jumpURL string) *TemplateCardBuilder {
 	b.imageTextArea = &ImageTextArea{
-		Type:     1, // URL type
+		Type:     1, // URL类型
 		URL:      jumpURL,
 		Title:    title,
 		Desc:     desc,
@@ -64,7 +64,7 @@ func (b *TemplateCardBuilder) ImageTextArea(title, desc, imageURL, jumpURL strin
 	return b
 }
 
-// AddVerticalContent adds a vertical content item (news_notice only).
+// AddVerticalContent 添加垂直内容项（仅news_notice类型支持）.
 func (b *TemplateCardBuilder) AddVerticalContent(title, desc string) *TemplateCardBuilder {
 	b.verticalContentList = append(b.verticalContentList, VerticalContent{
 		Title: title,
@@ -73,15 +73,15 @@ func (b *TemplateCardBuilder) AddVerticalContent(title, desc string) *TemplateCa
 	return b
 }
 
-// JumpURL configures a URL jump action.
+// JumpURL 配置URL跳转动作.
 func (b *TemplateCardBuilder) JumpURL(url string) *TemplateCardBuilder {
 	b.jumpURL = url
 	return b
 }
 
-// Build assembles a *TemplateCardMessage.
+// Build 构建TemplateCardMessage.
 func (b *TemplateCardBuilder) Build() *TemplateCardMessage {
-	// default card action (URL)
+	// 默认卡片动作（URL跳转）
 	action := CardAction{Type: 1, URL: b.jumpURL}
 
 	tpl := TemplateCard{
@@ -91,7 +91,7 @@ func (b *TemplateCardBuilder) Build() *TemplateCardMessage {
 		CardAction:   action,
 	}
 
-	// Add news_notice specific fields
+	// 添加news_notice特有字段
 	if b.cardType == CardTypeNewsNotice {
 		tpl.CardImage = b.cardImage
 		tpl.ImageTextArea = b.imageTextArea
