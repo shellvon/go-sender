@@ -34,7 +34,7 @@ type uploadTarget interface {
 type ProviderOption func(*Config)
 
 // New 创建一个使用WecomAppTransformer的企业微信应用provider实例.
-func New(config *Config, tokenCache TokenCache) (*Provider, error) {
+func New(config *Config, tokenCache core.Cache[*AccessToken]) (*Provider, error) {
 	// 创建transformer，传入用户设置的tokenCache
 	wecomTransformer := NewWecomAppTransformer(tokenCache)
 

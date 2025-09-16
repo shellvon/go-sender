@@ -108,6 +108,69 @@ type DefaultMessage struct {
 	Extras map[string]interface{} `json:"extras,omitempty"`
 }
 
+// BaseMessage 提供Message接口的基础实现，减少样板代码
+// 用户可以嵌入此结构体，然后只需要重写需要自定义的方法
+//
+// 最小集成示例：
+//
+//	const ProviderTypeCustomSMS ProviderType = "custom_sms"
+//
+//	// 定义自定义消息结构
+//	type CustomSMSMessage struct {
+//		*BaseMessage
+//		Phone   string `json:"phone"`
+//		Content string `json:"content"`
+//	}
+//
+//	// 创建消息的便捷函数
+//	func NewCustomSMSMessage(phone, content string) *CustomSMSMessage {
+//		return &CustomSMSMessage{
+//			BaseMessage: NewBaseMessage(ProviderTypeCustomSMS),
+//			Phone:       phone,
+//			Content:     content,
+//		}
+//	}
+//
+//	// 可选：重写验证逻辑
+//	func (m *CustomSMSMessage) Validate() error {
+//		if m.Phone == "" || m.Content == "" {
+//			return fmt.Errorf("phone and content are required")
+//		}
+//		return nil
+//	}
+//
+//	// 使用示例
+//	message := NewCustomSMSMessage("13800138000", "Hello World")
+//	// message 现在实现了完整的 Message 接口，可以直接使用
+type BaseMessage struct {
+	DefaultMessage
+
+	providerType ProviderType
+}
+
+// NewBaseMessage 创建基础消息，用户只需指定ProviderType.
+func NewBaseMessage(providerType ProviderType) *BaseMessage {
+	return &BaseMessage{
+		DefaultMessage: DefaultMessage{},
+		providerType:   providerType,
+	}
+}
+
+// ProviderType 返回提供者类型.
+func (m *BaseMessage) ProviderType() ProviderType {
+	return m.providerType
+}
+
+// GetSubProvider 默认返回空（大部分场景不需要）.
+func (m *BaseMessage) GetSubProvider() string {
+	return ""
+}
+
+// Validate 默认验证通过（可以被重写）.
+func (m *BaseMessage) Validate() error {
+	return nil
+}
+
 // LoggerAware is implemented by types that can set a logger.
 type LoggerAware interface {
 	SetLogger(Logger)

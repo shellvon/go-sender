@@ -15,6 +15,12 @@ import (
 	"github.com/shellvon/go-sender/utils"
 )
 
+// AccessToken 代表带有过期时间的企业微信访问令牌.
+type AccessToken struct {
+	Token     string    `json:"token"`
+	ExpiresAt time.Time `json:"expires_at"`
+}
+
 // 企业微信应用API端点.
 const (
 	// SendMessageEndpoint 发送消息的API端点.
@@ -132,13 +138,13 @@ type SendRequest struct {
 type WecomAppTransformer struct {
 	*wecomappTransformer // 嵌入原有的transformer
 
-	tokenCache TokenCache
+	tokenCache core.Cache[*AccessToken]
 }
 
 // NewWecomAppTransformer 创建企业微信应用transformer.
-func NewWecomAppTransformer(tokenCache TokenCache) *WecomAppTransformer {
+func NewWecomAppTransformer(tokenCache core.Cache[*AccessToken]) *WecomAppTransformer {
 	if tokenCache == nil {
-		tokenCache = NewMemoryTokenCache()
+		tokenCache = core.NewMemoryCache[*AccessToken]()
 	}
 	return &WecomAppTransformer{
 		wecomappTransformer: newWecomAppTransformer().(*wecomappTransformer),
@@ -243,13 +249,9 @@ func (t *WecomAppTransformer) GetValidAccessToken(
 	tokenKey := t.getTokenKey(account)
 
 	// 尝试从缓存获取
-	token, err := t.tokenCache.Get(tokenKey)
-	if err != nil {
-		return "", fmt.Errorf("failed to get token from cache: %w", err)
-	}
-
-	// 检查是否有效
-	if token != nil && !token.IsExpired(5*time.Minute) {
+	token, exists := t.tokenCache.Get(tokenKey)
+	if exists && token != nil {
+		// 检查是否还有效（缓存会自动处理过期）
 		return token.Token, nil
 	}
 
@@ -259,9 +261,10 @@ func (t *WecomAppTransformer) GetValidAccessToken(
 		return "", err
 	}
 
-	// 缓存新token
-	if cacheErr := t.tokenCache.Set(tokenKey, newToken); cacheErr != nil {
-		return "", cacheErr
+	// 直接缓存新token（TTL已经在fetchAccessToken中调整过了）
+	ttl := time.Until(newToken.ExpiresAt)
+	if ttl > 0 {
+		_ = t.tokenCache.Set(tokenKey, newToken, &ttl)
 	}
 
 	return newToken.Token, nil
@@ -312,8 +315,9 @@ func (t *WecomAppTransformer) fetchAccessToken(
 		}
 	}
 
-	// 创建带过期时间的访问令牌
-	expiresAt := time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second)
+	// 创建带过期时间的访问令牌，提前5分钟过期避免临界条件
+	buffer := 5 * time.Minute
+	expiresAt := time.Now().Add(time.Duration(tokenResp.ExpiresIn)*time.Second - buffer)
 	return &AccessToken{
 		Token:     tokenResp.AccessToken,
 		ExpiresAt: expiresAt,
@@ -348,7 +352,7 @@ func (t *WecomAppTransformer) wrapHandler(
 				// 如果是认证错误，清除缓存
 				if wecomErr.IsAuthenticationError() {
 					tokenKey := t.getTokenKey(account)
-					t.tokenCache.Delete(tokenKey)
+					_ = t.tokenCache.Delete(tokenKey)
 				}
 				return wecomErr
 			}

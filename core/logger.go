@@ -13,8 +13,10 @@ type Level int8
 const LevelKey = "level"
 
 const (
+	// LevelTrace is logger trace level (most verbose).
+	LevelTrace Level = iota - 2
 	// LevelDebug is logger debug level.
-	LevelDebug Level = iota - 1
+	LevelDebug
 	// LevelInfo is logger info level.
 	LevelInfo
 	// LevelWarn is logger warn level.
@@ -32,6 +34,8 @@ func (l Level) Key() string {
 
 func (l Level) String() string {
 	switch l {
+	case LevelTrace:
+		return "TRACE"
 	case LevelDebug:
 		return "DEBUG"
 	case LevelInfo:
