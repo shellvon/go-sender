@@ -59,7 +59,9 @@ go-sender supports a wide range of notification channels. Below is a summary of 
   | Mattermost | [Mattermost](https://mattermost.com/)            | [API](https://api.mattermost.com/)                                  |
   | Discord    | [Discord](https://discord.com/)                  | [Webhooks](https://discord.com/developers/docs/resources/webhook)   |
 
-> Looking for a provider that is not listed? Create a new transformer or simply use the Webhook provider.
+> **Looking for a provider that is not listed?**
+> - Use the generic **Webhook provider** for any HTTP API
+> - Create a **custom provider** - see [Advanced Usage: Custom Providers](./advanced.md#custom-providers) for the complete guide
 
 ---
 

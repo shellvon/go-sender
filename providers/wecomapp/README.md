@@ -1,8 +1,8 @@
 # WeCom App Provider (企业微信应用)
 
-> 通过[企业微信应用](https://developer.work.weixin.qq.com/)发送消息到用户、部门或标签。
+> 通过企业微信应用发送消息到用户、部门或标签
 
-[⬅️ 返回项目README](../../README.md) | [🔗 企业微信群机器人Provider](../wecombot/README.md)
+[⬅️ 返回项目README](../../README.md) | [📖 官方文档](https://developer.work.weixin.qq.com/document/path/90236) | [🔗 企业微信群机器人Provider](../wecombot/README.md)
 
 ---
 
@@ -17,7 +17,8 @@
 | **用户范围** | 企业所有员工 | 群聊成员 |
 | **权限控制** | 企业管理员控制 | 群管理员控制 |
 | **消息送达** | 个人消息推送 | 群聊推送 |
-| **高级功能** | 模板卡片、文件上传、安全模式 | 基础消息类型 |
+| **消息类型** | 更丰富的消息类型 | 基础消息类型 |
+| **高级功能** | 模板卡片、安全模式、自动上传 | 基础功能 |
 
 **选择建议：**
 - 🏢 **企业应用**: 适合正式的企业通信、HR通知、审批流程等场景
@@ -25,167 +26,97 @@
 
 ---
 
-## 功能特性
-
-- 支持多应用账号配置，支持轮询/随机/权重负载均衡策略
-- 自动获取和刷新访问令牌(access_token)，自动重试机制
-- 多种消息类型支持:
-  - 文本消息 (Text)
-  - Markdown消息
-  - 图片消息 (Image)
-  - 语音消息 (Voice)
-  - 视频消息 (Video)  
-  - 文件消息 (File)
-  - 图文消息 (News)
-  - 文本卡片 (TextCard)
-  - 模板卡片 (TemplateCard)
-  - 图文消息 (MPNews)
-  - 小程序通知 (MiniprogramNotice)
-- 自动文件上传功能（图片、语音、视频、文件）
-- 支持发送给指定用户、部门或标签
-- 安全模式、重复消息检查等高级功能
-
----
-
-## 配置说明
-
-### 基本配置
+## 🚀 快速开始
 
 ```go
 import (
-    "github.com/shellvon/go-sender/core"
+    "context"
     "github.com/shellvon/go-sender/providers/wecomapp"
 )
 
-cfg := wecomapp.Config{
-    ProviderMeta: core.ProviderMeta{
-        Strategy: core.StrategyRoundRobin, // 负载均衡策略
-    },
-    Items: []*wecomapp.Account{
-        {
-            BaseAccount: core.BaseAccount{
-                AccountMeta: core.AccountMeta{
-                    Name: "main",
-                },
-                Credentials: core.Credentials{
-                    APIKey:    "YOUR_CORP_ID",     // 企业ID
-                    APISecret: "YOUR_CORP_SECRET", // 应用Secret
-                    AppID:     "YOUR_AGENT_ID",    // 应用ID
-                },
-            },
-        },
-    },
-}
+// 创建账号和 Provider
+account := wecomapp.NewAccount("corp-id", "app-secret", "agent-id")
+provider, _ := wecomapp.NewProvider([]*wecomapp.Account{account})
+
+// 构建并发送消息
+msg := wecomapp.Text().
+    Content("系统通知：部署已完成").
+    ToUser("user1|user2").  // 发送给指定用户
+    Build()
+
+provider.Send(context.Background(), msg, nil)
 ```
-
-### 获取配置参数
-
-1. **企业ID (CorpID)**: 登录企业微信管理后台，在"我的企业" -> "企业信息"中获取
-2. **应用Secret**: 在"应用管理" -> 选择应用 -> "Secret"中获取  
-3. **应用ID (AgentID)**: 在"应用管理" -> 选择应用中获取
 
 ---
 
-## 快速构建器
+## 💬 支持的消息类型
 
-### 文本消息
+使用 Builder 模式轻松构建各种消息：
 
+### 文本消息 (`wecomapp.Text()`)
 ```go
-// 简单文本消息
+// 发送给指定用户
 msg := wecomapp.Text().
-    Content("系统告警: CPU使用率超过90%").
-    ToUser("user1|user2").  // 指定用户
+    Content("系统告警：CPU使用率超过90%").
+    ToUser("user1|user2").
     Build()
 
 // 发送给所有人
 msg := wecomapp.Text().
     Content("重要通知").
-    ToUser("@all").  // 所有用户
+    ToUser("@all").
     Build()
 ```
 
-### Markdown消息
-
+### Markdown 消息 (`wecomapp.Markdown()`)
 ```go
-markdownContent := `# 系统监控报告
-
-## 服务器状态
-- **CPU使用率**: 45%
-- **内存使用率**: 60%  
-- **磁盘使用率**: 75%
-
-> 系统运行正常
-
-[查看详情](https://example.com/dashboard)`
-
 msg := wecomapp.Markdown().
-    Content(markdownContent).
+    Content("# 监控报告\n\n- **CPU**: 45%\n- **内存**: 60%").
     ToUser("admin1|admin2").
     Build()
 ```
 
-### 图片消息
-
+### 媒体消息 (`wecomapp.Media()`)
 ```go
-// 使用本地文件路径 (自动上传)
+// 图片消息 - 自动上传
 msg := wecomapp.Media().
     MediaType("image").
     LocalPath("/path/to/screenshot.png").
     ToUser("user1").
     Build()
 
-// 使用已有的media_id
-msg := wecomapp.Media().
-    MediaType("image").
-    MediaID("MEDIA_ID_FROM_UPLOAD").
-    ToUser("user1").
-    Build()
-```
-
-### 文件消息
-
-```go
-// 发送文件 (自动上传)
+// 文件消息 - 自动上传
 msg := wecomapp.Media().
     MediaType("file").
     LocalPath("/path/to/report.pdf").
     ToUser("team@department").
     Build()
-```
 
-### 语音消息
-
-```go
-// 发送语音 (仅支持AMR格式，≤2MB，≤60秒)
+// 语音消息 - 自动上传
 msg := wecomapp.Media().
     MediaType("voice").
     LocalPath("/path/to/voice.amr").
     ToUser("user1").
     Build()
+
+// 视频消息 - 自动上传
+msg := wecomapp.Media().
+    MediaType("video").
+    LocalPath("/path/to/video.mp4").
+    ToUser("user1").
+    Build()
 ```
 
-### 图文消息
-
+### 图文消息 (`wecomapp.News()`)
 ```go
 msg := wecomapp.News().
-    AddArticle(
-        "重要公告",                    // 标题
-        "请注意查看最新的公司政策",      // 描述  
-        "https://example.com/news",   // 链接
-        "https://example.com/pic.jpg", // 图片
-    ).
-    AddArticle(
-        "技术分享",
-        "Go语言最佳实践",
-        "https://example.com/tech",
-        "https://example.com/tech.jpg",
-    ).
+    AddArticle("重要公告", "请注意查看最新政策", "https://example.com/news", "pic.jpg").
+    AddArticle("技术分享", "Go语言最佳实践", "https://example.com/tech", "tech.jpg").
     ToUser("@all").
     Build()
 ```
 
-### 文本卡片
-
+### 文本卡片 (`wecomapp.TextCard()`)
 ```go
 msg := wecomapp.TextCard().
     Title("部署完成").
@@ -196,103 +127,92 @@ msg := wecomapp.TextCard().
     Build()
 ```
 
-### 模板卡片
-
+### 模板卡片 (`wecomapp.TemplateCard()`)
 ```go
 msg := wecomapp.TemplateCard().
     CardType("text_notice").
     Source(wecomapp.CardSource{
-        IconURL:   "https://example.com/icon.png",
-        Desc:      "企业微信",
-        DescColor: 0,
+        IconURL: "https://example.com/icon.png",
+        Desc:    "企业微信",
     }).
     MainTitle(wecomapp.CardMainTitle{
         Title: "欢迎使用企业微信",
         Desc:  "您的好友正在邀请您加入企业微信",
     }).
-    QuoteArea(wecomapp.CardQuoteArea{
-        Type:      1,
-        URL:       "https://example.com",
-        Title:     "引用文本标题",
-        QuoteText: "引用文本内容",
-    }).
     SubTitleText("下载企业微信还能抢红包！").
-    HorizontalContentList([]wecomapp.CardHorizontalContent{
-        {
-            KeyName: "邀请人",
-            Value:   "张三",
-        },
-        {
-            KeyName: "企业名称", 
-            Value:   "腾讯",
-        },
-    }).
-    JumpList([]wecomapp.CardJump{
-        {
-            Type:     1,
-            URL:      "https://example.com",
-            Title:    "企业微信官网",
-            AppID:    "APPID",
-            PagePath: "pages/index",
-        },
-    }).
-    CardAction(wecomapp.CardAction{
-        Type: 1,
-        URL:  "https://example.com",
-    }).
+    ToUser("user1").
+    Build()
+```
+
+### 图文消息 (`wecomapp.MPNews()`)
+```go
+msg := wecomapp.MPNews().
+    AddArticle("标题", "作者", "内容摘要", "图片URL", "内容链接").
+    ToUser("@all").
+    Build()
+```
+
+### 小程序通知 (`wecomapp.MiniprogramNotice()`)
+```go
+msg := wecomapp.MiniprogramNotice().
+    AppID("wx123456").
+    Page("pages/index").
+    Title("小程序通知").
+    Description("点击查看详情").
     ToUser("user1").
     Build()
 ```
 
 ---
 
-## 使用方法
+## ⚙️ Provider 配置
 
-### 1. 直接使用Provider
-
-```go
-provider, err := wecomapp.NewWithDefaults(&cfg)
-if err != nil {
-    log.Fatalf("创建provider失败: %v", err)
-}
-
-ctx := context.Background()
-result, err := provider.Send(ctx, msg, nil)
-if err != nil {
-    log.Printf("发送失败: %v", err)
-}
-```
-
-### 2. 结合GoSender使用
+### 基础配置
 
 ```go
 import (
-    gosender "github.com/shellvon/go-sender"
+    "github.com/shellvon/go-sender/core"
+    "github.com/shellvon/go-sender/providers/wecomapp"
 )
 
-sender := gosender.NewSender()
-provider, _ := wecomapp.NewWithDefaults(&cfg)
-sender.RegisterProvider(core.ProviderTypeWecomApp, provider, nil)
-
-err := sender.Send(context.Background(), msg)
-if err != nil {
-    log.Printf("发送失败: %v", err)
+config := &wecomapp.Config{
+    ProviderMeta: core.ProviderMeta{
+        Strategy: core.StrategyRoundRobin, // 负载均衡策略
+    },
+    Items: []*wecomapp.Account{
+        wecomapp.NewAccount("corp-id", "app-secret", "agent-id"),
+    },
 }
+
+provider, _ := wecomapp.New(config, nil) // nil = 使用默认内存缓存
 ```
+
+### 获取配置参数
+
+1. **企业ID (CorpID)**: 登录企业微信管理后台，在"我的企业" → "企业信息"中获取
+2. **应用Secret**: 在"应用管理" → 选择应用 → "Secret"中获取  
+3. **应用ID (AgentID)**: 在"应用管理" → 选择应用中获取
 
 ---
 
-## 高级功能
+## 🔧 高级功能
 
-### 文件自动上传
+### 自动上传媒体文件
 
-对于媒体消息（图片、语音、视频、文件），支持自动上传功能:
+对于媒体消息，支持自动上传功能：
 
 ```go
-// 使用本地文件路径，SDK自动上传并获取media_id
+// 自动上传本地文件
 msg := wecomapp.Media().
     MediaType("file").
     LocalPath("/path/to/document.pdf").
+    ToUser("user1").
+    Build()
+
+// 使用已有的 media_id
+msg := wecomapp.Media().
+    MediaType("image").
+    MediaID("MEDIA_ID_FROM_UPLOAD").
     ToUser("user1").
     Build()
 ```
@@ -320,135 +240,68 @@ msg := wecomapp.Text().
     Build()
 ```
 
-### 自定义Token缓存
+### 自定义 Token 缓存
 
 ```go
-import "github.com/shellvon/go-sender/providers/wecomapp"
-
-// 实现自定义缓存
-type CustomTokenCache struct {
-    // 你的缓存实现
-}
-
-func (c *CustomTokenCache) Get(key string) (*wecomapp.AccessToken, error) {
-    // 获取token实现
-}
-
-func (c *CustomTokenCache) Set(key string, token *wecomapp.AccessToken) error {
-    // 设置token实现  
-}
-
-func (c *CustomTokenCache) Delete(key string) error {
-    // 删除token实现
-}
+import "github.com/shellvon/go-sender/core"
 
 // 使用自定义缓存
-provider, err := wecomapp.New(&cfg, &CustomTokenCache{})
+customCache := core.NewMemoryCache[*wecomapp.AccessToken]()
+provider, _ := wecomapp.New(config, customCache)
 
-// 或者使用默认内存缓存
-provider, err := wecomapp.NewWithDefaults(&cfg)
-// 等价于: provider, err := wecomapp.New(&cfg, nil)
+// 使用默认缓存（传入nil）
+provider, _ := wecomapp.New(config, nil)
 ```
 
----
-
-## 消息类型限制
-
-| 消息类型 | 大小限制 | 格式要求 | 特殊说明 |
-|---------|---------|---------|---------|
-| 文本 | 最大2048字节 | UTF-8编码 | 支持换行符 |
-| Markdown | 最大4096字节 | UTF-8编码 | 支持部分Markdown语法 |
-| 图片 | ≤2MB | jpg/png格式 | 自动上传获取media_id |
-| 语音 | ≤2MB，≤60秒 | AMR格式 | 企业微信录音格式 |
-| 视频 | ≤10MB | MP4格式 | - |
-| 文件 | ≤20MB | 任意格式 | 支持常见文档格式 |
-
----
-
-## 错误处理
-
-Provider内置了以下错误处理机制:
-
-- **Token自动刷新**: 当access_token过期时自动获取新token并重试
-- **网络重试**: 支持网络请求失败时的重试机制  
-- **参数验证**: 发送前验证必需参数
-- **错误码映射**: 将企业微信API错误码转换为友好的错误信息
-
-常见错误码:
-- `40001`: 不合法的secret参数
-- `40014`: 不合法的access_token  
-- `41001`: 缺少access_token参数
-- `42001`: access_token超时
-- `48001`: api接口未授权
-
----
-
-## 便捷方法
-
-### 快速创建Provider
+### 与 Sender 集成
 
 ```go
-// 创建单账号provider
-provider, err := wecomapp.NewProvider([]*wecomapp.Account{
-    wecomapp.NewAccount("corpid", "secret", "agentid", 
-        wecomapp.Name("main"),
-        wecomapp.Weight(100),
-    ),
-})
+import (
+    "context"
+    gosender "github.com/shellvon/go-sender"
+    "github.com/shellvon/go-sender/core"
+    "github.com/shellvon/go-sender/providers/wecomapp"
+)
 
-// 创建多账号provider with策略
-provider, err := wecomapp.NewProvider([]*wecomapp.Account{
-    wecomapp.NewAccount("corpid1", "secret1", "agentid1", wecomapp.Name("app1")),
-    wecomapp.NewAccount("corpid2", "secret2", "agentid2", wecomapp.Name("app2")),
-}, wecomapp.Strategy(core.StrategyWeighted))
+// 创建 Sender 实例
+sender := gosender.NewSender()
+
+// 创建企业微信应用 Provider
+account := wecomapp.NewAccount("corp-id", "app-secret", "agent-id")
+provider, _ := wecomapp.NewProvider([]*wecomapp.Account{account})
+
+// 注册 Provider
+sender.RegisterProvider(core.ProviderTypeWecomApp, provider, nil)
+
+// 发送消息
+msg := wecomapp.Text().Content("Hello").ToUser("user1").Build()
+result, err := sender.Send(context.Background(), msg)
 ```
 
 ---
 
-## API参考
+## 📋 注意事项
 
-### Provider配置
+### 基本使用要求
+- ToUser 中的用户ID需要是企业微信中的用户ID
+- ToParty 中需要使用企业微信中的部门ID
+- ToTag 中需要使用企业微信中的标签ID
 
-- `Config`: Provider配置结构
-- `Account`: 企业微信应用账号配置
-- `ProviderOption`: Provider配置选项
-- `ConfigOption`: Provider实例配置选项
+### 重要提醒
+关于以下具体限制和配置，请查阅企业微信官方文档：
+- **媒体文件限制**：文件大小、格式要求、有效期等详细规定
+- **应用权限配置**：应用可见范围、发送权限设置方法
+- **频率限制**：API调用频率限制的具体数值和规则
+- **错误码说明**：各种错误情况的处理方式
+- **IP白名单**：微信应用支持IP白名单配置，不在名单内的会报错
 
-### 消息类型
-
-- `TextMessage`: 文本消息
-- `MarkdownMessage`: Markdown消息  
-- `MediaMessage`: 媒体消息(图片/语音/视频/文件)
-- `NewsMessage`: 图文消息
-- `TextCardMessage`: 文本卡片
-- `TemplateCardMessage`: 模板卡片
-- `MPNewsMessage`: 图文消息(mpnews)
-- `MiniprogramNoticeMessage`: 小程序通知
-
-### 构建器
-
-- `Text()`: 文本消息构建器
-- `Markdown()`: Markdown消息构建器
-- `Media()`: 媒体消息构建器
-- `News()`: 图文消息构建器
-- `TextCard()`: 文本卡片构建器
-- `TemplateCard()`: 模板卡片构建器
+详细信息请参考：[企业微信应用官方文档](https://developer.work.weixin.qq.com/document/path/90236)
 
 ---
 
-## 注意事项
+## 相关链接
 
-- **应用权限**: 确保应用具有发送消息的权限，在企业微信管理后台配置可见范围
-- **用户ID**: ToUser中的用户ID需要是企业微信中的用户ID，不是微信昵称
-- **部门ID**: ToParty中需要使用企业微信中的部门ID
-- **文件上传**: 上传的媒体文件有效期为3天，仅上传账号可使用
-- **频率限制**: 企业微信对API调用有频率限制，建议合理控制发送频率
-- **消息加密**: 开启安全模式时，消息内容会被加密传输
-
----
-
-## 官方文档
-
-- [企业微信API文档](https://developer.work.weixin.qq.com/document/path/90236)
+- [企业微信应用官方文档](https://developer.work.weixin.qq.com/document/path/90236)
 - [发送应用消息](https://developer.work.weixin.qq.com/document/path/90236)
 - [上传多媒体文件](https://developer.work.weixin.qq.com/document/path/90253)
+- [企业微信群机器人 Provider](../wecombot/README.md) - 更简单的群聊通知

@@ -1,6 +1,6 @@
 # Getting Started
 
-Welcome to **go-sender** – the simple, flexible, and extensible notification library for Go developers.
+Welcome to **go-sender** – the unified notification library that grows with your needs, from simple scripts to enterprise applications.
 
 ## 🚀 Quick Installation
 
@@ -8,186 +8,219 @@ Welcome to **go-sender** – the simple, flexible, and extensible notification l
 go get github.com/shellvon/go-sender
 ```
 
-## 🏁 Your First Message
+## 📈 Progressive Learning Path
 
-### Method 1: Direct Provider Usage (No Middleware)
+### Level 1: Simplest Start (30 seconds)
 
-Send SMS directly using the provider:
+**Send your first message with zero configuration:**
+
+```go
+import (
+    "context"
+    "github.com/shellvon/go-sender/providers/wecombot"
+)
+
+func main() {
+    // Create and send in one go - no setup needed!
+    account := wecombot.NewAccount("your-webhook-key")
+    provider, _ := wecombot.NewProvider([]*wecombot.Account{account})
+    
+    msg := wecombot.Text().Content("Hello go-sender!").Build()
+    provider.Send(context.Background(), msg, nil)
+}
+```
+
+**Why this works:** Most providers need only an API key or webhook URL. Perfect for testing or simple automation scripts.
+
+### Level 2: Add Structure (2 minutes)
+
+**Use the Sender for better organization:**
 
 ```go
 package main
 
 import (
     "context"
-    gosender "github.com/shellvon/go-sender"
-    "github.com/shellvon/go-sender/core"
-    "github.com/shellvon/go-sender/providers/sms"
     "log"
-)
-
-func main() {
-    // Create SMS account with the new simple API
-    account := sms.NewAccount("aliyun", "your-access-key", "your-secret-key",
-        sms.Name("aliyun-default"),        // Custom account name
-        sms.WithSignName("MyApp"),         // Optional SMS-specific settings
-        sms.WithRegion("cn-hangzhou"))
-
-    // Create provider
-    provider, err := sms.NewProvider([]*sms.Account{account},
-        sms.Strategy(core.StrategyRoundRobin)) // Round-robin strategy
-    if err != nil {
-        panic(err)
-    }
-
-    // Create and send message
-    msg := sms.Aliyun().
-        To("13800138000").
-        Content("Hello from go-sender!").
-        TemplateID("SMS_xxx").
-        Build()
-
-    result, err := provider.Send(context.Background(), msg, &core.ProviderSendOptions{})
-    if err != nil {
-        panic(err)
-    }
-    log.Printf("Message sent successfully! Request ID: %s", result.RequestID)
-}
-```
-
-### Method 2: Using Sender with Provider Registration
-
-Register provider with sender for middleware support:
-
-```go
-package main
-
-import (
-    "context"
+    
     gosender "github.com/shellvon/go-sender"
     "github.com/shellvon/go-sender/core"
-    "github.com/shellvon/go-sender/providers/sms"
+    "github.com/shellvon/go-sender/providers/wecombot"
 )
 
 func main() {
-    // Create sender
+    // 1️⃣ Initialize sender
     sender := gosender.NewSender()
-
-    // Create and register SMS provider
-    account := sms.NewAccount("aliyun", "your-access-key", "your-secret-key",
-        sms.Name("aliyun-default"),
-        sms.WithSignName("MyApp"))
-
-    smsProvider, err := sms.NewProvider([]*sms.Account{account})
+    
+    // 2️⃣ Register provider
+    account := wecombot.NewAccount("your-webhook-key")
+    provider, _ := wecombot.NewProvider([]*wecombot.Account{account})
+    sender.RegisterProvider(core.ProviderTypeWecombot, provider, nil)
+    
+    // 3️⃣ Send with detailed results
+    msg := wecombot.Text().Content("Hello go-sender!").Build()
+    result, err := sender.SendWithResult(context.Background(), msg)
     if err != nil {
-        panic(err)
+        log.Fatalf("Failed: %v", err)
     }
-    sender.RegisterProvider(core.ProviderTypeSMS, smsProvider, nil)
-
-    // Create and send message
-    msg := sms.Aliyun().
-        To("13800138000").
-        Content("Hello from go-sender!").
-        TemplateID("SMS_xxx").
-        Build()
-
-    err = sender.Send(context.Background(), msg)
-    if err != nil {
-        panic(err)
-    }
+    log.Printf("Success! Status: %d", result.StatusCode)
 }
 ```
 
-## ✉️ Supported Channels
+**What you gain:** Structured error handling, detailed results, and preparation for advanced features.
 
-- SMS: Aliyun, Tencent, Huawei, Yunpian, etc.
-- Email: SMTP, EmailJS, Resend
-- IM/Bot: WeCom, DingTalk, Lark, Telegram
-- Webhook: Universal HTTP integration
+### Level 3: Production Ready (5 minutes)
 
-See [providers.md](./providers.md) for the full list.
-
-## 🧑‍💻 FAQ
-
-**Q: Is go-sender production ready?**  
-A: Yes, but always test with your own provider credentials and templates.
-
-**Q: How do I add a new provider?**  
-A: See [advanced.md](./advanced.md) for custom provider instructions.
-
-**Q: Can I use go-sender in microservices?**  
-A: Absolutely! It is designed for both monoliths and microservices.
-
-**Q: When should I use Method 1 vs Method 2?**  
-A: Use Method 1 for simple cases without middleware. Use Method 2 when you need rate limiting, retry, circuit breaker, or other middleware features.
-
-**Q: Can I use a custom HTTP client?**  
-A: Yes! You can pass a custom `*http.Client` to `sender.Send()` for advanced features:
+**Add retry, rate limiting, and multi-account support:**
 
 ```go
 import (
-    "crypto/tls"
-    "net/http"
-    "net/url"
     "time"
     "github.com/shellvon/go-sender/core"
+    "github.com/shellvon/go-sender/ratelimiter"
 )
 
-// Custom HTTP client with timeout and proxy
+func main() {
+    sender := gosender.NewSender()
+    
+    // Multiple accounts for high availability
+    accounts := []*wecombot.Account{
+        wecombot.NewAccount("primary-webhook-key"),
+        wecombot.NewAccount("backup-webhook-key"),
+    }
+    
+    provider, _ := wecombot.NewProvider(accounts)
+    
+    // Production middleware
+    middleware := &core.SenderMiddleware{
+        RateLimiter: ratelimiter.NewTokenBucketRateLimiter(10, 5), // 10 QPS, burst 5
+        Retry: &core.RetryPolicy{
+            MaxAttempts: 3,
+            InitialDelay: time.Second,
+            MaxDelay: 10 * time.Second,
+        },
+    }
+    
+    sender.RegisterProvider(core.ProviderTypeWecombot, provider, middleware)
+    
+    // Your code stays the same!
+    msg := wecombot.Text().Content("Production ready!").Build()
+    sender.Send(context.Background(), msg)
+}
+```
+
+**Enterprise features unlocked:** Automatic failover, rate limiting, exponential backoff retry, circuit breaker.
+
+### Level 4: Multi-Channel (10 minutes)
+
+**Add SMS, Email, and other channels:**
+
+```go
+import (
+    "github.com/shellvon/go-sender/providers/sms"
+    "github.com/shellvon/go-sender/providers/email"
+)
+
+func main() {
+    sender := gosender.NewSender()
+    
+    // Register multiple providers
+    registerWeCom(sender)
+    registerSMS(sender)
+    registerEmail(sender)
+    
+    // Auto-routing: message type determines the provider
+    wecomMsg := wecombot.Text().Content("WeChat notification").Build()
+    smsMsg := sms.Aliyun().To("13800138000").Content("SMS alert").Build()
+    emailMsg := email.NewMessage("Alert", "Email notification", "admin@company.com")
+    
+    // All use the same API - go-sender routes automatically
+    sender.Send(context.Background(), wecomMsg)  // → WeCom provider
+    sender.Send(context.Background(), smsMsg)    // → SMS provider
+    sender.Send(context.Background(), emailMsg)  // → Email provider
+}
+
+func registerSMS(sender *gosender.Sender) {
+    account := sms.NewAccount("aliyun", "key", "secret", sms.WithSignName("MyApp"))
+    provider, _ := sms.NewProvider([]*sms.Account{account})
+    sender.RegisterProvider(core.ProviderTypeSMS, provider, nil)
+}
+```
+
+**The power:** One API for all channels. Message types automatically route to the right provider.
+
+## 🎯 What's Your Use Case?
+
+Choose your starting level based on your needs:
+
+| **Scenario** | **Start At** | **Why** |
+|--------------|-------------|---------|
+| Quick script / Testing | Level 1 | Zero setup, immediate results |
+| Small application | Level 2 | Better structure, error handling |
+| Production service | Level 3 | Reliability, monitoring, failover |
+| Multi-channel platform | Level 4 | Unified API for all notification types |
+
+## 📋 Supported Providers
+
+- **SMS**: Aliyun, Tencent, Huawei, Volc, Yunpian, CL253, and more
+- **Email**: SMTP, EmailJS, Resend
+- **IM/Bot**: WeCom, DingTalk, Lark, Telegram
+- **Webhook**: Universal HTTP integration for any API
+
+See [providers.md](./providers.md) for the complete list.
+
+## 💡 Key Benefits
+
+### 🔄 **Auto-Routing**
+Message types automatically route to the right provider - no manual switching needed.
+
+### 🏗️ **Progressive Architecture**
+Start simple, add complexity only when you need it. Your code doesn't break as you scale.
+
+### 🛡️ **Production Ready**
+Built-in retry, rate limiting, circuit breaker, and multi-account failover.
+
+### 🧩 **Extensible**
+Can't find a provider? Create custom ones in ~50 lines of code.
+
+## 🔧 Advanced Features
+
+### Custom HTTP Client
+```go
 client := &http.Client{
     Timeout: 30 * time.Second,
     Transport: &http.Transport{
-        Proxy: http.ProxyURL(&url.URL{
-            Scheme: "http",
-            Host:   "proxy.example.com:8080",
-        }),
-        TLSClientConfig: &tls.Config{
-            InsecureSkipVerify: false,
-        },
+        Proxy: http.ProxyURL(proxyURL),
+        TLSClientConfig: &tls.Config{/* custom TLS */},
     },
 }
 
-// Use custom client for all requests
-err = sender.Send(context.Background(), msg, core.WithSendHTTPClient(client))
+sender.Send(ctx, msg, core.WithSendHTTPClient(client))
 ```
 
-**Benefits of custom HTTP client:**
-
-- **Timeout Control**: Prevent hanging requests
-- **Proxy Support**: Route through corporate proxies
-- **TLS Configuration**: Custom certificates and security settings
-- **Connection Pooling**: Optimize performance for high-volume sending
-- **Retry Logic**: Built-in retry with exponential backoff
-- **Load Balancing**: Distribute requests across multiple endpoints
-- **Authentication**: Custom auth headers or certificates
-- **Monitoring**: Add request/response logging and metrics
-- **Caching**: Implement response caching for repeated requests
-
-## 🪝 Using Hooks (Before / After)
-
-Need to run custom logic before or after each send? go-sender provides **Hooks**:
-
+### Hooks for Custom Logic
 ```go
-mw := &core.SenderMiddleware{}
-mw.UseBeforeHook(func(_ context.Context, m core.Message, _ *core.SendOptions) error {
-    fmt.Println("GLOBAL BEFORE", m.MsgID())
+middleware := &core.SenderMiddleware{}
+middleware.UseBeforeHook(func(ctx context.Context, msg core.Message, opts *core.SendOptions) error {
+    log.Printf("Sending message: %s", msg.MsgID())
     return nil
 })
 
-sender.RegisterProvider(core.ProviderTypeSMS, smsProvider, mw)
-
-// Per-request hooks:
-sender.Send(ctx, msg,
-    core.WithSendAfterHooks(func(_ context.Context, _ core.Message, _ *core.SendOptions, _ *core.SendResult, err error) {
-        fmt.Println("PER-REQ AFTER, err:", err)
-    }),
-)
+sender.RegisterProvider(providerType, provider, middleware)
 ```
 
-Execution order: `global before → per-request before → send → global after → per-request after`.
+## 🚀 Ready to Level Up?
 
-## 📚 Next Steps
+### Next Steps:
+- **Level 1-2 Users**: Check out [providers.md](./providers.md) for more channels
+- **Level 3-4 Users**: Explore [middleware.md](./middleware.md) for advanced features
+- **Custom Needs**: See [advanced.md](./advanced.md) for custom providers and deep customization
+- **Real Examples**: Browse [examples.md](./examples.md) for production scenarios
 
-- [Core Concepts](./concepts.md)
-- [Provider Usage](./providers.md)
-- [Middleware & Advanced Features](./middleware.md)
-- [Examples](./examples.md)
+### Quick References:
+- [Core Concepts](./concepts.md) - Understanding the architecture
+- [Troubleshooting](./troubleshooting.md) - Common issues and solutions
+
+---
+
+**Ready to send your first message?** Pick your level above and start coding! 🎉
