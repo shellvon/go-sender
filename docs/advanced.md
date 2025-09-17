@@ -287,12 +287,12 @@ sender.Send(ctx, msg, core.WithSendHTTPClient(client))
 
 ## Strategies
 
-- Weighted round-robin, failover, and more.
+- round-robin, random, weighted, health-based selection strategies.
 - See [core/strategy.go](../core/strategy.go) for details.
 
 ## Extending Message Types
 
-You can define your own message types for new channels or advanced scenarios.
+You can define your own message types for new providers or advanced scenarios.
 
 ---
 

@@ -1,36 +1,79 @@
 # Getting Started
 
-Welcome to **go-sender** – the unified notification library that grows with your needs, from simple scripts to enterprise applications.
+## 🎯 Why go-sender?
 
-## 🚀 Quick Installation
+**The Problem:** Modern applications need to send notifications through multiple channels - SMS, Email, IM, Webhooks. Each service has different APIs, authentication methods, and failure modes. This leads to:
 
-```bash
-go get github.com/shellvon/go-sender
+- 🔄 **Repeated Integration Work**: Every new notification channel means new HTTP clients, error handling, retry logic
+- 🚨 **Operational Complexity**: Different monitoring, rate limiting, and failure recovery for each service  
+- 🧩 **Tight Coupling**: Business logic scattered across multiple service-specific implementations
+
+**The Solution:** go-sender provides a **unified interface** with **progressive complexity** - start simple, add production features only when needed.
+
+## 🏗️ Design Philosophy
+
+go-sender follows these core principles:
+
 ```
+┌─────────────┐    ┌──────────────┐    ┌─────────────────┐
+│   Message   │───▶│   go-sender  │───▶│   Target API    │
+│             │    │   (Router)   │    │                 │
+│ - Content   │    │              │    │ - Aliyun SMS    │
+│ - To        │    │ ┌──────────┐ │    │ - Gmail SMTP    │
+│ - Type()────┼────┼▶│ Provider │ │    │ - WeChat Bot    │
+└─────────────┘    │ │ Selection│ │    │ - Telegram API  │
+                   │ └──────────┘ │    │ - Webhook...    │
+                   │              │    └─────────────────┘
+                   │ ┌──────────┐ │
+                   │ │Middleware│ │    
+                   │ │- Retry   │ │    
+                   │ │- Limit   │ │    
+                   │ │- Circuit │ │    
+                   │ └──────────┘ │    
+                   └──────────────┘    
+```
+
+**How It Works:**
+
+1. **📝 Create Message**: Build a message using provider-specific builders (e.g., `sms.Aliyun()`, `email.NewMessage()`)
+2. **🎯 Auto-Route**: Message's `ProviderType()` determines which provider handles it - no manual routing needed
+3. **⚖️ Account Selection**: If multiple accounts exist, strategies (round-robin, weighted, health-based) pick the best one
+4. **🔄 Middleware Processing**: Optional retry, rate limiting, circuit breaker, metrics collection
+5. **🚀 API Call**: Provider transforms message to target API format and sends
+
+**Key Benefits:**
+
+- **🎯 Auto-Routing**: Messages define their destination - no manual switching
+- **🔄 Decorator Pattern**: Add middleware without changing business logic  
+- **🏗️ Progressive Complexity**: Start simple, add features when needed
+- **⚖️ Multi-Account Strategy**: Built-in load balancing and health checks
 
 ## 📈 Progressive Learning Path
 
+> **Already read the README?** Jump to [Level 3: Production Ready](#level-3-production-ready) or [Level 4: Multi-Provider](#level-4-multi-provider)
+
+Choose your starting level based on your needs:
+
+| **Use Case** | **Level** | **Why** |
+|--------------|-----------|---------|
+| Quick script / Testing | [Level 1](#level-1-simplest-start) | Zero setup, immediate results |
+| Small application | [Level 2](#level-2-add-structure) | Better structure, error handling |
+| Production service | [Level 3](#level-3-production-ready) | Reliability, monitoring, load balancing |
+| Multi-provider platform | [Level 4](#level-4-multi-provider) | Unified API for all notification types |
+
 ### Level 1: Simplest Start (30 seconds)
+
+**Already know this?** This is identical to README examples.
 
 **Send your first message with zero configuration:**
 
 ```go
-import (
-    "context"
-    "github.com/shellvon/go-sender/providers/wecombot"
-)
-
-func main() {
-    // Create and send in one go - no setup needed!
-    account := wecombot.NewAccount("your-webhook-key")
-    provider, _ := wecombot.NewProvider([]*wecombot.Account{account})
-    
-    msg := wecombot.Text().Content("Hello go-sender!").Build()
-    provider.Send(context.Background(), msg, nil)
-}
+// Same as README - minimal setup
+account := wecombot.NewAccount("your-webhook-key")
+provider, _ := wecombot.NewProvider([]*wecombot.Account{account})
+msg := wecombot.Text().Content("Hello go-sender!").Build()
+provider.Send(context.Background(), msg, nil)
 ```
-
-**Why this works:** Most providers need only an API key or webhook URL. Perfect for testing or simple automation scripts.
 
 ### Level 2: Add Structure (2 minutes)
 
@@ -109,11 +152,11 @@ func main() {
 }
 ```
 
-**Enterprise features unlocked:** Automatic failover, rate limiting, exponential backoff retry, circuit breaker.
+**Enterprise features unlocked:** Multi-account load balancing, rate limiting, exponential backoff retry, circuit breaker.
 
-### Level 4: Multi-Channel (10 minutes)
+### Level 4: Multi-Provider (10 minutes)
 
-**Add SMS, Email, and other channels:**
+**Add SMS, Email, and other providers:**
 
 ```go
 import (
@@ -147,79 +190,22 @@ func registerSMS(sender *gosender.Sender) {
 }
 ```
 
-**The power:** One API for all channels. Message types automatically route to the right provider.
+**The power:** One API for all providers. Message types automatically route to the right provider.
 
-## 🎯 What's Your Use Case?
+## 🚀 What's Next?
 
-Choose your starting level based on your needs:
+Congratulations! You've learned the progressive path from simple scripts to enterprise-ready notification systems.
 
-| **Scenario** | **Start At** | **Why** |
-|--------------|-------------|---------|
-| Quick script / Testing | Level 1 | Zero setup, immediate results |
-| Small application | Level 2 | Better structure, error handling |
-| Production service | Level 3 | Reliability, monitoring, failover |
-| Multi-channel platform | Level 4 | Unified API for all notification types |
+### Choose Your Path:
 
-## 📋 Supported Providers
-
-- **SMS**: Aliyun, Tencent, Huawei, Volc, Yunpian, CL253, and more
-- **Email**: SMTP, EmailJS, Resend
-- **IM/Bot**: WeCom, DingTalk, Lark, Telegram
-- **Webhook**: Universal HTTP integration for any API
-
-See [providers.md](./providers.md) for the complete list.
-
-## 💡 Key Benefits
-
-### 🔄 **Auto-Routing**
-Message types automatically route to the right provider - no manual switching needed.
-
-### 🏗️ **Progressive Architecture**
-Start simple, add complexity only when you need it. Your code doesn't break as you scale.
-
-### 🛡️ **Production Ready**
-Built-in retry, rate limiting, circuit breaker, and multi-account failover.
-
-### 🧩 **Extensible**
-Can't find a provider? Create custom ones in ~50 lines of code.
-
-## 🔧 Advanced Features
-
-### Custom HTTP Client
-```go
-client := &http.Client{
-    Timeout: 30 * time.Second,
-    Transport: &http.Transport{
-        Proxy: http.ProxyURL(proxyURL),
-        TLSClientConfig: &tls.Config{/* custom TLS */},
-    },
-}
-
-sender.Send(ctx, msg, core.WithSendHTTPClient(client))
-```
-
-### Hooks for Custom Logic
-```go
-middleware := &core.SenderMiddleware{}
-middleware.UseBeforeHook(func(ctx context.Context, msg core.Message, opts *core.SendOptions) error {
-    log.Printf("Sending message: %s", msg.MsgID())
-    return nil
-})
-
-sender.RegisterProvider(providerType, provider, middleware)
-```
-
-## 🚀 Ready to Level Up?
-
-### Next Steps:
-- **Level 1-2 Users**: Check out [providers.md](./providers.md) for more channels
-- **Level 3-4 Users**: Explore [middleware.md](./middleware.md) for advanced features
-- **Custom Needs**: See [advanced.md](./advanced.md) for custom providers and deep customization
-- **Real Examples**: Browse [examples.md](./examples.md) for production scenarios
-
-### Quick References:
-- [Core Concepts](./concepts.md) - Understanding the architecture
-- [Troubleshooting](./troubleshooting.md) - Common issues and solutions
+| **If you want to...** | **Go to** |
+|-----------------------|-----------|
+| 🔍 **Find specific providers** | [Providers Reference](./providers.md) |
+| 🛠 **Build custom providers** | [Advanced Usage](./advanced.md) |
+| 🧪 **See real examples** | [Examples](./examples.md) |
+| 🚦 **Add middleware** | [Middleware Guide](./middleware.md) |
+| 💡 **Understand architecture** | [Core Concepts](./concepts.md) |
+| 🔧 **Troubleshoot issues** | [Troubleshooting](./troubleshooting.md) |
 
 ---
 

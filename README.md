@@ -15,7 +15,7 @@
 - 🪶 **Lightweight**: Pure Go, zero bloat, minimal dependencies.
 - 🧩 **Flexible**: Plug-and-play for SMS, Email, IM, Webhook, and more.
 - 🚀 **Simple**: Send a message in just a few lines.
-- 🔌 **Extensible**: Add new channels, middleware **and Before/After Hooks** easily.
+- 🔌 **Extensible**: Add new providers, middleware **and Before/After Hooks** easily.
 
 ---
 
@@ -72,90 +72,9 @@ func main() {
 }
 ```
 
-**That's it!** 🎉 This same 4-step pattern works for **any channel**.
+**That's it!** 🎉 This same 4-step pattern works for **any provider**.
 
----
-
-## 🧠 How It Works
-
-### The Universal Pattern
-
-**Most modern notification services are HTTP APIs** (SMS, IM, Webhooks), while others use specific protocols (SMTP for email). go-sender abstracts this complexity:
-
-1. **Message → Provider Auto-routing**: Any message implementing `core.Message` gets automatically routed to the correct provider based on `ProviderType()`
-
-2. **Protocol Abstraction**: HTTP-based providers use `BaseHTTPTransformer`, while SMTP uses specialized handling. Just tell us the endpoint, parameters, and auth method.
-
-3. **Decorator Pattern**: Want retry? Rate limiting? Queuing? Add middleware without changing your business logic.
-
-4. **Multi-account Strategy**: Round-robin, weighted, or manually specify which account to use.
-
-### Real Examples
-
-```go
-// SMS (automatically routed to SMS provider)
-msg := sms.Aliyun().To("13800138000").Content("Hello").Build()
-
-// Email (automatically routed to Email provider)
-msg := email.NewMessage().To("user@example.com").Subject("Hi").Body("Hello").Build()
-
-// Telegram (automatically routed to Telegram provider)
-msg := telegram.Text().Chat("@channel").Text("Hello").Build()
-
-// All use the same sender.Send(ctx, msg) - zero coupling!
-```
-
----
-
-## 🎯 More Examples
-
-### Advanced Features Made Simple
-
-#### Want Middleware? Use Decorators
-```go
-// Add retry + rate limiting without changing business logic
-sender.SetRetryPolicy(core.NewRetryPolicy(core.WithRetryMaxAttempts(3)))
-sender.SetRateLimiter(ratelimiter.NewTokenBucketRateLimiter(100, 100))
-
-// Business logic stays the same
-sender.Send(ctx, msg) // Now has retry + rate limiting!
-```
-
-#### Multiple Accounts? Use Strategies
-```go
-// Load balance across accounts
-accounts := []*sms.Account{
-    sms.NewAccount("aliyun", "key1", "secret1"),
-    sms.NewAccount("tencent", "key2", "secret2"),
-}
-provider, _ := sms.NewProvider(accounts,
-    sms.Strategy(core.StrategyRoundRobin))
-
-// Or manually pick account
-sender.Send(ctx, msg, core.WithSendAccount("backup-account"))
-```
-
-#### Complex Authentication? Use Transformers
-```go
-// WeChat Work App needs access_token? We handle it:
-cache := core.NewMemoryCache[*wecomapp.AccessToken]()
-provider, _ := wecomapp.New(&config, cache)
-
-// Token fetching, caching, renewal - all automatic!
-```
-
-#### Multiple SMS Providers? Use SubProviders
-```go
-// Same SMS interface, different providers
-msg1 := sms.Aliyun().To("phone").Content("Hello").Build()    // → Aliyun API
-msg2 := sms.Tencent().To("phone").Content("Hello").Build()   // → Tencent API
-msg3 := sms.Huawei().To("phone").Content("Hello").Build()    // → Huawei API
-
-// Same sender handles all
-sender.Send(ctx, msg1)
-sender.Send(ctx, msg2)
-sender.Send(ctx, msg3)
-```
+> 📚 **Want to learn more?** Check out our [comprehensive guides](./docs/getting-started.md)
 
 ## 📦 Installation
 
@@ -180,9 +99,9 @@ See [docs/providers.md](docs/providers.md) for complete provider list and config
 
 ## 🛠 Don't See Your Provider?
 
-**No problem!** go-sender is designed for extensibility:
+**No problem!** go-sender is designed for extensibility. You have **two approaches**:
 
-### 1. Use Generic Webhook
+### Option 1: Use Generic Webhook (Recommended for HTTP APIs)
 ```go
 // Step 1: Configure the webhook endpoint
 endpoint := &webhook.Endpoint{
@@ -207,41 +126,37 @@ msg := webhook.Webhook().
 provider.Send(context.Background(), msg, nil)
 ```
 
-### 2. Create Custom Provider
-Building custom providers is simple - just implement the `core.Message` interface using `core.BaseMessage`:
+### Option 2: Create Custom Provider (For Complex Requirements)
+
+For complex authentication, custom protocols, or special requirements:
 
 ```go
-// Define your message type
+// 1. Define your message type
 type CustomMessage struct {
-    core.BaseMessage  // Handles routing automatically
-    Content   string `json:"content"`
-    Recipient string `json:"recipient"`
+    core.BaseMessage
+    Content string `json:"content"`
 }
 
-func (m *CustomMessage) ProviderType() core.ProviderType {
-    return "custom_api"  // This enables auto-routing
-}
-
-// Create transformer for HTTP protocol conversion
-// See existing providers like wecombot/, sms/, email/ for patterns
+// 2. Implement provider interface
+// See docs/advanced.md for complete guide
 ```
 
-**Want to dive deeper?** Study these provider implementations:
-- **Simple**: [`providers/wecombot/`](./providers/wecombot/) - Basic HTTP webhook
-- **Authentication**: [`providers/wecomapp/`](./providers/wecomapp/) - OAuth with caching
-- **Multi-vendor**: [`providers/sms/`](./providers/sms/) - SubProvider pattern
-
-See [docs/advanced.md](./docs/advanced.md) for the complete custom provider guide.
+**Want the full tutorial?** See [Advanced: Custom Providers](./docs/advanced.md#custom-providers)
 
 ---
 
 ## 📚 Documentation
 
-- 🚀 [Quick Start Guide](./docs/getting-started.md) - Get running in 5 minutes
-- 💡 [Core Concepts](./docs/concepts.md) - Understand the architecture
-- 📖 [All Examples](./docs/examples.md) - Real-world usage patterns
-- 🔧 [Advanced Usage](./docs/advanced.md) - Custom providers, middleware, deployment
-- 🔌 [Provider Reference](./docs/providers.md) - All supported providers
+| **Getting Started** | **Advanced** | **Reference** |
+|---------------------|--------------|---------------|
+| [📖 Getting Started](./docs/getting-started.md) | [🔧 Advanced Usage](./docs/advanced.md) | [🔌 Providers](./docs/providers.md) |
+| [💡 Core Concepts](./docs/concepts.md) | [🧪 Examples](./docs/examples.md) | [❓ FAQ](./docs/faq.md) |
+| [🏗️ Architecture](./docs/architecture.md) | [🚦 Middleware](./docs/middleware.md) | [🔧 Troubleshooting](./docs/troubleshooting.md) |
+
+**Quick Navigation:**
+- 🆕 **New user?** Start with [Getting Started](./docs/getting-started.md)
+- 🔍 **Need a specific provider?** Check [Providers](./docs/providers.md)  
+- 🛠 **Want to build custom provider?** See [Advanced Usage](./docs/advanced.md)
 
 ---
 

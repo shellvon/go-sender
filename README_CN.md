@@ -2,7 +2,7 @@
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/shellvon/go-sender)
 [![Go Report Card](https://goreportcard.com/badge/github.com/shellvon/go-sender)](https://goreportcard.com/report/github.com/shellvon/go-sender)
-[![GoDoc](https://godoc.org/github.com/shellvon/go-sender?status.svg)](https://pkg.go.dev/github.com/shellvon/go-sender)
+[![GoDoc](https://godoc.org/github.com/shellvon/go-sender?status.svg)](https://godoc.org/github.com/shellvon/go-sender)
 
 > Send anything, anywhere, with Go. One API, All Providers 🚀
 
@@ -59,154 +59,60 @@ package main
 
 import (
     "context"
-    "log"
-    
     gosender "github.com/shellvon/go-sender"
     "github.com/shellvon/go-sender/core"
     "github.com/shellvon/go-sender/providers/wecombot"
 )
 
 func main() {
-    // 1️⃣ 初始化 Sender 实例（可稍后添加中间件）
+    // 1️⃣ 创建 sender
     sender := gosender.NewSender()
-
-    // 2️⃣ 创建企业微信机器人账号和 Provider
+    
+    // 2️⃣ 创建账号  
     account := wecombot.NewAccount("your-webhook-key")
-    wecomProvider, err := wecombot.NewProvider([]*wecombot.Account{account})
-    if err != nil {
-        log.Fatalf("创建 Provider 失败: %v", err)
-    }
-    // 向 Sender 注册（nil = 使用全局中间件设置）
-    sender.RegisterProvider(core.ProviderTypeWecombot, wecomProvider, nil)
-
-    // 3️⃣ 构造要发送的消息
+    
+    // 3️⃣ 注册 provider
+    provider, _ := wecombot.NewProvider([]*wecombot.Account{account})
+    sender.RegisterProvider(core.ProviderTypeWecombot, provider, nil)
+    
+    // 4️⃣ 发送消息
     msg := wecombot.Text().Content("Hello from go-sender!").Build()
-
-    // 4️⃣ 发送消息并获取详细结果
-    _, err = sender.SendWithResult(context.Background(), msg)
-    if err != nil {
-        log.Fatalf("发送失败: %v", err)
-    }
-    log.Println("消息发送成功！")
+    sender.Send(context.Background(), msg)
 }
 ```
+
+**就是这样！** 🎉 这个相同的 4 步模式适用于**任何 Provider**。
+
+> 📚 **想了解更多？** 查看我们的[详细指南](./docs/getting-started.md)
+
+
+## 📦 安装
+
+```bash
+go get github.com/shellvon/go-sender
+```
+
 
 ---
 
-## 🔧 工作原理
+## ✨ 支持的 Providers
 
-go-sender 采用现代化的设计模式：
+| Provider 类型 | 实现 | 状态 |
+|---------------|------|--------|
+| **短信** | 阿里云、腾讯云、华为云、云片、CL253、火山引擎等 | ✅ 生产就绪 |
+| **邮件** | SMTP、EmailJS、Resend | ✅ 生产就绪 |
+| **IM/机器人** | 企业微信、钉钉、飞书、Telegram、ServerChan | ✅ 生产就绪 |
+| **Webhook** | 通用 HTTP、自定义 APIs | ✅ 生产就绪 |
 
-1. **🎯 自动路由**：任何消息只要实现了 `ProviderType()`，系统会自动分发给对应的 Provider 处理
-2. **🔄 装饰器模式**：通过中间件为您增加重试、限流、熔断等策略
-3. **⚖️ 多账号策略**：内置轮询、权重、故障转移等账号选择策略
-4. **🌐 HTTP 抽象**：现代通知服务大多是 HTTP APIs，而其他使用特定协议（如邮件的 SMTP）
-
-想要重试？队列？限流？我们通过装饰器模式实现切面编程，无需装饰器时可直接使用 Provider 发送。
-
----
-
-## 📦 更多示例
-
-### 高级特性（中间件）
-
-```go
-import (
-    "time"
-    "github.com/shellvon/go-sender/ratelimiter"
-)
-
-// 带重试、限流的生产级配置
-middleware := &core.SenderMiddleware{
-    RateLimiter: ratelimiter.NewTokenBucketRateLimiter(10, 5), // 10 QPS，突发 5
-    Retry: &core.RetryPolicy{
-        MaxAttempts: 3,
-        InitialDelay: time.Second,
-        MaxDelay: 10 * time.Second,
-    },
-}
-
-sender.RegisterProvider(core.ProviderTypeWecombot, provider, middleware)
-```
-
-### 多账号与策略
-
-```go
-// 多个账号实现高可用
-accounts := []*wecombot.Account{
-    wecombot.NewAccount("primary-webhook"),
-    wecombot.NewAccount("backup-webhook"),
-}
-
-config := &wecombot.Config{
-    ProviderMeta: core.ProviderMeta{
-        Strategy: core.StrategyFailover, // 故障转移策略
-    },
-    Items: accounts,
-}
-```
-
-### 复杂认证（企业微信应用）
-
-```go
-import "github.com/shellvon/go-sender/providers/wecomapp"
-
-// 自动 OAuth 令牌管理
-account := wecomapp.NewAccount("corp-id", "agent-id", "app-secret")
-provider, _ := wecomapp.New(&wecomapp.Config{Items: []*wecomapp.Account{account}}, nil)
-
-msg := wecomapp.Text().Content("来自企业应用的消息").Build()
-provider.Send(context.Background(), msg, nil)
-```
-
-### 子 Provider（短信多厂商）
-
-```go
-import "github.com/shellvon/go-sender/providers/sms"
-
-// 同一个短信 Provider 支持多个厂商
-aliyunMsg := sms.Aliyun().To("13800138000").Content("阿里云短信").Build()
-tencentMsg := sms.Tencent().To("13800138000").Content("腾讯云短信").Build()
-
-// 自动路由到对应的厂商 API
-sender.Send(context.Background(), aliyunMsg)  // → 阿里云 API
-sender.Send(context.Background(), tencentMsg) // → 腾讯云 API
-```
-
----
-
-## 🛠 支持的 Provider
-
-| Provider | 状态 | 说明 |
-|----------|------|------|
-| **短信** |
-| Aliyun SMS | ✅ | 阿里云短信服务 |
-| Tencent SMS | ✅ | 腾讯云短信服务 |
-| Huawei SMS | ✅ | 华为云短信服务 |
-| Volc SMS | ✅ | 火山引擎短信服务 |
-| Yunpian SMS | ✅ | 云片短信服务 |
-| **邮件** |
-| SMTP | ✅ | 标准 SMTP 协议 |
-| EmailJS | ✅ | EmailJS API 服务 |
-| Resend | ✅ | Resend API 服务 |
-| **IM/机器人** |
-| 企业微信机器人 | ✅ | WeCom Bot Webhook |
-| 企业微信应用 | ✅ | WeCom App API |
-| 钉钉机器人 | ✅ | DingTalk Bot |
-| 飞书/Lark | ✅ | Lark/Feishu API |
-| Telegram | ✅ | Telegram Bot API |
-| **Webhook** |
-| 通用 Webhook | ✅ | 支持任意 HTTP API |
-
-[查看完整 Provider 列表 →](./docs/providers.md)
+查看 [docs/providers.md](docs/providers.md) 获取完整的 provider 列表和配置。
 
 ---
 
 ## 🛠 找不到您的 Provider？
 
-**没问题！** go-sender 专为扩展性而设计：
+**没问题！** go-sender 专为扩展性而设计。您有**两种选择**：
 
-### 1. 使用通用 Webhook
+### 选择 1：使用通用 Webhook（推荐用于 HTTP APIs）
 
 ```go
 // 步骤 1：配置 webhook 端点
@@ -232,46 +138,37 @@ msg := webhook.Webhook().
 provider.Send(context.Background(), msg, nil)
 ```
 
-### 2. 创建自定义 Provider
+### 选择 2：创建自定义 Provider（用于复杂需求）
 
-构建自定义 Provider 很简单 - 只需使用 `core.BaseMessage` 实现 `core.Message` 接口：
+对于复杂认证、自定义协议或特殊需求：
 
 ```go
-// 定义消息类型
+// 1. 定义消息类型
 type CustomMessage struct {
-    core.BaseMessage  // 自动处理路由
-    Content   string `json:"content"`
-    Recipient string `json:"recipient"`
+    core.BaseMessage
+    Content string `json:"content"`
 }
 
-func (m *CustomMessage) ProviderType() core.ProviderType {
-    return "custom_api"  // 这将启用自动路由
-}
-
-// 创建 transformer 进行 HTTP 协议转换
-// 参考现有 Provider 如 wecombot/、sms/、email/ 的模式
+// 2. 实现 provider 接口
+// 查看 docs/advanced.md 获取完整指南
 ```
 
-**想深入了解？** 研究这些 Provider 实现：
-- **简单**：[`providers/wecombot/`](./providers/wecombot/) - 基础 HTTP webhook
-- **认证**：[`providers/wecomapp/`](./providers/wecomapp/) - OAuth 与缓存
-- **多厂商**：[`providers/sms/`](./providers/sms/) - SubProvider 模式
-
-查看 [docs/advanced.md](./docs/advanced.md) 获取完整的自定义 Provider 指南。
+**想要完整教程？** 查看 [高级用法：自定义 Providers](./docs/advanced.md#custom-providers)
 
 ---
 
 ## 📚 文档
 
-| 文档 | 说明 |
-|------|------|
-| [快速入门](./docs/getting-started.md) | 从简单脚本到企业级应用的渐进式指南 |
-| [核心概念](./docs/concepts.md) | 理解 go-sender 的架构设计 |
-| [Provider 文档](./docs/providers.md) | 所有支持的 Provider 详细说明 |
-| [中间件](./docs/middleware.md) | 重试、限流、熔断等高级特性 |
-| [高级用法](./docs/advanced.md) | 自定义 Provider、中间件、策略 |
-| [示例](./docs/examples.md) | 生产环境使用案例 |
-| [故障排除](./docs/troubleshooting.md) | 常见问题与解决方案 |
+| **入门指南** | **高级使用** | **参考文档** |
+|-------------|-------------|-------------|
+| [📖 快速入门](./docs/getting-started.md) | [🔧 高级用法](./docs/advanced.md) | [🔌 Providers](./docs/providers.md) |
+| [💡 核心概念](./docs/concepts.md) | [🧪 示例](./docs/examples.md) | [❓ FAQ](./docs/faq.md) |
+| [🏗️ 架构概览](./docs/architecture.md) | [🚦 中间件](./docs/middleware.md) | [🔧 故障排除](./docs/troubleshooting.md) |
+
+**快速导航：**
+- 🆕 **新用户？** 从[快速入门](./docs/getting-started.md)开始
+- 🔍 **需要特定 Provider？** 查看[Providers](./docs/providers.md)  
+- 🛠 **想构建自定义 Provider？** 参考[高级用法](./docs/advanced.md)
 
 ---
 

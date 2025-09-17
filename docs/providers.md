@@ -1,6 +1,22 @@
-# Supported Providers
+# Provider Reference
 
-go-sender supports a wide range of notification channels. Below is a summary of built-in providers. For details and advanced usage, see each provider's own doc.
+go-sender supports a comprehensive ecosystem of notification providers across multiple categories. This reference provides an overview of capabilities, status, and integration details.
+
+> **Quick Start**: Looking for usage examples? See [Getting Started](./getting-started.md) for hands-on tutorials.
+
+## Provider Ecosystem Overview
+
+| **Category** | **Providers** | **Key Features** | **Use Cases** |
+|-------------|---------------|------------------|---------------|
+| **SMS** | Aliyun, Tencent, Huawei, CL253, Volc | Template support, signature management, multi-region | OTP, alerts, marketing |
+| **Email** | SMTP, EmailJS, Resend, Mailgun | Direct SMTP or API-based delivery | Transactional, newsletters |
+| **IM/Bot** | WeCom, DingTalk, Lark, Telegram | Rich media, markdown, interactive cards | Team notifications, bots |
+| **Webhook** | Generic HTTP, Custom APIs | Universal integration for any HTTP API | Custom integrations, push services |
+
+**Status Legend:**
+- ✅ **Production Ready**: Fully tested and production-ready
+- 🚧 **In Development**: Functional but may have limitations  
+- 📋 **Planned**: On roadmap for future implementation
 
 ## SMS & Voice
 
@@ -18,11 +34,14 @@ go-sender supports a wide range of notification channels. Below is a summary of 
 | SMSBao (短信宝)           | [smsbao.com](https://www.smsbao.com)           | [API](https://www.smsbao.com/openapi)                                                                                                | [SMSBao README](../providers/sms/README.md)     |
 | Yuntongxun (云讯通)       | [yuntongxun.com](https://www.yuntongxun.com)   | [API](https://www.yuntongxun.com/developer-center)                                                                                   | [Yuntongxun README](../providers/sms/README.md) |
 
-## Email
+## Email Providers
 
-- SMTP (go-mail) ([README](../providers/email/README.md))
-- EmailJS (API) ([README](../providers/emailapi/README.md))
-- Resend (API) ([README](../providers/emailapi/README.md))
+| **Provider** | **Protocol** | **Key Features** | **Status** | **Documentation** |
+|-------------|--------------|------------------|------------|-------------------|
+| **SMTP** | SMTP | Direct server connection, full control | ✅ Production | [Email README](../providers/email/README.md) |
+| **EmailJS** | HTTP API | Browser-friendly, template support | ✅ Production | [EmailAPI README](../providers/emailapi/README.md) |
+| **Resend** | HTTP API | Developer-focused, webhooks | ✅ Production | [EmailAPI README](../providers/emailapi/README.md) |
+| **Mailgun** | HTTP API | Enterprise features, analytics | ✅ Production | [EmailAPI README](../providers/emailapi/README.md) |
 
 ## IM/Bot/Enterprise Notification
 

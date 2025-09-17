@@ -208,4 +208,4 @@ verbose: false
 log_level: DEBUG # DEBUG, INFO, WARN, ERROR
 
 # Default provider selection strategy
-# strategy: round_robin  # round_robin, weighted, failover
+# strategy: round_robin  # round_robin, random, weighted, health_based

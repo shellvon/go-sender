@@ -1,63 +1,133 @@
 # Core Concepts
 
-go-sender is designed to be simple, decoupled, and extensible. Here are the key concepts every user should know:
+go-sender is designed to be simple, decoupled, and extensible. This guide explains the key architectural concepts and how they work together.
+
+> **Quick Reference**: Looking for specific usage patterns? See [Getting Started](./getting-started.md) for hands-on examples.
 
 ## Sender
 
-The main entry point for all message sending.
+The **central orchestrator** that manages providers and middleware chains. Created via `gosender.NewSender()`.
 
-- Manages all providers and middleware.
-- Exposes `Send` and `SendWithResult` methods for sending messages.
-- Handles middleware chains transparently.
-- Need to send with a specific sub-account or override strategy? Pass `core.WithSendAccount()` or `core.WithSendStrategy()` when calling `Send`.
+**Key Responsibilities:**
+- **Provider Management**: Register and route messages to appropriate providers
+- **Middleware Execution**: Apply rate limiting, retry, circuit breaker transparently  
+- **Message Routing**: Auto-route based on message's `ProviderType()`
+- **Runtime Configuration**: Override account/strategy per request with `core.WithSendAccount()`
 
-## Provider
+**API Methods:**
+- `Send(ctx, msg)` - Fire-and-forget sending
+- `SendWithResult(ctx, msg)` - Get detailed response and metrics
 
-A pluggable component that knows how to deliver a message to a specific channel (e.g., Aliyun SMS, WeComBot, EmailJS).
+## Provider System
 
-- Each provider implements a unified interface.
-- Easy to add your own provider for any channel.
+Providers are **pluggable components** that implement the `core.Provider` interface for specific communication channels.
 
-## Message
+**Provider Ecosystem:**
 
-A data structure representing what you want to send.
+| **Category** | **Providers** | **Key Features** |
+|-------------|---------------|------------------|
+| **SMS** | Aliyun, Tencent, Huawei, CL253, Volc | Template support, signature management, multi-region |
+| **Email** | SMTP, EmailJS, Resend, Mailgun | Direct SMTP or API-based delivery |
+| **IM/Bot** | WeCom, DingTalk, Lark, Telegram | Rich media, markdown, interactive cards |
+| **Webhook** | Generic HTTP, Custom APIs | Universal integration for any HTTP API |
 
-- Different providers may have different message types (SMS, Email, IM, etc.).
-- All messages support common fields: content, recipients, template, etc.
-- Message configuration is now done via chainable builder methods for type safety and clarity.
+**Provider Features:**
+- **Account Management**: Multiple accounts per provider with load balancing
+- **Message Transformation**: Convert messages to provider-specific API formats
+- **Error Handling**: Provider-specific error mapping and retry logic
 
-## Middleware
+## Message Construction
 
-Reusable components that add cross-cutting features:
+Messages are built using **fluent builder patterns** specific to each provider type.
 
-- Rate Limiting
-- Retry Policy
-- Circuit Breaker
-- Queue
-- Metrics
+**Builder Examples:**
+```go
+// SMS Message
+smsMsg := sms.Aliyun().To("13800138000").Content("Hello").Build()
 
-Middleware is applied as a chain, and you can add or remove them as needed.
+// Email Message  
+emailMsg := email.NewMessage().To("user@example.com").Subject("Hi").Body("Hello").Build()
 
-## Decorator Pattern
+// IM Message
+imMsg := wecombot.Text().Content("Notification").Build()
+```
 
-go-sender uses the decorator pattern to wrap providers with middleware, so you can add features without changing your business logic.
+**Key Features:**
+- **Type Safety**: Compile-time validation of required fields
+- **Provider-Specific**: Each provider exposes relevant options (templates, attachments, etc.)
+- **Auto-Routing**: Message's `ProviderType()` determines which provider handles it
 
-## HTTP Transformer
+## Integration Approaches
 
-For HTTP-based providers, go-sender uses a flexible transformer architecture:
+go-sender supports two primary integration patterns:
 
-- Converts your message into an HTTP request.
-- Supports custom HTTP clients, headers, authentication, etc.
+### Pattern 1: Direct Provider Usage
+**Best for:** Simple scenarios without middleware requirements
 
-## Extensibility
+```go
+// Direct provider usage - minimal setup
+account := wecombot.NewAccount("webhook-key")
+provider, _ := wecombot.NewProvider([]*wecombot.Account{account})
+msg := wecombot.Text().Content("Hello").Build()
+provider.Send(ctx, msg, nil)
+```
 
-- Add new providers by implementing the Provider interface.
-- Add new middleware by implementing the Middleware interface.
-- Customize HTTP behavior with transformers and custom clients.
+### Pattern 2: Sender with Provider Registration  
+**Best for:** Production systems needing middleware (retry, rate limiting, circuit breakers)
+
+```go
+// Sender orchestrator with middleware support
+sender := gosender.NewSender()
+provider, _ := wecombot.NewProvider(accounts)
+middleware := &core.SenderMiddleware{
+    RateLimiter: ratelimiter.NewTokenBucketRateLimiter(10, 5),
+    Retry: &core.RetryPolicy{MaxAttempts: 3},
+}
+sender.RegisterProvider(core.ProviderTypeWecombot, provider, middleware)
+sender.Send(ctx, msg)
+```
+
+## Middleware Architecture
+
+The library implements a **decorator pattern** where `SenderMiddleware` wraps providers with cross-cutting concerns:
+
+| **Component** | **Purpose** | **Example** |
+|---------------|-------------|-------------|
+| **Rate Limiter** | Prevent API rate limit violations | `10 QPS, burst 5` |
+| **Retry Policy** | Handle transient failures | `3 attempts, exponential backoff` |
+| **Circuit Breaker** | Prevent cascading failures | `Open after 5 failures` |
+| **Queue** | Async processing and batching | `Redis, memory queue` |
+| **Metrics** | Observability and monitoring | `Success/failure rates` |
+
+## Extensibility Model
+
+The library is designed for extensibility through well-defined interfaces:
+
+| **Extension Point** | **Interface** | **Use Case** |
+|-------------------|---------------|--------------|
+| **Custom Providers** | `core.Provider` | New communication channels |
+| **Custom Middleware** | Middleware interfaces | Cross-cutting concerns |
+| **HTTP Transformers** | `HTTPRequestTransformer` | Custom request/response handling |
+| **Selection Strategies** | `SelectionStrategy` | Account selection algorithms |
+
+**Extension Examples:**
+```go
+// Custom Provider
+type MyProvider struct { /* implementation */ }
+func (p *MyProvider) Send(ctx, msg, opts) (*SendResult, error) { /* ... */ }
+
+// Custom Strategy  
+type GeoStrategy struct { /* implementation */ }
+func (s *GeoStrategy) Select(accounts []Selectable) Selectable { /* ... */ }
+```
 
 ---
 
-**Next:**
+## What's Next?
 
-- [Supported Providers & Usage](./providers.md)
-- [How to use Middleware](./middleware.md)
+| **To Learn About** | **Go To** |
+|-------------------|-----------|
+| 🚀 **Hands-on Examples** | [Getting Started](./getting-started.md) |
+| 🔌 **Provider Details** | [Providers](./providers.md) |
+| 🚦 **Middleware Setup** | [Middleware](./middleware.md) |
+| 🛠 **Custom Extensions** | [Advanced Usage](./advanced.md) |

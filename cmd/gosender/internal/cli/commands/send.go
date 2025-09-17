@@ -96,7 +96,7 @@ configurations without actually sending messages.`,
 	cmd.Flags().StringVar(&flags.SubProvider, "sub-provider", "", "sub-provider type (aliyun, tencent, resend, etc.)")
 	cmd.Flags().StringVarP(&flags.Account, "account", "a", "", "specific account name to use")
 	cmd.Flags().
-		StringVar(&flags.Strategy, "strategy", "", "provider selection strategy (round_robin, weighted, failover)")
+		StringVar(&flags.Strategy, "strategy", "", "provider selection strategy (round_robin, random, weighted, health_based)")
 	cmd.Flags().StringVar(&flags.TemplateID, "template-id", "", "template ID for SMS and applicable providers")
 	cmd.Flags().
 		StringToStringVar(&flags.TemplateParams, "template-params", map[string]string{}, "template parameters as key=value pairs")
