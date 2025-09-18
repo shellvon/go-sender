@@ -11,7 +11,7 @@ import (
 // It follows the three-tier design: AccountMeta + Credentials + extra
 //   - AccountMeta: Name, Weight, Disabled (from core.BaseAccount)
 //   - Credentials: APIKey, APISecret, AppID (e.g., Mailgun domain) (from core.BaseAccount)
-//   - Extra: Region, Callback (optional defaults for API services)
+//   - Extra: Region, Callback, From (API service-specific configuration)
 //
 // It embeds core.BaseAccount so it automatically satisfies core.BasicAccount
 // and core.Selectable interfaces.
@@ -22,6 +22,8 @@ type Account struct {
 	Region string `json:"region,omitempty"   yaml:"region,omitempty"`
 	// Callback is the callback URL for webhooks.
 	Callback string `json:"callback,omitempty" yaml:"callback,omitempty"`
+	// From is the default "From" address for emails.
+	From string `json:"from,omitempty" yaml:"from,omitempty"`
 }
 
 // Validate checks if the account is valid.
@@ -83,6 +85,13 @@ func WithRegion(region string) AccountOption {
 func WithCallback(callback string) AccountOption {
 	return func(account *Account) {
 		account.Callback = callback
+	}
+}
+
+// WithFrom sets the default "From" address for emails.
+func WithFrom(from string) AccountOption {
+	return func(account *Account) {
+		account.From = from
 	}
 }
 

@@ -6,23 +6,20 @@
 
 ---
 
-## Status
-
 - This package is **experimental** – APIs may change.
-- Currently implemented: **Resend**, **EmailJS**.
-- Planned: Mailgun, Mailjet, Brevo, Mailersend, Mailtrap …
 
-## Supported & Planned Providers
 
-| Provider   | API Docs                                                       | Status      |
-| ---------- | -------------------------------------------------------------- | ----------- |
-| Resend     | https://resend.com/docs/api-reference                          | Implemented |
-| EmailJS    | https://www.emailjs.com/docs/rest-api/send/                    | Implemented |
-| Mailgun    | https://documentation.mailgun.com/en/latest/api_reference.html | Planned     |
-| Mailjet    | https://dev.mailjet.com/email/guides/send-api-v31/             | Planned     |
-| Brevo      | https://developers.brevo.com/docs                              | Planned     |
-| Mailersend | https://developers.mailersend.com/                             | Planned     |
-| Mailtrap   | https://api-docs.mailtrap.io/docs                              | Planned     |
+## Supported Providers
+
+| Provider   | API Docs                                                       |
+| ---------- | -------------------------------------------------------------- |
+| Resend     | https://resend.com/docs/api-reference                          |
+| EmailJS    | https://www.emailjs.com/docs/rest-api/send/                    |
+| Mailgun    | https://documentation.mailgun.com/docs/mailgun                 |
+| Mailjet    | https://dev.mailjet.com/email/guides/send-api-v31/             |
+| Brevo      | https://developers.brevo.com/reference/sendtransacemail        |
+| Mailersend | https://developers.mailersend.com/                             |
+| Mailtrap   | https://api-docs.mailtrap.io/docs/mailtrap-api-docs            |
 
 ---
 
@@ -111,10 +108,4 @@ sender.RegisterProvider(core.ProviderTypeEmailAPI, provider, nil)
 _ = sender.Send(context.Background(), msg)
 ```
 
----
-
-## References
-
-- Resend API: <https://resend.com/docs/api-reference>
-- EmailJS API: <https://www.emailjs.com/docs/rest-api/send/>
-- More providers coming soon.
+If you want send email via STMP, see [Email Provider](../email/README.md)

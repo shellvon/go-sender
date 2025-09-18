@@ -10,12 +10,66 @@ import (
 type SubProviderType string
 
 const (
-	SubProviderEmailJS SubProviderType = "emailjs"
-	SubProviderResend  SubProviderType = "resend"
+	SubProviderEmailJS    SubProviderType = "emailjs"
+	SubProviderResend     SubProviderType = "resend"
+	SubProviderMailerSend SubProviderType = "mailersend"
+	SubProviderMailtrap   SubProviderType = "mailtrap"
+	SubProviderBrevo      SubProviderType = "brevo"
+	SubProviderMailgun    SubProviderType = "mailgun"
+	SubProviderMailjet    SubProviderType = "mailjet"
 	// 可以继续添加其他 EmailAPI 提供商.
 )
 
+// EmailType represents the type of email based on content characteristics.
+type EmailType int
+
+const (
+	// EmailTypeText indicates email with text content only.
+	//
+	// See also: GetEmailType
+	EmailTypeText EmailType = iota
+
+	// EmailTypeHTML indicates email with HTML content only.
+	//
+	// See also: GetEmailType
+	EmailTypeHTML
+
+	// EmailTypeTextAndHTML indicates email with both text and HTML content.
+	//
+	// See also: GetEmailType
+	EmailTypeTextAndHTML
+
+	// EmailTypeTemplate indicates email using template-based content.
+	//
+	// See also: GetEmailType, TemplateID, TemplateData
+	EmailTypeTemplate
+)
+
+// String returns a human-readable representation of the email type.
+func (t EmailType) String() string {
+	switch t {
+	case EmailTypeText:
+		return "Text"
+	case EmailTypeHTML:
+		return "HTML"
+	case EmailTypeTextAndHTML:
+		return "TextAndHTML"
+	case EmailTypeTemplate:
+		return "Template"
+	default:
+		return "Unknown"
+	}
+}
+
 // Message represents a unified email message for API-based providers.
+//
+// The message structure supports different email types:
+// - Text: contains text content only
+// - HTML: contains HTML content only
+// - TextAndHTML: contains both text and HTML content
+// - Template: uses template-based content generation
+//
+// Use GetEmailType() to determine the message content type.
 type Message struct {
 	core.DefaultMessage
 
@@ -36,7 +90,9 @@ type Message struct {
 
 	// Template related fields
 	TemplateID   string                 `json:"template_id,omitempty"`   // 模板ID
-	TemplateData map[string]interface{} `json:"template_data,omitempty"` // 模板数据
+	TemplateData map[string]interface{} `json:"template_data,omitempty"` // 模板数据（通用格式）
+	// Note: For providers like MailerSend that support per-recipient personalization,
+	// TemplateData can be structured as: key=email_address, value=personalization_data
 
 	// Additional fields
 	Attachments []Attachment      `json:"attachments,omitempty"` // 附件
@@ -53,10 +109,16 @@ type Message struct {
 }
 
 // Attachment represents an email attachment.
+// For Mailtrap, it supports content_id for inline attachments as per OpenAPI spec.
 type Attachment struct {
 	Filename    string `json:"filename"`
 	ContentType string `json:"content_type"`
 	Content     []byte `json:"content"`
+	// ContentID is used for inline attachments (when disposition is "inline")
+	// This allows the attachment to be referenced within the email body
+	ContentID string `json:"content_id,omitempty"`
+	// Disposition specifies how the attachment should be displayed
+	Disposition string `json:"disposition,omitempty"` // "attachment" or "inline"
 }
 
 var (
@@ -78,4 +140,30 @@ func (m *Message) Validate() error {
 
 func (m *Message) MsgID() string {
 	return m.DefaultMessage.MsgID()
+}
+
+// GetEmailType determines the email type based on content characteristics.
+//
+// See also: EmailTypeText, EmailTypeHTML, EmailTypeTextAndHTML, EmailTypeTemplate
+func (m *Message) GetEmailType() EmailType {
+	hasText := m.Text != ""
+	hasHTML := m.HTML != ""
+	hasTemplate := m.TemplateID != ""
+
+	if hasTemplate {
+		return EmailTypeTemplate
+	}
+
+	if hasText && hasHTML {
+		return EmailTypeTextAndHTML
+	}
+
+	if hasHTML {
+		return EmailTypeHTML
+	}
+
+	if hasText {
+		return EmailTypeText
+	}
+	return EmailTypeText
 }
