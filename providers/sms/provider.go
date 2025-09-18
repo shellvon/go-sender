@@ -110,9 +110,7 @@ func NewProvider(accounts []*Account, opts ...ProviderOption) (*Provider, error)
 				Items:        items,
 			}
 		},
-		func(config *Config) (*Provider, error) {
-			return New(config)
-		},
+		New,
 		opts...,
 	)
 }

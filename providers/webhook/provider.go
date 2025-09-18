@@ -51,9 +51,7 @@ func NewProvider(endpoints []*Endpoint, opts ...ProviderOption) (*Provider, erro
 				Items:        items,
 			}
 		},
-		func(config *Config) (*Provider, error) {
-			return New(config)
-		},
+		New,
 		opts...,
 	)
 }
