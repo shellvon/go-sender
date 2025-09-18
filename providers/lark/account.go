@@ -39,7 +39,7 @@ func NewAccount(webhookURL string, opts ...AccountOption) *Account {
 				BaseAccount: baseAccount,
 			}
 		},
-		func(defaultName, subType string) string {
+		func(defaultName, _ string) string {
 			return defaultName // Lark uses fixed default name
 		},
 		opts...,

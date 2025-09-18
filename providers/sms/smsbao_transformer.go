@@ -2,6 +2,8 @@ package sms
 
 import (
 	"context"
+	//nolint:gosec // compatibility with legacy system, not for security
+	"crypto/md5"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -71,7 +73,7 @@ func (t *smsbaoTransformer) transformSMS(
 	// 构建查询参数
 	queryParams := url.Values{
 		"u": {account.APIKey},
-		"p": {utils.MD5Hex(account.APISecret)},
+		"p": {utils.HashHex(md5.New, []byte(account.APISecret))},
 		"m": {mobiles},
 		"c": {content},
 	}
@@ -138,7 +140,7 @@ func (t *smsbaoTransformer) transformVoice(
 	// 构建查询参数
 	queryParams := url.Values{
 		"u": {account.APIKey},
-		"p": {utils.MD5Hex(account.APISecret)},
+		"p": {utils.HashHex(md5.New, []byte(account.APISecret))},
 		"m": {msg.Mobiles[0]},
 		"c": {msg.Content},
 	}

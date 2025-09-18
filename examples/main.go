@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/md5"
 	"flag"
 	"fmt"
 	"image"
@@ -44,9 +45,9 @@ func createEmptyImage() (string, string, error) {
 		return "", "", fmt.Errorf("failed to encode PNG: %w", err)
 	}
 
-	imgMD5 := utils.MD5Hex(buf.String())
+	imgMD5 := utils.HashHex(md5.New, buf.Bytes())
 
-	imgBase64 := utils.Base64Encode(buf.String())
+	imgBase64 := utils.Base64EncodeBytes(buf.Bytes())
 
 	return imgBase64, imgMD5, nil
 }

@@ -79,21 +79,14 @@ func (mt *mailgunTransformer) transform(
 
 	headers := map[string]string{
 		"Authorization": "Basic " + base64.StdEncoding.EncodeToString([]byte(auth)),
+		"Content-Type":  "application/x-www-form-urlencoded",
 	}
-
-	// Convert form data to URL encoded format
-	bodyData, err := encodeFormData(formData)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to encode form data: %w", err)
-	}
-
-	headers["Content-Type"] = "application/x-www-form-urlencoded"
 
 	return &core.HTTPRequestSpec{
 		Method:   http.MethodPost,
 		URL:      apiURL,
 		Headers:  headers,
-		Body:     bodyData,
+		Body:     encodeFormData(formData),
 		BodyType: core.BodyTypeForm,
 	}, nil, nil
 }
@@ -245,7 +238,7 @@ func (mt *mailgunTransformer) validate(msg *Message, account *Account) error {
 }
 
 // Helper functions.
-func encodeFormData(data map[string]interface{}) ([]byte, error) {
+func encodeFormData(data map[string]interface{}) []byte {
 	// Use standard library for URL encoding
 	values := url.Values{}
 
@@ -265,5 +258,5 @@ func encodeFormData(data map[string]interface{}) ([]byte, error) {
 		}
 	}
 
-	return []byte(values.Encode()), nil
+	return []byte(values.Encode())
 }

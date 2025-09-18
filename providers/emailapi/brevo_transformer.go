@@ -24,7 +24,7 @@ const (
 	brevoAPIPath            = "https://api.brevo.com/v3/smtp/email"
 	brevoMaxRecipients      = 50
 	brevoTagsKey            = "tags"
-	brevoBatchIdKey         = "batchId"
+	brevoBatchIDKey         = "batchId"
 	brevoMessageVersionsKey = "messageVersions"
 )
 
@@ -198,7 +198,7 @@ func (bt *brevoTransformer) buildRequestBody(msg *Message, account *Account) map
 	}
 
 	// Batch ID for grouping emails
-	if batchId, ok := msg.Extras[brevoBatchIdKey]; ok {
+	if batchId, ok := msg.Extras[brevoBatchIDKey]; ok {
 		body["batchId"] = batchId
 	}
 

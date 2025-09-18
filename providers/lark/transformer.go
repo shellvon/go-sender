@@ -2,6 +2,7 @@ package lark
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -37,7 +38,7 @@ func (lt *larkTransformer) transform(
 	qs := url.Values{}
 	if account.APISecret != "" {
 		ts := strconv.FormatInt(time.Now().Unix(), 10)
-		sign := utils.HMACSHA256Base64(account.APISecret, ts+"\n"+account.APISecret)
+		sign := utils.HMACBase64(sha256.New, []byte(account.APISecret), []byte(ts+"\n"+account.APISecret))
 		qs.Add("timestamp", ts)
 		qs.Add("sign", sign)
 	}

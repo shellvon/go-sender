@@ -74,13 +74,13 @@ func (b *BrevoBuilder) Preheader(preheader string) *BrevoBuilder {
 	return b
 }
 
-// BatchId sets the batch ID for grouping emails (Brevo specific).
+// BatchID sets the batch ID for grouping emails (Brevo specific).
 // This allows you to group related emails together for tracking purposes.
-func (b *BrevoBuilder) BatchId(batchId string) *BrevoBuilder {
+func (b *BrevoBuilder) BatchID(batchID string) *BrevoBuilder {
 	if b.extras == nil {
 		b.extras = make(map[string]interface{})
 	}
-	b.extras[brevoBatchIdKey] = batchId
+	b.extras[brevoBatchIDKey] = batchID
 	return b
 }
 

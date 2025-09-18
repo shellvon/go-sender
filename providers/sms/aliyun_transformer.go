@@ -2,6 +2,7 @@ package sms
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"math/rand/v2"
@@ -98,7 +99,7 @@ func (t *aliyunTransformer) signAliyunRequest(params aliyunSignParams) map[strin
 	// 计算请求体哈希
 	var hashedRequestPayload string
 	if len(params.Body) > 0 {
-		hashedRequestPayload = utils.SHA256Hex(params.Body)
+		hashedRequestPayload = utils.HashHex(sha256.New, params.Body)
 	} else {
 		hashedRequestPayload = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" // 空字符串的SHA256
 	}
@@ -135,10 +136,10 @@ func (t *aliyunTransformer) signAliyunRequest(params aliyunSignParams) map[strin
 		hashedRequestPayload,
 	}, "\n")
 
-	hashedCanonicalRequest := utils.SHA256Hex([]byte(canonicalRequest))
+	hashedCanonicalRequest := utils.HashHex(sha256.New, []byte(canonicalRequest))
 	stringToSign := algorithm + "\n" + hashedCanonicalRequest
 
-	signature := utils.HMACSHA256Hex(params.Account.APISecret, stringToSign)
+	signature := utils.HMACHex(sha256.New, []byte(params.Account.APISecret), []byte(stringToSign))
 	authorization := algorithm + " Credential=" + params.Account.APIKey +
 		",SignedHeaders=" + signedHeaders + ",Signature=" + signature
 	headers["Authorization"] = authorization

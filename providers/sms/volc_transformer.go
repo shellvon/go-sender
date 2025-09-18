@@ -2,6 +2,7 @@ package sms
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -124,7 +125,7 @@ func (t *volcTransformer) buildVolcHeaders(account *Account, body []byte, qs url
 	contentType := "application/json"
 
 	// 2. Payload: hex-encoded SHA256
-	payload := utils.SHA256Hex(body)
+	payload := utils.HashHex(sha256.New, body)
 
 	// 3. Canonicalize query string
 	canonicalQueryString := t.normalizeQueryString(qs.Encode())
@@ -161,15 +162,15 @@ func (t *volcTransformer) buildVolcHeaders(account *Account, body []byte, qs url
 		"HMAC-SHA256",
 		xDate,
 		credentialScope,
-		utils.SHA256Hex([]byte(canonicalRequest)),
+		utils.HashHex(sha256.New, []byte(canonicalRequest)),
 	}, "\n")
 
 	// 8. Derive signing key
-	kDate := utils.HMACSHA256([]byte(account.APISecret), []byte(authDate))
-	kRegion := utils.HMACSHA256(kDate, []byte(region))
-	kService := utils.HMACSHA256(kRegion, []byte(service))
-	kSigning := utils.HMACSHA256(kService, []byte("request"))
-	signature := utils.HMACSHA256(kSigning, []byte(stringToSign))
+	kDate := utils.HMACSum(sha256.New, []byte(account.APISecret), []byte(authDate))
+	kRegion := utils.HMACSum(sha256.New, kDate, []byte(region))
+	kService := utils.HMACSum(sha256.New, kRegion, []byte(service))
+	kSigning := utils.HMACSum(sha256.New, kService, []byte("request"))
+	signature := utils.HMACSum(sha256.New, kSigning, []byte(stringToSign))
 	signatureHex := hex.EncodeToString(signature)
 
 	// 9. Build Authorization header

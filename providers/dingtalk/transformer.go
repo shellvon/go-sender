@@ -2,6 +2,7 @@ package dingtalk
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -38,7 +39,7 @@ func (dt *dingTalkTransformer) transform(
 	if account.APISecret != "" {
 		ts := time.Now().UnixMilli()
 		stringToSign := fmt.Sprintf("%d\n%s", ts, account.APISecret)
-		sign := utils.HMACSHA256Base64(account.APISecret, stringToSign)
+		sign := utils.HMACBase64(sha256.New, []byte(account.APISecret), []byte(stringToSign))
 		qs.Add("timestamp", strconv.FormatInt(ts, 10))
 		qs.Add("sign", sign)
 	}

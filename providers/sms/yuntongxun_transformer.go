@@ -2,6 +2,7 @@ package sms
 
 import (
 	"context"
+	"crypto/md5"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -262,15 +263,16 @@ func (t *yuntongxunTransformer) transformVoice(
 // generateSignature 生成云讯通API签名.
 func (t *yuntongxunTransformer) generateSignature(account *Account) string {
 	datetime := time.Now().Format("20060102150405")
-	return strings.ToUpper(utils.MD5Hex(account.APIKey + account.APISecret + datetime))
+	return strings.ToUpper(utils.HashHex(md5.New, []byte(account.APIKey+account.APISecret+datetime)))
 }
 
 // buildHeaders 构建云讯通API请求头.
 func (t *yuntongxunTransformer) buildHeaders(account *Account) map[string]string {
 	datetime := time.Now().Format("20060102150405")
+	auth := fmt.Sprintf("%s:%s", account.APIKey, datetime)
 	return map[string]string{
 		"Accept":        "application/json",
 		"Content-Type":  "application/json;charset=utf-8",
-		"Authorization": utils.Base64Encode(fmt.Sprintf("%s:%s", account.APIKey, datetime)),
+		"Authorization": utils.Base64EncodeBytes([]byte(auth)),
 	}
 }

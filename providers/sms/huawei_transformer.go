@@ -2,6 +2,7 @@ package sms
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -139,7 +140,7 @@ func (t *huaweiTransformer) buildHeaders(appKey, appSecret string) map[string]st
 func (t *huaweiTransformer) buildHuaweiWsseHeader(appKey, appSecret string) string {
 	now := time.Now().UTC().Format(time.RFC3339)
 	nonce := strconv.FormatInt(time.Now().UnixNano(), 10)
-	passwordDigest := utils.Base64EncodeBytes(utils.SHA256Sum([]byte(nonce + now + appSecret)))
+	passwordDigest := utils.Base64EncodeBytes(utils.HashSum(sha256.New, []byte(nonce+now+appSecret)))
 	return fmt.Sprintf(
 		"UsernameToken Username=\"%s\",PasswordDigest=\"%s\",Nonce=\"%s\",Created=\"%s\"",
 		appKey, passwordDigest, nonce, now,

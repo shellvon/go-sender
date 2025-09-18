@@ -2,6 +2,10 @@ package sms
 
 import (
 	"context"
+	//nolint:gosec // compatibility with legacy system, not for security
+	"crypto/md5"
+	//nolint:gosec // compatibility with legacy system, not for security
+	"crypto/sha1"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -367,11 +371,11 @@ func (t *submailTransformer) calculateSignature(account *Account, params map[str
 	// 根据签名类型计算签名
 	switch signType {
 	case "sha1":
-		return utils.SHA1Hex(stringToSign + account.APISecret)
+		return utils.HashHex(sha1.New, []byte(stringToSign+account.APISecret))
 	case "normal":
 		return account.APISecret
 	default: // md5
-		return utils.MD5Hex(stringToSign + account.APISecret)
+		return utils.HashHex(md5.New, []byte(stringToSign+account.APISecret))
 	}
 }
 
