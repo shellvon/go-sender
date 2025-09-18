@@ -46,6 +46,32 @@ func New(config *Config) (*Provider, error) {
 	return &Provider{HTTPProvider: httpProvider}, nil
 }
 
+// ProviderOption represents a function that modifies WeCom Bot Provider configuration.
+type ProviderOption func(*Config)
+
+// NewProvider creates a new WeCom Bot provider with the given accounts and options.
+//
+// At least one account is required.
+//
+// Example:
+//
+//	provider, err := wecombot.NewProvider([]*wecombot.Account{account1, account2},
+//	    wecombot.Strategy(core.StrategyWeighted))
+func NewProvider(accounts []*Account, opts ...ProviderOption) (*Provider, error) {
+	return core.CreateProvider(
+		accounts,
+		core.ProviderTypeWecombot,
+		func(meta core.ProviderMeta, items []*Account) *Config {
+			return &Config{
+				ProviderMeta: meta,
+				Items:        items,
+			}
+		},
+		New,
+		opts...,
+	)
+}
+
 func (p *Provider) Name() string {
 	return string(core.ProviderTypeWecombot)
 }
@@ -147,32 +173,6 @@ func (p *Provider) uploadMediaType(
 		return "", nil, fmt.Errorf("upload error %s", result.ErrMsg)
 	}
 	return result.MediaID, selectedAccount, nil
-}
-
-// ProviderOption represents a function that modifies WeCom Bot Provider configuration.
-type ProviderOption func(*Config)
-
-// NewProvider creates a new WeCom Bot provider with the given accounts and options.
-//
-// At least one account is required.
-//
-// Example:
-//
-//	provider, err := wecombot.NewProvider([]*wecombot.Account{account1, account2},
-//	    wecombot.Strategy(core.StrategyWeighted))
-func NewProvider(accounts []*Account, opts ...ProviderOption) (*Provider, error) {
-	return core.CreateProvider(
-		accounts,
-		core.ProviderTypeWecombot,
-		func(meta core.ProviderMeta, items []*Account) *Config {
-			return &Config{
-				ProviderMeta: meta,
-				Items:        items,
-			}
-		},
-		New,
-		opts...,
-	)
 }
 
 // Re-exported core provider options for cleaner API

@@ -27,11 +27,6 @@ func New(config *Config) (*Provider, error) {
 	return &Provider{HTTPProvider: httpProvider}, nil
 }
 
-// Name returns the provider name.
-func (p *Provider) Name() string {
-	return string(core.ProviderTypeServerChan)
-}
-
 // ProviderOption represents a function that modifies ServerChan Provider configuration.
 type ProviderOption func(*Config)
 
@@ -56,6 +51,11 @@ func NewProvider(accounts []*Account, opts ...ProviderOption) (*Provider, error)
 		New,
 		opts...,
 	)
+}
+
+// Name returns the provider name.
+func (p *Provider) Name() string {
+	return string(core.ProviderTypeServerChan)
 }
 
 // Re-exported core provider options for cleaner API

@@ -63,6 +63,24 @@ type ImageMessage struct {
 	Image MediaMessageContent `json:"image"`
 }
 
+func NewImageMessage(mediaID string) *ImageMessage {
+	return &ImageMessage{
+		BaseMediaMessage: BaseMediaMessage{
+			BaseMessage: BaseMessage{MsgType: TypeImage},
+		},
+		Image: MediaMessageContent{MediaID: mediaID},
+	}
+}
+
+func NewImageMessageFromPath(localPath string) *ImageMessage {
+	return &ImageMessage{
+		BaseMediaMessage: BaseMediaMessage{
+			BaseMessage: BaseMessage{MsgType: TypeImage},
+			LocalPath:   localPath,
+		},
+	}
+}
+
 func (m *ImageMessage) getMediaContent() *MediaMessageContent { return &m.Image }
 func (m *ImageMessage) getMediaID() string                    { return m.Image.MediaID }
 func (m *ImageMessage) setMediaID(id string)                  { m.Image.MediaID = id }
@@ -83,6 +101,24 @@ type VoiceMessage struct {
 	BaseMediaMessage
 
 	Voice MediaMessageContent `json:"voice"`
+}
+
+func NewVoiceMessage(mediaID string) *VoiceMessage {
+	return &VoiceMessage{
+		BaseMediaMessage: BaseMediaMessage{
+			BaseMessage: BaseMessage{MsgType: TypeVoice},
+		},
+		Voice: MediaMessageContent{MediaID: mediaID},
+	}
+}
+
+func NewVoiceMessageFromPath(localPath string) *VoiceMessage {
+	return &VoiceMessage{
+		BaseMediaMessage: BaseMediaMessage{
+			BaseMessage: BaseMessage{MsgType: TypeVoice},
+			LocalPath:   localPath,
+		},
+	}
 }
 
 func (m *VoiceMessage) getMediaContent() *MediaMessageContent { return &m.Voice }
@@ -107,6 +143,26 @@ type VideoMessage struct {
 	Video VideoMediaMessageContent `json:"video"`
 }
 
+func NewVideoMessage(mediaID string) *VideoMessage {
+	return &VideoMessage{
+		BaseMediaMessage: BaseMediaMessage{
+			BaseMessage: BaseMessage{MsgType: TypeVideo},
+		},
+		Video: VideoMediaMessageContent{
+			MediaMessageContent: MediaMessageContent{MediaID: mediaID},
+		},
+	}
+}
+
+func NewVideoMessageFromPath(localPath string) *VideoMessage {
+	return &VideoMessage{
+		BaseMediaMessage: BaseMediaMessage{
+			BaseMessage: BaseMessage{MsgType: TypeVideo},
+			LocalPath:   localPath,
+		},
+	}
+}
+
 func (m *VideoMessage) getMediaContent() *MediaMessageContent { return &m.Video.MediaMessageContent }
 func (m *VideoMessage) getMediaID() string                    { return m.Video.MediaID }
 func (m *VideoMessage) setMediaID(id string)                  { m.Video.MediaID = id }
@@ -129,78 +185,6 @@ type FileMessage struct {
 	File MediaMessageContent `json:"file"`
 }
 
-func (m *FileMessage) getMediaContent() *MediaMessageContent { return &m.File }
-func (m *FileMessage) getMediaID() string                    { return m.File.MediaID }
-func (m *FileMessage) setMediaID(id string)                  { m.File.MediaID = id }
-func (m *FileMessage) mediaType() string                     { return string(MediaTypeFile) }
-
-func (m *FileMessage) Validate() error {
-	if err := m.BaseMediaMessage.Validate(); err != nil {
-		return err
-	}
-	if m.File.MediaID == "" && m.LocalPath == "" {
-		return core.NewParamError("either media_id or local file path must be provided")
-	}
-	return nil
-}
-
-// Constructor functions.
-func NewImageMessage(mediaID string) *ImageMessage {
-	return &ImageMessage{
-		BaseMediaMessage: BaseMediaMessage{
-			BaseMessage: BaseMessage{MsgType: TypeImage},
-		},
-		Image: MediaMessageContent{MediaID: mediaID},
-	}
-}
-
-func NewImageMessageFromPath(localPath string) *ImageMessage {
-	return &ImageMessage{
-		BaseMediaMessage: BaseMediaMessage{
-			BaseMessage: BaseMessage{MsgType: TypeImage},
-			LocalPath:   localPath,
-		},
-	}
-}
-
-func NewVoiceMessage(mediaID string) *VoiceMessage {
-	return &VoiceMessage{
-		BaseMediaMessage: BaseMediaMessage{
-			BaseMessage: BaseMessage{MsgType: TypeVoice},
-		},
-		Voice: MediaMessageContent{MediaID: mediaID},
-	}
-}
-
-func NewVoiceMessageFromPath(localPath string) *VoiceMessage {
-	return &VoiceMessage{
-		BaseMediaMessage: BaseMediaMessage{
-			BaseMessage: BaseMessage{MsgType: TypeVoice},
-			LocalPath:   localPath,
-		},
-	}
-}
-
-func NewVideoMessage(mediaID string) *VideoMessage {
-	return &VideoMessage{
-		BaseMediaMessage: BaseMediaMessage{
-			BaseMessage: BaseMessage{MsgType: TypeVideo},
-		},
-		Video: VideoMediaMessageContent{
-			MediaMessageContent: MediaMessageContent{MediaID: mediaID},
-		},
-	}
-}
-
-func NewVideoMessageFromPath(localPath string) *VideoMessage {
-	return &VideoMessage{
-		BaseMediaMessage: BaseMediaMessage{
-			BaseMessage: BaseMessage{MsgType: TypeVideo},
-			LocalPath:   localPath,
-		},
-	}
-}
-
 func NewFileMessage(mediaID string) *FileMessage {
 	return &FileMessage{
 		BaseMediaMessage: BaseMediaMessage{
@@ -217,4 +201,19 @@ func NewFileMessageFromPath(localPath string) *FileMessage {
 			LocalPath:   localPath,
 		},
 	}
+}
+
+func (m *FileMessage) getMediaContent() *MediaMessageContent { return &m.File }
+func (m *FileMessage) getMediaID() string                    { return m.File.MediaID }
+func (m *FileMessage) setMediaID(id string)                  { m.File.MediaID = id }
+func (m *FileMessage) mediaType() string                     { return string(MediaTypeFile) }
+
+func (m *FileMessage) Validate() error {
+	if err := m.BaseMediaMessage.Validate(); err != nil {
+		return err
+	}
+	if m.File.MediaID == "" && m.LocalPath == "" {
+		return core.NewParamError("either media_id or local file path must be provided")
+	}
+	return nil
 }

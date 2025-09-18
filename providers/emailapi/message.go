@@ -126,6 +126,15 @@ var (
 	_ core.Validatable      = (*Message)(nil)
 )
 
+// NewMessage creates a new EmailAPI message with the specified sub-provider.
+func NewMessage(subProvider string) *Message {
+	return &Message{
+		BaseMessage:     core.NewBaseMessage(core.ProviderTypeEmailAPI),
+		WithExtraFields: core.NewWithExtraFields(),
+		SubProvider:     subProvider,
+	}
+}
+
 // GetSubProvider Implements the SubProviderAware interface.
 // Returns the sub-provider type.
 func (m *Message) GetSubProvider() string {
@@ -141,16 +150,6 @@ func (m *Message) Validate() error {
 }
 
 // GetEmailType determines the email type based on content characteristics.
-//
-// NewMessage creates a new EmailAPI message with the specified sub-provider.
-func NewMessage(subProvider string) *Message {
-	return &Message{
-		BaseMessage:     core.NewBaseMessage(core.ProviderTypeEmailAPI),
-		WithExtraFields: core.NewWithExtraFields(),
-		SubProvider:     subProvider,
-	}
-}
-
 // See also: EmailTypeText, EmailTypeHTML, EmailTypeTextAndHTML, EmailTypeTemplate.
 func (m *Message) GetEmailType() EmailType {
 	hasText := m.Text != ""

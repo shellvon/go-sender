@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/transformer"
@@ -188,7 +189,7 @@ func (mt *mailjetTransformer) buildRequestBody(msg *Message, account *Account) M
 
 	// Template support
 	if msg.TemplateID != "" {
-		if templateID, err := parseTemplateIDInt(msg.TemplateID); err == nil {
+		if templateID, err := strconv.Atoi(msg.TemplateID); err == nil {
 			message.TemplateID = templateID
 			message.TemplateLanguage = true
 
@@ -233,21 +234,21 @@ func (mt *mailjetTransformer) buildRequestBody(msg *Message, account *Account) M
 
 	// Custom ID from extras
 	if customID, ok := msg.Extras["custom_id"]; ok {
-		if id, ok := customID.(string); ok {
+		if id, idOk := customID.(string); idOk {
 			message.CustomID = id
 		}
 	}
 
 	// Campaign tracking
 	if campaign, ok := msg.Extras["campaign"]; ok {
-		if c, ok := campaign.(string); ok {
+		if c, campaignOk := campaign.(string); campaignOk {
 			message.CustomCampaign = c
 		}
 	}
 
 	// URL Tags
 	if urlTags, ok := msg.Extras["url_tags"]; ok {
-		if tags, ok := urlTags.(string); ok {
+		if tags, tagsOk := urlTags.(string); tagsOk {
 			message.URLTags = tags
 		}
 	}
@@ -255,7 +256,7 @@ func (mt *mailjetTransformer) buildRequestBody(msg *Message, account *Account) M
 	// Sandbox mode
 	sandboxMode := false
 	if sandbox, ok := msg.Extras["sandbox"]; ok {
-		if sb, ok := sandbox.(bool); ok {
+		if sb, sbOk := sandbox.(bool); sbOk {
 			sandboxMode = sb
 		}
 	}
@@ -304,21 +305,4 @@ func (mt *mailjetTransformer) validate(msg *Message, account *Account) error {
 	}
 
 	return nil
-}
-
-// parseTemplateIDInt parses template ID as integer for Mailjet.
-func parseTemplateIDInt(templateID string) (int, error) {
-	if templateID == "" {
-		return 0, errors.New("template ID is empty")
-	}
-
-	result := 0
-	for _, char := range templateID {
-		if char < '0' || char > '9' {
-			return 0, fmt.Errorf("invalid template ID: %s", templateID)
-		}
-		result = result*10 + int(char-'0')
-	}
-
-	return result, nil
 }

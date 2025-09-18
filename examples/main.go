@@ -3,7 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
-	"crypto/md5"
+	"crypto/md5" //nolint:gosec // G501: MD5 used for demonstration purposes, not cryptographic security
 	"flag"
 	"fmt"
 	"image"

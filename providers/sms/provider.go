@@ -83,12 +83,6 @@ func New(config *Config) (*Provider, error) {
 	return &Provider{HTTPProvider: httpProvider}, nil
 }
 
-func (p *Provider) Name() string {
-	return string(core.ProviderTypeSMS)
-}
-
-// Simplified API for Provider creation - using generics for type safety
-
 // ProviderOption represents a function that modifies SMS Provider configuration.
 type ProviderOption func(*Config)
 
@@ -113,6 +107,10 @@ func NewProvider(accounts []*Account, opts ...ProviderOption) (*Provider, error)
 		New,
 		opts...,
 	)
+}
+
+func (p *Provider) Name() string {
+	return string(core.ProviderTypeSMS)
 }
 
 // Re-exported core provider options for cleaner API

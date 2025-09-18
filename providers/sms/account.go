@@ -24,30 +24,6 @@ type Account struct {
 	Callback string `json:"callback,omitempty"`  // Callback URL for delivery reports
 }
 
-// Username returns the API key for authentication.
-func (a *Account) Username() string { return a.GetCredentials().APIKey }
-
-// Password returns the API secret for authentication.
-func (a *Account) Password() string { return a.GetCredentials().APISecret }
-
-// SubProvider returns the SMS sub-provider name (e.g., "aliyun", "tencent").
-func (a *Account) SubProvider() string { return a.AccountMeta.SubType }
-
-// Validate validates the SMS account configuration.
-func (a *Account) Validate() error {
-	// First run the base validation
-	if err := a.BaseAccount.Validate(); err != nil {
-		return err
-	}
-
-	// SMS-specific validation: SubType is required
-	if a.AccountMeta.SubType == "" {
-		return errors.New("subType is required for SMS accounts")
-	}
-
-	return nil
-}
-
 // AccountOption represents a function that modifies SMS Account configuration.
 type AccountOption func(*Account)
 
@@ -85,6 +61,30 @@ func NewAccount(subType, apiKey, apiSecret string, opts ...AccountOption) *Accou
 		},
 		opts...,
 	)
+}
+
+// Username returns the API key for authentication.
+func (a *Account) Username() string { return a.GetCredentials().APIKey }
+
+// Password returns the API secret for authentication.
+func (a *Account) Password() string { return a.GetCredentials().APISecret }
+
+// SubProvider returns the SMS sub-provider name (e.g., "aliyun", "tencent").
+func (a *Account) SubProvider() string { return a.AccountMeta.SubType }
+
+// Validate validates the SMS account configuration.
+func (a *Account) Validate() error {
+	// First run the base validation
+	if err := a.BaseAccount.Validate(); err != nil {
+		return err
+	}
+
+	// SMS-specific validation: SubType is required
+	if a.AccountMeta.SubType == "" {
+		return errors.New("subType is required for SMS accounts")
+	}
+
+	return nil
 }
 
 // SMS-specific account options

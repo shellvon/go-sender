@@ -17,7 +17,7 @@ type Config = core.BaseConfig[*Account]
 type Provider struct {
 	*providers.HTTPProvider[*Account]
 
-	transformer *WecomAppTransformer
+	transformer *wecomTransformer
 }
 
 var _ core.Provider = (*Provider)(nil)
@@ -33,10 +33,10 @@ type uploadTarget interface {
 // ProviderOption 代表修改企业微信应用Provider配置的函数.
 type ProviderOption func(*Config)
 
-// New 创建一个使用WecomAppTransformer的企业微信应用provider实例.
+// New 创建一个使用wecomTransformer的企业微信应用provider实例.
 func New(config *Config, tokenCache core.Cache[*AccessToken]) (*Provider, error) {
 	// 创建transformer，传入用户设置的tokenCache
-	wecomTransformer := NewWecomAppTransformer(tokenCache)
+	wecomTransformer := newWecomTransformer(tokenCache)
 
 	// 创建HTTPProvider时使用transformer
 	httpProvider, err := providers.NewHTTPProvider(
@@ -54,6 +54,31 @@ func New(config *Config, tokenCache core.Cache[*AccessToken]) (*Provider, error)
 	}
 
 	return provider, nil
+}
+
+// NewProvider 使用给定的账号和选项创建新的企业微信应用provider
+//
+// 至少需要一个账号。
+//
+// 示例:
+//
+//	provider, err := wecomapp.NewProvider([]*wecomapp.Account{account1, account2},
+//	    wecomapp.Strategy(core.StrategyWeighted))
+func NewProvider(accounts []*Account, opts ...ProviderOption) (*Provider, error) {
+	return core.CreateProvider(
+		accounts,
+		core.ProviderTypeWecomApp,
+		func(meta core.ProviderMeta, items []*Account) *Config {
+			return &Config{
+				ProviderMeta: meta,
+				Items:        items,
+			}
+		},
+		func(config *Config) (*Provider, error) {
+			return New(config, nil)
+		},
+		opts...,
+	)
 }
 
 // Name 返回provider名称.
@@ -91,8 +116,8 @@ func (p *Provider) Send(
 	ctx = core.WithRoute(ctx, ri)
 
 	// 在发送之前，手动处理需要上传的媒体文件
-	if err := p.handleMediaUpload(ctx, msg, selectedAccount, opts); err != nil {
-		return nil, err
+	if uploadErr := p.handleMediaUpload(ctx, msg, selectedAccount, opts); uploadErr != nil {
+		return nil, uploadErr
 	}
 
 	// 获取access token（使用opts中的HTTP client）
@@ -164,31 +189,6 @@ func (p *Provider) handleMediaUpload(
 	// 设置上传后的mediaID
 	uploadMsg.setMediaID(mediaID)
 	return nil
-}
-
-// NewProvider 使用给定的账号和选项创建新的企业微信应用provider
-//
-// 至少需要一个账号。
-//
-// 示例:
-//
-//	provider, err := wecomapp.NewProvider([]*wecomapp.Account{account1, account2},
-//	    wecomapp.Strategy(core.StrategyWeighted))
-func NewProvider(accounts []*Account, opts ...ProviderOption) (*Provider, error) {
-	return core.CreateProvider(
-		accounts,
-		core.ProviderTypeWecomApp,
-		func(meta core.ProviderMeta, items []*Account) *Config {
-			return &Config{
-				ProviderMeta: meta,
-				Items:        items,
-			}
-		},
-		func(config *Config) (*Provider, error) {
-			return New(config, nil)
-		},
-		opts...,
-	)
 }
 
 // Re-exported core provider options for cleaner API

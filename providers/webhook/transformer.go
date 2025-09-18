@@ -56,9 +56,9 @@ func (wt *webhookTransformer) transform(
 	// Then apply message-level path params and query params
 	url := baseURL
 	if len(msg.PathParams) > 0 || len(msg.QueryParams) > 0 {
-		builtURL, err := msg.buildURL(baseURL)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to build URL: %w", err)
+		builtURL, buildErr := msg.buildURL(baseURL)
+		if buildErr != nil {
+			return nil, nil, fmt.Errorf("failed to build URL: %w", buildErr)
 		}
 		url = builtURL
 	}

@@ -33,6 +33,32 @@ func New(config *Config) (*Provider, error) {
 	}, nil
 }
 
+// ProviderOption represents a function that modifies Email Provider configuration.
+type ProviderOption func(*Config)
+
+// NewProvider creates a new Email provider with the given accounts and options.
+//
+// At least one account is required.
+//
+// Example:
+//
+//	provider, err := email.NewProvider([]*email.Account{account1, account2},
+//	    email.Strategy(core.StrategyWeighted))
+func NewProvider(accounts []*Account, opts ...ProviderOption) (*Provider, error) {
+	return core.CreateProvider(
+		accounts,
+		core.ProviderTypeEmail,
+		func(meta core.ProviderMeta, items []*Account) *Config {
+			return &Config{
+				ProviderMeta: meta,
+				Items:        items,
+			}
+		},
+		New,
+		opts...,
+	)
+}
+
 // Send sends an email message and returns the result.
 func (p *Provider) Send(
 	ctx context.Context,
@@ -167,32 +193,6 @@ func (a *Account) GetWeight() int {
 
 func (a *Account) IsEnabled() bool {
 	return !a.Disabled
-}
-
-// ProviderOption represents a function that modifies Email Provider configuration.
-type ProviderOption func(*Config)
-
-// NewProvider creates a new Email provider with the given accounts and options.
-//
-// At least one account is required.
-//
-// Example:
-//
-//	provider, err := email.NewProvider([]*email.Account{account1, account2},
-//	    email.Strategy(core.StrategyWeighted))
-func NewProvider(accounts []*Account, opts ...ProviderOption) (*Provider, error) {
-	return core.CreateProvider(
-		accounts,
-		core.ProviderTypeEmail,
-		func(meta core.ProviderMeta, items []*Account) *Config {
-			return &Config{
-				ProviderMeta: meta,
-				Items:        items,
-			}
-		},
-		New,
-		opts...,
-	)
 }
 
 // Re-exported core provider options for cleaner API

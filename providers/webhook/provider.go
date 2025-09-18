@@ -25,11 +25,6 @@ func New(config *Config) (*Provider, error) {
 	return &Provider{HTTPProvider: httpProvider}, nil
 }
 
-// Name returns the name of the provider.
-func (p *Provider) Name() string {
-	return string(core.ProviderTypeWebhook)
-}
-
 // ProviderOption represents a function that modifies Webhook Provider configuration.
 type ProviderOption func(*Config)
 
@@ -54,6 +49,11 @@ func NewProvider(endpoints []*Endpoint, opts ...ProviderOption) (*Provider, erro
 		New,
 		opts...,
 	)
+}
+
+// Name returns the name of the provider.
+func (p *Provider) Name() string {
+	return string(core.ProviderTypeWebhook)
 }
 
 // Re-exported core provider options for cleaner API

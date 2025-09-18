@@ -52,7 +52,7 @@ type ResponseHandlerConfig struct {
 
 // NewSendResultHandler builds a SendResultHandler based on cfg.
 //
-//nolint:gocognit // complexity acceptable for response handling
+
 func NewSendResultHandler(cfg *ResponseHandlerConfig) SendResultHandler {
 	if cfg == nil {
 		cfg = &ResponseHandlerConfig{CheckBody: false}

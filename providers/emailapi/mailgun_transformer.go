@@ -58,7 +58,7 @@ func (mt *mailgunTransformer) transform(
 	// Check if domain is overridden in message extras first
 	domain := account.Region
 	if overrideDomain, ok := msg.Extras["domain"]; ok {
-		if domainStr, ok := overrideDomain.(string); ok && domainStr != "" {
+		if domainStr, domainOk := overrideDomain.(string); domainOk && domainStr != "" {
 			domain = domainStr
 		}
 	}
@@ -143,12 +143,10 @@ func (mt *mailgunTransformer) buildFormData(msg *Message, account *Account) map[
 				data["t:variables"] = string(jsonBytes)
 			}
 		}
-	} else {
+	} else if msg.TemplateData != nil {
 		// If not using template, use TemplateData as custom variables (v:)
-		if msg.TemplateData != nil {
-			for key, value := range msg.TemplateData {
-				data["v:"+key] = value
-			}
+		for key, value := range msg.TemplateData {
+			data["v:"+key] = value
 		}
 	}
 
@@ -161,7 +159,7 @@ func (mt *mailgunTransformer) buildFormData(msg *Message, account *Account) map[
 
 	// Tags - Mailgun accepts multiple o:tag params
 	if tags, ok := msg.Extras[mailgunTagsKey]; ok {
-		if tagSlice, ok := tags.([]string); ok {
+		if tagSlice, tagOk := tags.([]string); tagOk {
 			// Store as slice for proper handling in form encoding
 			data["o:tag"] = tagSlice
 		}
@@ -204,7 +202,7 @@ func (mt *mailgunTransformer) validate(msg *Message, account *Account) error {
 	// Check domain from account or message extras
 	domain := account.Region
 	if overrideDomain, ok := msg.Extras["domain"]; ok {
-		if domainStr, ok := overrideDomain.(string); ok && domainStr != "" {
+		if domainStr, domainOk := overrideDomain.(string); domainOk && domainStr != "" {
 			domain = domainStr
 		}
 	}

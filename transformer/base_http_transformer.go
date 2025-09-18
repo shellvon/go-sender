@@ -69,7 +69,7 @@ func (t *BaseHTTPTransformer[M, C]) CanTransform(msg core.Message) bool {
 		return false
 	}
 	if t.subProvider != "" {
-		if aware, ok := any(m).(core.SubProviderAware); ok {
+		if aware, awareOk := any(m).(core.SubProviderAware); awareOk {
 			if aware.GetSubProvider() != t.subProvider {
 				return false
 			}

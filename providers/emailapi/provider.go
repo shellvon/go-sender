@@ -83,11 +83,6 @@ func New(config *Config) (*Provider, error) {
 	return &Provider{HTTPProvider: httpProvider}, nil
 }
 
-// Name returns the provider type.
-func (p *Provider) Name() string {
-	return string(core.ProviderTypeEmailAPI)
-}
-
 // ProviderOption represents a function that modifies Email API Provider configuration.
 type ProviderOption func(*Config)
 
@@ -112,6 +107,11 @@ func NewProvider(accounts []*Account, opts ...ProviderOption) (*Provider, error)
 		New,
 		opts...,
 	)
+}
+
+// Name returns the provider type.
+func (p *Provider) Name() string {
+	return string(core.ProviderTypeEmailAPI)
 }
 
 // Re-exported core provider options for cleaner API

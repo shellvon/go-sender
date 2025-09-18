@@ -351,6 +351,12 @@ func (m *TemplateCardMessage) validateCardTypeSpecific() error {
 		if len(m.TemplateCard.VerticalContentList) > 0 {
 			return core.NewParamError("vertical_content_list is not allowed for text_notice cards")
 		}
+	case CardTypeButtonInteraction:
+		// Button interaction cards have their own validation logic
+		// TODO: Add specific validation for button interaction cards if needed
+	case CardTypeVoteInteraction:
+		// Vote interaction cards have their own validation logic
+		// TODO: Add specific validation for vote interaction cards if needed
 	}
 	return nil
 }

@@ -2,7 +2,7 @@ package sms
 
 import (
 	"context"
-	"crypto/md5"
+	"crypto/md5" //nolint:gosec // G501: MD5 used by YunTongXun API requirement, not cryptographic security
 	"encoding/json"
 	"fmt"
 	"net/http"

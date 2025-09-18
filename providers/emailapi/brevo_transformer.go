@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -152,7 +153,7 @@ func (bt *brevoTransformer) buildRequestBody(msg *Message, account *Account) map
 	// Template support
 	if msg.TemplateID != "" {
 		templateIDInt := 0
-		if id, err := parseTemplateID(msg.TemplateID); err == nil {
+		if id, err := strconv.Atoi(msg.TemplateID); err == nil {
 			templateIDInt = id
 		}
 		body["templateId"] = templateIDInt
@@ -198,8 +199,8 @@ func (bt *brevoTransformer) buildRequestBody(msg *Message, account *Account) map
 	}
 
 	// Batch ID for grouping emails
-	if batchId, ok := msg.Extras[brevoBatchIDKey]; ok {
-		body["batchId"] = batchId
+	if batchID, ok := msg.Extras[brevoBatchIDKey]; ok {
+		body["batchId"] = batchID
 	}
 
 	// Message versions
@@ -244,22 +245,4 @@ func (bt *brevoTransformer) validate(msg *Message, account *Account) error {
 	}
 
 	return nil
-}
-
-// parseTemplateID attempts to parse template ID as integer.
-func parseTemplateID(templateID string) (int, error) {
-	if templateID == "" {
-		return 0, errors.New("template ID is empty")
-	}
-
-	// Simple integer parsing
-	result := 0
-	for _, char := range templateID {
-		if char < '0' || char > '9' {
-			return 0, fmt.Errorf("invalid template ID: %s", templateID)
-		}
-		result = result*10 + int(char-'0')
-	}
-
-	return result, nil
 }

@@ -26,15 +26,6 @@ type Account struct {
 	From string `json:"from,omitempty"     yaml:"from,omitempty"`
 }
 
-// Validate checks if the account is valid.
-// It ensures that the subType is set for Email API providers.
-func (a *Account) Validate() error {
-	if a.SubType == "" {
-		return errors.New("subType is required for Email API provider")
-	}
-	return a.BaseAccount.Validate()
-}
-
 // AccountOption represents a function that modifies Email API Account configuration.
 type AccountOption func(*Account)
 
@@ -70,6 +61,15 @@ func NewAccount(subType, apiKey string, opts ...AccountOption) *Account {
 		},
 		opts...,
 	)
+}
+
+// Validate checks if the account is valid.
+// It ensures that the subType is set for Email API providers.
+func (a *Account) Validate() error {
+	if a.SubType == "" {
+		return errors.New("subType is required for Email API provider")
+	}
+	return a.BaseAccount.Validate()
 }
 
 // EmailAPI-specific account options

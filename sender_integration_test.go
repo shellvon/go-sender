@@ -749,7 +749,7 @@ func TestRetryPolicy(t *testing.T) {
 
 // TestCallbackHandling 测试回调处理.
 //
-//nolint:gocognit // test
+
 func TestCallbackHandling(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(100 * time.Millisecond)
@@ -854,11 +854,12 @@ func TestCallbackHandling(t *testing.T) {
 			err := callbackErr
 			mu.Unlock()
 
-			if !executed {
+			switch {
+			case !executed:
 				t.Error("Callback was not executed")
-			} else if err == nil {
+			case err == nil:
 				t.Error("Expected error in callback, got nil")
-			} else {
+			default:
 				t.Logf("Callback executed successfully with expected error: %v", err)
 			}
 		case <-time.After(10 * time.Second): // Reasonable timeout for mock server
@@ -913,11 +914,12 @@ func TestCallbackHandling(t *testing.T) {
 			err := callbackErr
 			mu.Unlock()
 
-			if !executed {
+			switch {
+			case !executed:
 				t.Error("Delayed callback was not executed")
-			} else if err == nil {
+			case err == nil:
 				t.Error("Expected error in delayed callback, got nil")
-			} else {
+			default:
 				t.Logf("Delayed callback executed successfully with expected error: %v", err)
 			}
 		case <-time.After(10 * time.Second): // Reasonable timeout including delay

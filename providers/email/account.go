@@ -20,9 +20,6 @@ type Account struct {
 	From string `json:"from"` // Default "From" address
 }
 
-func (a *Account) Username() string { return a.GetCredentials().APIKey }
-func (a *Account) Password() string { return a.GetCredentials().APISecret }
-
 // AccountOption represents a function that modifies Email Account configuration.
 type AccountOption func(*Account)
 
@@ -57,6 +54,9 @@ func NewAccount(host string, port int, username, password string, opts ...Accoun
 		opts...,
 	)
 }
+
+func (a *Account) Username() string { return a.GetCredentials().APIKey }
+func (a *Account) Password() string { return a.GetCredentials().APISecret }
 
 // Email-specific account options
 

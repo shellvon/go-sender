@@ -27,16 +27,11 @@ const (
 	// UploadMediaEndpoint 上传媒体文件的API端点.
 	UploadMediaEndpoint = "https://qyapi.weixin.qq.com/cgi-bin/media/upload"
 	// GetTokenEndpoint 获取访问令牌的API端点.
-	GetTokenEndpoint = "https://qyapi.weixin.qq.com/cgi-bin/gettoken"
+	GetTokenEndpoint = "https://qyapi.weixin.qq.com/cgi-bin/gettoken" //nolint:gosec // G101: This is WeChat Work API endpoint URL, not credentials
 )
 
-// wecomappTransformer 为企业微信应用利用共享的BaseHTTPTransformer.
-type wecomappTransformer struct {
-	*transformer.BaseHTTPTransformer[Message, *Account]
-}
-
 // transform 为企业微信应用消息构建HTTPRequestSpec.
-func (wt *wecomappTransformer) transform(
+func (t *wecomTransformer) transform(
 	ctx context.Context,
 	msg Message,
 	account *Account,
@@ -55,30 +50,6 @@ func (wt *wecomappTransformer) transform(
 	}, nil, nil
 }
 
-// newWecomAppTransformer 创建新的企业微信应用transformer
-// https://developer.work.weixin.qq.com/document/path/90372
-func newWecomAppTransformer() core.HTTPTransformer[*Account] {
-	respCfg := &core.ResponseHandlerConfig{
-		BodyType:  core.BodyTypeJSON,
-		CheckBody: true,
-		Path:      "errcode",
-		Expect:    "0",
-		Mode:      core.MatchEq,
-		CodePath:  "errcode",
-		MsgPath:   "errmsg",
-	}
-
-	wt := &wecomappTransformer{}
-	wt.BaseHTTPTransformer = transformer.NewSimpleHTTPTransformer(
-		core.ProviderTypeWecomApp,
-		"",
-		respCfg,
-		wt.transform,
-	)
-
-	return wt
-}
-
 // SendRequest 代表通过企业微信应用API发送消息的请求结构
 // 它使用json.RawMessage在转换过程中保留原始消息结构.
 type SendRequest struct {
@@ -93,26 +64,44 @@ type SendRequest struct {
 	Content json.RawMessage `json:"-"`
 }
 
-// WecomAppTransformer 具备完整企业微信API能力的transformer.
-type WecomAppTransformer struct {
-	*wecomappTransformer // 嵌入原有的transformer
+// wecomTransformer 具备完整企业微信API能力的transformer.
+type wecomTransformer struct {
+	*transformer.BaseHTTPTransformer[Message, *Account]
 
 	tokenCache core.Cache[*AccessToken]
 }
 
-// NewWecomAppTransformer 创建企业微信应用transformer.
-func NewWecomAppTransformer(tokenCache core.Cache[*AccessToken]) *WecomAppTransformer {
+// newWecomTransformer 创建企业微信应用transformer.
+func newWecomTransformer(tokenCache core.Cache[*AccessToken]) *wecomTransformer {
 	if tokenCache == nil {
 		tokenCache = core.NewMemoryCache[*AccessToken]()
 	}
-	return &WecomAppTransformer{
-		wecomappTransformer: newWecomAppTransformer().(*wecomappTransformer),
-		tokenCache:          tokenCache,
+
+	respCfg := &core.ResponseHandlerConfig{
+		BodyType:  core.BodyTypeJSON,
+		CheckBody: true,
+		Path:      "errcode",
+		Expect:    "0",
+		Mode:      core.MatchEq,
+		CodePath:  "errcode",
+		MsgPath:   "errmsg",
 	}
+
+	t := &wecomTransformer{
+		tokenCache: tokenCache,
+	}
+	t.BaseHTTPTransformer = transformer.NewSimpleHTTPTransformer(
+		core.ProviderTypeWecomApp,
+		"",
+		respCfg,
+		t.transform,
+	)
+
+	return t
 }
 
 // UploadMediaWithClient 使用指定的HTTP客户端上传媒体文件.
-func (t *WecomAppTransformer) UploadMediaWithClient(
+func (t *wecomTransformer) UploadMediaWithClient(
 	ctx context.Context,
 	account *Account,
 	localPath, mediaType string,
@@ -150,8 +139,8 @@ func (t *WecomAppTransformer) UploadMediaWithClient(
 
 	// 解析响应
 	var uploadResp MediaUploadResponse
-	if err := json.Unmarshal(bodyBytes, &uploadResp); err != nil {
-		return "", fmt.Errorf("failed to parse upload response: %w", err)
+	if parseErr := json.Unmarshal(bodyBytes, &uploadResp); parseErr != nil {
+		return "", fmt.Errorf("failed to parse upload response: %w", parseErr)
 	}
 
 	// 检查企业微信API错误
@@ -164,7 +153,7 @@ func (t *WecomAppTransformer) UploadMediaWithClient(
 		// 如果是认证错误，清除缓存
 		if wecomErr.IsAuthenticationError() {
 			tokenKey := t.getTokenKey(account)
-			t.tokenCache.Delete(tokenKey)
+			_ = t.tokenCache.Delete(tokenKey) // 忽略删除缓存的错误
 		}
 		return "", wecomErr
 	}
@@ -173,7 +162,7 @@ func (t *WecomAppTransformer) UploadMediaWithClient(
 }
 
 // GetValidAccessToken 从缓存获取或刷新access token（公开方法供Provider调用）.
-func (t *WecomAppTransformer) GetValidAccessToken(
+func (t *wecomTransformer) GetValidAccessToken(
 	ctx context.Context,
 	account *Account,
 	httpClient *http.Client,
@@ -203,7 +192,7 @@ func (t *WecomAppTransformer) GetValidAccessToken(
 }
 
 // fetchAccessToken 从API获取新的access token.
-func (t *WecomAppTransformer) fetchAccessToken(
+func (t *wecomTransformer) fetchAccessToken(
 	ctx context.Context,
 	account *Account,
 	httpClient *http.Client,
@@ -235,8 +224,8 @@ func (t *WecomAppTransformer) fetchAccessToken(
 	}
 
 	var tokenResp TokenResponse
-	if err := json.Unmarshal(bodyBytes, &tokenResp); err != nil {
-		return nil, fmt.Errorf("failed to decode token response: %w", err)
+	if parseErr := json.Unmarshal(bodyBytes, &tokenResp); parseErr != nil {
+		return nil, fmt.Errorf("failed to decode token response: %w", parseErr)
 	}
 
 	if tokenResp.ErrCode != 0 {
@@ -257,12 +246,12 @@ func (t *WecomAppTransformer) fetchAccessToken(
 }
 
 // getTokenKey 根据账号凭据生成访问令牌的缓存键.
-func (t *WecomAppTransformer) getTokenKey(account *Account) string {
+func (t *wecomTransformer) getTokenKey(account *Account) string {
 	return fmt.Sprintf("wecomapp:%s:%s", account.CorpID(), account.AgentID())
 }
 
 // wrapHandler 包装响应处理器以支持认证错误处理.
-func (t *WecomAppTransformer) wrapHandler(
+func (t *wecomTransformer) wrapHandler(
 	_ context.Context,
 	account *Account,
 	originalHandler core.SendResultHandler,
