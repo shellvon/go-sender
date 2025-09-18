@@ -66,7 +66,7 @@ type Message struct {
 	UID         string     `json:"uid,omitempty"`          // 统一用户ID - 各平台内部适配
 }
 
-// NewSMSMessage creates a new SMS message with the specified sub-provider
+// NewSMSMessage creates a new SMS message with the specified sub-provider.
 func NewSMSMessage(subProvider string) *Message {
 	return &Message{
 		BaseMessage:     core.NewBaseMessage(core.ProviderTypeSMS),

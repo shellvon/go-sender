@@ -23,7 +23,7 @@ type Account struct {
 	// Callback is the callback URL for webhooks.
 	Callback string `json:"callback,omitempty" yaml:"callback,omitempty"`
 	// From is the default "From" address for emails.
-	From string `json:"from,omitempty" yaml:"from,omitempty"`
+	From string `json:"from,omitempty"     yaml:"from,omitempty"`
 }
 
 // Validate checks if the account is valid.

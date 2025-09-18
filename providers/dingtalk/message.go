@@ -34,6 +34,7 @@ type Message interface {
 // BaseMessage is the base message structure.
 type BaseMessage struct {
 	*core.BaseMessage
+
 	MsgType MessageType `json:"msgtype"`
 }
 

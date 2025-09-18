@@ -83,9 +83,8 @@ func getDefaultMethod(method string, reqBody io.Reader) string {
 //   - Go's HTTP client ignores Host header in req.Header and uses req.Host instead
 //   - This function automatically detects Host header (case-insensitive) and sets req.Host
 //
-// This allows users to set custom Host values for webhook/proxy scenarios
+// This allows users to set custom Host values for webhook/proxy scenarios.
 func setRequestHeaders(req *http.Request, headers map[string]string, contentType string) {
-
 	// 1. apply user headers first (they have highest priority)
 	for key, value := range headers {
 		// Special case: handle Host header separately since Go ignores it in req.Heade

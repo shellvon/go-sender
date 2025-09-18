@@ -244,7 +244,7 @@ func (mt *mailgunTransformer) validate(msg *Message, account *Account) error {
 	return nil
 }
 
-// Helper functions
+// Helper functions.
 func encodeFormData(data map[string]interface{}) ([]byte, error) {
 	// Use standard library for URL encoding
 	values := url.Values{}

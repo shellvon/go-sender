@@ -1,4 +1,3 @@
-//nolint:dupl // FileMessage 和 VoiceMessage 按设计共享相似的样板代码。
 package wecombot
 
 import (

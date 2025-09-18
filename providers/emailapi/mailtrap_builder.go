@@ -19,7 +19,7 @@ func NewMailtrapBuilder() *MailtrapBuilder {
 
 // Category sets the category for message tracking (Mailtrap specific).
 //
-// See also: CustomVariables
+// See also: CustomVariables.
 func (b *MailtrapBuilder) Category(category string) *MailtrapBuilder {
 	if b.extras == nil {
 		b.extras = make(map[string]interface{})
@@ -31,7 +31,7 @@ func (b *MailtrapBuilder) Category(category string) *MailtrapBuilder {
 // CustomVariables sets custom variables for tracking (Mailtrap specific).
 // This follows the OpenAPI specification which uses 'custom_variables' field.
 //
-// See also: Category
+// See also: Category.
 func (b *MailtrapBuilder) CustomVariables(variables map[string]interface{}) *MailtrapBuilder {
 	if b.extras == nil {
 		b.extras = make(map[string]interface{})
@@ -50,7 +50,7 @@ func (b *MailtrapBuilder) CustomArgs(args map[string]interface{}) *MailtrapBuild
 
 // TemplateUUID sets the template UUID for template-based emails.
 //
-// See also: BuildTemplateEmail, EmailTypeTemplate
+// See also: BuildTemplateEmail, EmailTypeTemplate.
 func (b *MailtrapBuilder) TemplateUUID(templateUUID string) *MailtrapBuilder {
 	b.templateID = templateUUID
 	return b
@@ -58,7 +58,7 @@ func (b *MailtrapBuilder) TemplateUUID(templateUUID string) *MailtrapBuilder {
 
 // TemplateVariables sets the template variables for template-based emails.
 //
-// See also: BuildTemplateEmail, EmailTypeTemplate, TemplateUUID
+// See also: BuildTemplateEmail, EmailTypeTemplate, TemplateUUID.
 func (b *MailtrapBuilder) TemplateVariables(variables map[string]interface{}) *MailtrapBuilder {
 	b.templateData = variables
 	return b
@@ -74,7 +74,7 @@ func (b *MailtrapBuilder) Build() *Message {
 // BuildTextEmail creates a text-only email message.
 // The resulting message will have EmailType EmailTypeText.
 //
-// See also: EmailTypeText, GetEmailType
+// See also: EmailTypeText, GetEmailType.
 func (b *MailtrapBuilder) BuildTextEmail() *Message {
 	msg := b.Build()
 	// Ensure it's a valid text email type by removing HTML if present
@@ -85,7 +85,7 @@ func (b *MailtrapBuilder) BuildTextEmail() *Message {
 // BuildHTMLEmail creates an HTML-only email message.
 // The resulting message will have EmailType EmailTypeHTML.
 //
-// See also: EmailTypeHTML, GetEmailType
+// See also: EmailTypeHTML, GetEmailType.
 func (b *MailtrapBuilder) BuildHTMLEmail() *Message {
 	msg := b.Build()
 	// Ensure it's a valid HTML email type by removing text if present
@@ -96,7 +96,7 @@ func (b *MailtrapBuilder) BuildHTMLEmail() *Message {
 // BuildTextAndHTMLEmail creates an email with both text and HTML content.
 // The resulting message will have EmailType EmailTypeTextAndHTML.
 //
-// See also: EmailTypeTextAndHTML, GetEmailType
+// See also: EmailTypeTextAndHTML, GetEmailType.
 func (b *MailtrapBuilder) BuildTextAndHTMLEmail() *Message {
 	return b.Build() // Both text and HTML should be present
 }
@@ -106,7 +106,7 @@ func (b *MailtrapBuilder) BuildTextAndHTMLEmail() *Message {
 //
 // Note: subject, text, and html fields are cleared as they should not be used with templates.
 //
-// See also: EmailTypeTemplate, GetEmailType, TemplateUUID, TemplateVariables
+// See also: EmailTypeTemplate, GetEmailType, TemplateUUID, TemplateVariables.
 func (b *MailtrapBuilder) BuildTemplateEmail() *Message {
 	msg := b.Build()
 	// Clear content fields as they're forbidden with templates

@@ -59,7 +59,6 @@ func (mt *mailtrapTransformer) transform(
 	msg *Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
-
 	// Prepare request body
 	requestBody := mt.buildRequestBody(msg, account)
 

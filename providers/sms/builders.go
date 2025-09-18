@@ -118,7 +118,7 @@ type MessageBuilder interface {
 }
 
 // BaseBuilder provides chainable methods for common SMS parameters.
-// It is generic so that each concrete builder can embed a `*BaseBuilder[*ConcreteBuilder]`
+// It is generic so that each concrete builder can embed a `*BaseBuilder[*ConcreteBuilder]`.
 type BaseBuilder[T any] struct {
 	subProvider    SubProviderType
 	mobiles        []string

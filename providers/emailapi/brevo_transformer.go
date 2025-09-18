@@ -167,7 +167,6 @@ func (bt *brevoTransformer) buildRequestBody(msg *Message, account *Account) map
 	if len(msg.Attachments) > 0 {
 		attachments := make([]BrevoAttachment, len(msg.Attachments))
 		for i, att := range msg.Attachments {
-
 			attachments[i] = BrevoAttachment{
 				Content: string(att.Content),
 				Name:    att.Filename,

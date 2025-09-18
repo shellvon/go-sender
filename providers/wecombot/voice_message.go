@@ -1,4 +1,3 @@
-//nolint:dupl // VoiceMessage and FileMessage share similar boilerplate by design.
 package wecombot
 
 import (

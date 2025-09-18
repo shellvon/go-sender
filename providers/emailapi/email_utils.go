@@ -16,7 +16,7 @@ type EmailAddress struct {
 // It supports formats like:
 // - "john@example.com"
 // - "John Doe <john@example.com>"
-// - "\"John Doe\" <john@example.com>"
+// - "\"John Doe\" <john@example.com>".
 func parseEmailAddress(addr string) EmailAddress {
 	if addr == "" {
 		return EmailAddress{}
