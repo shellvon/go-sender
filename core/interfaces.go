@@ -6,10 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 // ProviderType defines the type of a notification provider.
@@ -87,101 +84,9 @@ type SenderHealth struct {
 	Metrics   *HealthCheck                     `json:"metrics,omitempty"`
 }
 
-// Message is an interface that all specific message types must implement.
-// It ensures that messages can validate themselves before being sent.
-type Message interface {
-	// Validate checks if the message content is valid
-	Validate() error
-	// ProviderType returns the type of provider this message is intended for.
-	ProviderType() ProviderType
-
-	// GetSubProvider returns the sub-provider name (empty when not applicable).
-	GetSubProvider() string
-
-	// MsgID returns a unique id for this message (default: uuid, overridable)
-	MsgID() string
-}
-
-// DefaultMessage provides a base implementation for Message with a unique id.
-type DefaultMessage struct {
-	msgID  string                 // 可选，允许自定义消息ID，未设置时自动生成
-	Extras map[string]interface{} `json:"extras,omitempty"`
-}
-
-// BaseMessage 提供Message接口的基础实现，减少样板代码
-// 用户可以嵌入此结构体，然后只需要重写需要自定义的方法
-//
-// 最小集成示例：
-//
-//	const ProviderTypeCustomSMS ProviderType = "custom_sms"
-//
-//	// 定义自定义消息结构
-//	type CustomSMSMessage struct {
-//		*BaseMessage
-//		Phone   string `json:"phone"`
-//		Content string `json:"content"`
-//	}
-//
-//	// 创建消息的便捷函数
-//	func NewCustomSMSMessage(phone, content string) *CustomSMSMessage {
-//		return &CustomSMSMessage{
-//			BaseMessage: NewBaseMessage(ProviderTypeCustomSMS),
-//			Phone:       phone,
-//			Content:     content,
-//		}
-//	}
-//
-//	// 可选：重写验证逻辑
-//	func (m *CustomSMSMessage) Validate() error {
-//		if m.Phone == "" || m.Content == "" {
-//			return fmt.Errorf("phone and content are required")
-//		}
-//		return nil
-//	}
-//
-//	// 使用示例
-//	message := NewCustomSMSMessage("13800138000", "Hello World")
-//	// message 现在实现了完整的 Message 接口，可以直接使用
-type BaseMessage struct {
-	DefaultMessage
-
-	providerType ProviderType
-}
-
-// NewBaseMessage 创建基础消息，用户只需指定ProviderType.
-func NewBaseMessage(providerType ProviderType) *BaseMessage {
-	return &BaseMessage{
-		DefaultMessage: DefaultMessage{},
-		providerType:   providerType,
-	}
-}
-
-// ProviderType 返回提供者类型.
-func (m *BaseMessage) ProviderType() ProviderType {
-	return m.providerType
-}
-
-// GetSubProvider 默认返回空（大部分场景不需要）.
-func (m *BaseMessage) GetSubProvider() string {
-	return ""
-}
-
-// Validate 默认验证通过（可以被重写）.
-func (m *BaseMessage) Validate() error {
-	return nil
-}
-
 // LoggerAware is implemented by types that can set a logger.
 type LoggerAware interface {
 	SetLogger(Logger)
-}
-
-// MsgID returns the unique id of the message.
-func (m *DefaultMessage) MsgID() string {
-	if m.msgID == "" {
-		m.msgID = uuid.NewString()
-	}
-	return m.msgID
 }
 
 // ProviderSendOptions defines per-request parameters for Provider.Send.
@@ -423,108 +328,6 @@ const (
 	OperationDequeue = "dequeue"
 	OperationSent    = "sent"
 )
-
-// GetExtraString retrieves a string value from extras.
-func (m *DefaultMessage) GetExtraString(key string) (string, bool) {
-	if m.Extras == nil {
-		return "", false
-	}
-	if value, ok := m.Extras[key]; ok {
-		if str, okStr := value.(string); okStr {
-			return str, true
-		}
-	}
-	return "", false
-}
-
-// GetExtraStringOrDefault retrieves a string value from extras with a default fallback.
-func (m *DefaultMessage) GetExtraStringOrDefault(key, defaultValue string) string {
-	if value, ok := m.GetExtraString(key); ok && value != "" {
-		return value
-	}
-	return defaultValue
-}
-
-// GetExtraInt retrieves an integer value from extras.
-func (m *DefaultMessage) GetExtraInt(key string) (int, bool) {
-	if m.Extras == nil {
-		return 0, false
-	}
-	if value, ok := m.Extras[key]; ok {
-		switch v := value.(type) {
-		case int:
-			return v, true
-		case float64:
-			return int(v), true
-		case string:
-			if i, err := strconv.Atoi(v); err == nil {
-				return i, true
-			}
-		}
-	}
-	return 0, false
-}
-
-// GetExtraIntOrDefault retrieves an integer value from extras with a default fallback.
-func (m *DefaultMessage) GetExtraIntOrDefault(key string, defaultValue int) int {
-	if value, ok := m.GetExtraInt(key); ok {
-		return value
-	}
-	return defaultValue
-}
-
-// GetExtraBool retrieves a boolean value from extras.
-func (m *DefaultMessage) GetExtraBool(key string) (bool, bool) {
-	if m.Extras == nil {
-		return false, false
-	}
-	if value, ok := m.Extras[key]; ok {
-		if b, okBool := value.(bool); okBool {
-			return b, true
-		}
-	}
-	return false, false
-}
-
-// GetExtraBoolOrDefault retrieves a boolean value from extras with a default fallback.
-func (m *DefaultMessage) GetExtraBoolOrDefault(key string, defaultValue bool) bool {
-	if value, ok := m.GetExtraBool(key); ok {
-		return value
-	}
-	return defaultValue
-}
-
-// GetExtraFloat retrieves a float64 value from extras.
-func (m *DefaultMessage) GetExtraFloat(key string) (float64, bool) {
-	if m.Extras == nil {
-		return 0, false
-	}
-	if value, ok := m.Extras[key]; ok {
-		switch v := value.(type) {
-		case float64:
-			return v, true
-		case int:
-			return float64(v), true
-		case string:
-			if f, err := strconv.ParseFloat(v, 64); err == nil {
-				return f, true
-			}
-		}
-	}
-	return 0, false
-}
-
-// GetExtraFloatOrDefault retrieves a float64 value from extras with a default fallback.
-func (m *DefaultMessage) GetExtraFloatOrDefault(key string, defaultValue float64) float64 {
-	if value, ok := m.GetExtraFloat(key); ok {
-		return value
-	}
-	return defaultValue
-}
-
-func (m *DefaultMessage) GetSubProvider() string {
-	return ""
-}
 
 // SendResult represents the result of a send operation.
 type SendResult struct {

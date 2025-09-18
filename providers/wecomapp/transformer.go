@@ -3,7 +3,6 @@ package wecomapp
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -42,15 +41,6 @@ func (wt *wecomappTransformer) transform(
 	msg Message,
 	account *Account,
 ) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
-	if account == nil {
-		return nil, nil, errors.New("no account provided")
-	}
-
-	// 处理前验证消息
-	if err := wt.validateMessage(msg); err != nil {
-		return nil, nil, fmt.Errorf("message validation failed: %w", err)
-	}
-
 	// 直接序列化消息以保留所有字段
 	body, err := json.Marshal(msg)
 	if err != nil {
@@ -89,37 +79,6 @@ func newWecomAppTransformer() core.HTTPTransformer[*Account] {
 	return wt
 }
 
-// validateMessage 在转换前执行消息验证.
-func (wt *wecomappTransformer) validateMessage(msg Message) error {
-	if msg == nil {
-		return errors.New("message cannot be nil")
-	}
-
-	if msg.GetMsgType() == "" {
-		return errors.New("message type is required")
-	}
-
-	// 验证消息类型是否支持
-	switch msg.GetMsgType() {
-	case TypeText,
-		TypeImage,
-		TypeVoice,
-		TypeVideo,
-		TypeFile,
-		TypeNews,
-		TypeMarkdown,
-		TypeTemplateCard,
-		TypeTextCard,
-		TypeMPNews,
-		TypeMiniprogramNotice:
-		// Valid message types
-	default:
-		return fmt.Errorf("unsupported message type: %s", msg.GetMsgType())
-	}
-
-	return msg.Validate()
-}
-
 // SendRequest 代表通过企业微信应用API发送消息的请求结构
 // 它使用json.RawMessage在转换过程中保留原始消息结构.
 type SendRequest struct {
@@ -150,33 +109,6 @@ func NewWecomAppTransformer(tokenCache core.Cache[*AccessToken]) *WecomAppTransf
 		wecomappTransformer: newWecomAppTransformer().(*wecomappTransformer),
 		tokenCache:          tokenCache,
 	}
-}
-
-// Transform 简化的Transform方法，只构建基础请求.
-func (t *WecomAppTransformer) Transform(
-	ctx context.Context,
-	msg core.Message,
-	account *Account,
-) (*core.HTTPRequestSpec, core.SendResultHandler, error) {
-	// 1. 将消息转换为wecomapp Message接口
-	wecomMsg, ok := msg.(Message)
-	if !ok {
-		return nil, nil, errors.New("message is not a WeChat Work Application message")
-	}
-
-	// 2. 验证消息
-	if err := t.validateMessage(wecomMsg); err != nil {
-		return nil, nil, err
-	}
-
-	// 3. 调用原有的transform逻辑，构建基础请求
-	reqSpec, handler, err := t.wecomappTransformer.Transform(ctx, wecomMsg, account)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// 4. 返回基础的请求规格，access_token由包装器处理
-	return reqSpec, handler, nil
 }
 
 // UploadMediaWithClient 使用指定的HTTP客户端上传媒体文件.

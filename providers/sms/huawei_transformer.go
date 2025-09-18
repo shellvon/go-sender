@@ -121,7 +121,7 @@ func (t *huaweiTransformer) transformSMS(
 // 华为云要求：标准号码格式为：+{国家码}{地区码}{终端号码}.
 func (t *huaweiTransformer) formatHuaweiPhoneNumber(mobile string, regionCode int) string {
 	if regionCode == 0 {
-		regionCode = 86
+		regionCode = ChinaMainlandRegionCode
 	}
 	return fmt.Sprintf("+%d%s", regionCode, mobile)
 }

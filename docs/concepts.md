@@ -42,11 +42,21 @@ Messages are built using **fluent builder patterns** specific to each provider t
 
 **Builder Examples:**
 ```go
-// SMS Message
+// SMS Message (Builder Pattern)
 smsMsg := sms.Aliyun().To("13800138000").Content("Hello").Build()
 
-// Email Message  
-emailMsg := email.NewMessage().To("user@example.com").Subject("Hi").Body("Hello").Build()
+// SMS Message (Constructor Pattern)
+smsMsg := sms.NewSMSMessage("aliyun")
+smsMsg.Mobiles = []string{"13800138000"}
+smsMsg.Content = "Hello"
+
+// Email Message (Builder Pattern) 
+emailMsg := emailapi.Email().To("user@example.com").Subject("Hi").Body("Hello").Build()
+
+// Email Message (Constructor Pattern)
+emailMsg := emailapi.NewMessage("resend")
+emailMsg.To = []string{"user@example.com"}
+emailMsg.Subject = "Hi"
 
 // IM Message
 imMsg := wecombot.Text().Content("Notification").Build()

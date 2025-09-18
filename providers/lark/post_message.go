@@ -13,6 +13,11 @@ type PostMessage struct {
 	Content PostContent `json:"content"`
 }
 
+// Compile-time assertion: PostMessage implements Message interface.
+var (
+	_ core.Validatable = (*PostMessage)(nil)
+)
+
 // PostContent represents the content of a post message.
 type PostContent struct {
 	Post PostPayload `json:"post"`
@@ -71,7 +76,7 @@ func (b *PostBuilder) EnUS(title string, content [][]PostElement) *PostBuilder {
 // Build assembles a *PostMessage.
 func (b *PostBuilder) Build() *PostMessage {
 	return &PostMessage{
-		BaseMessage: BaseMessage{MsgType: TypePost},
+		BaseMessage: newBaseMessage(TypePost),
 		Content: PostContent{
 			Post: PostPayload{
 				ZhCN: b.zhCN,

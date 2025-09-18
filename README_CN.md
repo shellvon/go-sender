@@ -145,7 +145,9 @@ provider.Send(context.Background(), msg, nil)
 ```go
 // 1. 定义消息类型
 type CustomMessage struct {
-    core.BaseMessage
+    *core.BaseMessage
+    // 可选：如果需要额外字段支持
+    *core.WithExtraFields
     Content string `json:"content"`
 }
 

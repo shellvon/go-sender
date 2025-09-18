@@ -50,6 +50,7 @@
 - Builder API for Text SMS; provider-specific helpers (Aliyun, Tencent, …).
 - Template ID, sign, extra params per vendor.
 - Supports batch & international SMS, voice SMS (where available).
+- **Built-in ExtraFields support** for provider-specific configurations (regions, endpoints, voice settings).
 
 ---
 
@@ -94,6 +95,23 @@ msg := sms.Aliyun().
     TemplateID("SMS_1234567").
     Sign("YourSign").
     Build()
+```
+
+### Creating Messages with Constructor (Not Recommend)
+
+> The main reason constructors are not recommended is that ordinary users cannot accurately know which additional fields are available or their specific meanings. In contrast, the Builder pattern provides type safety and detailed documentation hints.
+
+```go
+// Create message using constructor
+msg := sms.NewSMSMessage("aliyun")
+msg.Mobiles = []string{"13800138000"}
+msg.Content = "Hello from go-sender!"
+msg.SignName = "YourSign"
+
+// Use extra fields for provider-specific settings
+msg.SetExtra("region", "cn-hangzhou")
+msg.SetExtra("endpoint", "dysmsapi.aliyuncs.com")
+msg.SetExtra("play_times", 3)  // For voice SMS
 ```
 
 ---

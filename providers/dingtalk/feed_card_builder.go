@@ -35,7 +35,7 @@ func (b *FeedCardMsgBuilder) AddLink(title, messageURL, picURL string) *FeedCard
 // Build assembles a *FeedCardMessage.
 func (b *FeedCardMsgBuilder) Build() *FeedCardMessage {
 	return &FeedCardMessage{
-		BaseMessage: BaseMessage{MsgType: TypeFeedCard},
+		BaseMessage: newBaseMessage(TypeFeedCard),
 		FeedCard: FeedCardContent{
 			Links: b.links,
 		},

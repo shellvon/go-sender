@@ -46,7 +46,7 @@ func channelMap() map[string]string {
 // Message for ServerChan
 // Reference: https://sct.ftqq.com/
 type Message struct {
-	core.DefaultMessage
+	*core.BaseMessage
 
 	Title   string `json:"title"`   // Message title, required, max 32 chars
 	Content string `json:"desp"`    // Message content (desp), optional, supports Markdown, max 32KB
@@ -61,9 +61,11 @@ func NewMessage(title, content string) *Message {
 	return Text().Title(title).Content(content).Build()
 }
 
-func (m *Message) ProviderType() core.ProviderType {
-	return core.ProviderTypeServerChan
-}
+// Compile-time assertion: Message implements Message interface.
+var (
+	_ core.Message     = (*Message)(nil)
+	_ core.Validatable = (*Message)(nil)
+)
 
 // Validate validates the message.
 func (m *Message) Validate() error {
@@ -173,11 +175,12 @@ func (b *TextBuilder) OpenID(openid string) *TextBuilder {
 // Build constructs the Message from the builder.
 func (b *TextBuilder) Build() *Message {
 	msg := &Message{
-		Title:   b.title,
-		Content: b.content,
-		Short:   b.short,
-		NoIP:    b.noIP,
-		OpenID:  b.openid,
+		BaseMessage: core.NewBaseMessage(core.ProviderTypeServerChan),
+		Title:       b.title,
+		Content:     b.content,
+		Short:       b.short,
+		NoIP:        b.noIP,
+		OpenID:      b.openid,
 	}
 	if b.channel != "" {
 		msg.Channel = msg.translateChannel(b.channel)

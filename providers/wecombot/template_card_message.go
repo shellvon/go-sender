@@ -251,7 +251,6 @@ func (m *TemplateCardMessage) validateHorizontalContentList() error {
 		if item.Value == "" {
 			return core.NewParamError(fmt.Sprintf("horizontal_content_list 第 %d 项：value 不能为空", i))
 		}
-		// 移除长度限制检查，让API服务端决策
 		switch item.Type {
 		case HorizontalTypeURL:
 			if item.URL == "" {
@@ -297,7 +296,6 @@ func (m *TemplateCardMessage) validateJumpList() error {
 				fmt.Sprintf("jump_list 第 %d 项：无效的 type %d，必须是 0、1 或 2", i, jump.Type),
 			)
 		}
-		// 移除长度限制检查，让API服务端决策
 	}
 	return nil
 }
@@ -373,18 +371,6 @@ func (m *TemplateCardMessage) validateImageTextArea() error {
 			)
 		}
 	}
-	return nil
-}
-
-// validateMainTitleLength 验证主标题长度（已移除长度限制，让API服务端决策）.
-func (m *TemplateCardMessage) validateMainTitleLength() error {
-	// 移除长度限制检查，让API服务端决策
-	return nil
-}
-
-// validateSubTitleTextLength 验证副标题长度（已移除长度限制，让API服务端决策）.
-func (m *TemplateCardMessage) validateSubTitleTextLength() error {
-	// 移除长度限制检查，让API服务端决策
 	return nil
 }
 

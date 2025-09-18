@@ -13,6 +13,11 @@ type ImageMessage struct {
 	Content ImageContent `json:"content"`
 }
 
+// Compile-time assertion: TextMessage implements Message interface.
+var (
+	_ core.Validatable = (*ImageMessage)(nil)
+)
+
 // ImageContent represents the content of an image message.
 type ImageContent struct {
 	Image ImagePayload `json:"image"`
@@ -40,7 +45,7 @@ func (b *ImageBuilder) ImageKey(key string) *ImageBuilder {
 // Build assembles a *ImageMessage.
 func (b *ImageBuilder) Build() *ImageMessage {
 	return &ImageMessage{
-		BaseMessage: BaseMessage{MsgType: TypeImage},
+		BaseMessage: newBaseMessage(TypeImage),
 		Content:     ImageContent{Image: ImagePayload{ImageKey: b.imageKey}},
 	}
 }

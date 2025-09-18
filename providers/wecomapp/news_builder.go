@@ -116,21 +116,23 @@ func (b *NewsBuilder) DuplicateCheckInterval(interval int) *NewsBuilder {
 
 // Build assembles a ready-to-send *NewsMessage.
 func (b *NewsBuilder) Build() *NewsMessage {
-	return &NewsMessage{
-		BaseMessage: BaseMessage{
-			CommonFields: CommonFields{
-				ToUser:                 b.toUser,
-				ToParty:                b.toParty,
-				ToTag:                  b.toTag,
-				Safe:                   b.safe,
-				EnableIDTrans:          b.enableIDTrans,
-				EnableDuplicateCheck:   b.enableDuplicateCheck,
-				DuplicateCheckInterval: b.duplicateCheckInterval,
-			},
-			MsgType: TypeNews,
-		},
+	msg := &NewsMessage{
+		BaseMessage: newBaseMessage(TypeNews),
 		News: NewsMessageContent{
 			Articles: b.articles,
 		},
 	}
+
+	// 设置CommonFields
+	msg.CommonFields = CommonFields{
+		ToUser:                 b.toUser,
+		ToParty:                b.toParty,
+		ToTag:                  b.toTag,
+		Safe:                   b.safe,
+		EnableIDTrans:          b.enableIDTrans,
+		EnableDuplicateCheck:   b.enableDuplicateCheck,
+		DuplicateCheckInterval: b.duplicateCheckInterval,
+	}
+
+	return msg
 }

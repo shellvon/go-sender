@@ -3,6 +3,7 @@ package telegram_test
 import (
 	"testing"
 
+	"github.com/shellvon/go-sender/core"
 	"github.com/shellvon/go-sender/providers/telegram"
 )
 
@@ -59,8 +60,11 @@ func TestBuilder_Validate(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		if err := tt.msg.Validate(); err != nil {
-			t.Errorf("Validate failed for %s: %v", tt.name, err)
+		// 安全地验证消息（如果支持）
+		if validatable, ok := any(tt.msg).(core.Validatable); ok {
+			if err := validatable.Validate(); err != nil {
+				t.Errorf("Validate failed for %s: %v", tt.name, err)
+			}
 		}
 	}
 }

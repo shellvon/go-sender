@@ -78,21 +78,23 @@ func (b *TextBuilder) DuplicateCheckInterval(interval int) *TextBuilder {
 
 // Build 组装一个可发送的*TextMessage.
 func (b *TextBuilder) Build() *TextMessage {
-	return &TextMessage{
-		BaseMessage: BaseMessage{
-			CommonFields: CommonFields{
-				ToUser:                 b.toUser,
-				ToParty:                b.toParty,
-				ToTag:                  b.toTag,
-				Safe:                   b.safe,
-				EnableIDTrans:          b.enableIDTrans,
-				EnableDuplicateCheck:   b.enableDuplicateCheck,
-				DuplicateCheckInterval: b.duplicateCheckInterval,
-			},
-			MsgType: TypeText,
-		},
+	msg := &TextMessage{
+		BaseMessage: newBaseMessage(TypeText),
 		Text: TextMessageContent{
 			Content: b.content,
 		},
 	}
+
+	// 设置CommonFields
+	msg.CommonFields = CommonFields{
+		ToUser:                 b.toUser,
+		ToParty:                b.toParty,
+		ToTag:                  b.toTag,
+		Safe:                   b.safe,
+		EnableIDTrans:          b.enableIDTrans,
+		EnableDuplicateCheck:   b.enableDuplicateCheck,
+		DuplicateCheckInterval: b.duplicateCheckInterval,
+	}
+
+	return msg
 }

@@ -41,7 +41,7 @@ func (b *NewsBuilder) Articles(arts []*Article) *NewsBuilder {
 // Build assembles a *NewsMessage.
 func (b *NewsBuilder) Build() *NewsMessage {
 	return &NewsMessage{
-		BaseMessage: BaseMessage{MsgType: TypeNews},
+		BaseMessage: newBaseMessage(TypeNews),
 		News: NewsContent{
 			Articles: b.articles,
 		},

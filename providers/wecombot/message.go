@@ -37,19 +37,21 @@ type Message interface {
 
 // BaseMessage 是消息的基础结构。
 type BaseMessage struct {
-	core.DefaultMessage
+	*core.BaseMessage
 
 	MsgType MessageType `json:"msgtype"`
+}
+
+// newBaseMessage Creates a new BaseMessage instance and sets the provider type to WecomBot.
+func newBaseMessage(msgType MessageType) BaseMessage {
+	return BaseMessage{
+		BaseMessage: core.NewBaseMessage(core.ProviderTypeWecombot),
+		MsgType:     msgType,
+	}
 }
 
 // GetMsgType 实现 Message 接口，返回消息类型。
 // 返回值：MessageType - 当前消息的类型。
 func (m *BaseMessage) GetMsgType() MessageType {
 	return m.MsgType
-}
-
-// ProviderType 返回提供者类型，表示企业微信群机器人。
-// 返回值：core.ProviderType - 提供者类型，固定为 ProviderTypeWecombot。
-func (m *BaseMessage) ProviderType() core.ProviderType {
-	return core.ProviderTypeWecombot
 }

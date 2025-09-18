@@ -4,7 +4,7 @@ import "github.com/shellvon/go-sender/core"
 
 // BaseMessage represents a base message with common fields for all Telegram messages.
 type BaseMessage struct {
-	core.DefaultMessage
+	*core.BaseMessage
 
 	MsgType MessageType `json:"msgtype"`
 
@@ -39,10 +39,13 @@ type BaseMessage struct {
 	ReplyMarkup ReplyMarkup `json:"reply_markup,omitempty"`
 }
 
-func (m *BaseMessage) ProviderType() core.ProviderType {
-	return core.ProviderTypeTelegram
-}
+// Compile-time assertion: BaseMessage implements Message interface.
+var (
+	_ core.Message = (*BaseMessage)(nil)
+)
 
+// GetMsgType Implements the Message interface.
+// Returns the message type.
 func (m *BaseMessage) GetMsgType() MessageType {
 	return m.MsgType
 }

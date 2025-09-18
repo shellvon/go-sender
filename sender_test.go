@@ -331,11 +331,16 @@ func TestSender_UnregisterProvider_AfterClose(t *testing.T) {
 	}
 }
 
-type senderDummyMsg struct{ core.DefaultMessage }
+type senderDummyMsg struct{ *core.BaseMessage }
 
-func (senderDummyMsg) Validate() error                 { return nil }
-func (senderDummyMsg) ProviderType() core.ProviderType { return "dummy" }
-func (senderDummyMsg) GetSubProvider() string          { return "" }
+func newSenderDummyMsg() *senderDummyMsg {
+	return &senderDummyMsg{
+		BaseMessage: core.NewBaseMessage("dummy"),
+	}
+}
+
+func (m *senderDummyMsg) Validate() error        { return nil }
+func (m *senderDummyMsg) GetSubProvider() string { return "" }
 
 // provider that marks call.
 type hookRecordProvider struct {
@@ -384,7 +389,7 @@ func TestSender_HookExecutionOrder(t *testing.T) {
 
 	_, err := s.SendWithResult(
 		context.Background(),
-		&senderDummyMsg{},
+		newSenderDummyMsg(),
 		core.WithSendBeforeHooks(perBefore),
 		core.WithSendAfterHooks(perAfter),
 	)
@@ -414,7 +419,7 @@ func TestSender_BeforeHookAbort(t *testing.T) {
 	called := false
 	s.RegisterProvider("dummy", &hookRecordProvider{called: &called}, mw)
 
-	_, err := s.SendWithResult(context.Background(), &senderDummyMsg{})
+	_, err := s.SendWithResult(context.Background(), newSenderDummyMsg())
 	if !errors.Is(err, abortErr) {
 		t.Fatalf("expected abort error, got %v", err)
 	}
@@ -437,7 +442,7 @@ func TestSender_HookAfterOnError(t *testing.T) {
 	s := gosender.NewSender()
 	s.RegisterProvider("dummy", &hookRecordProvider{called: nil, sendErr: errProvider}, mw)
 
-	_, err := s.SendWithResult(context.Background(), &senderDummyMsg{})
+	_, err := s.SendWithResult(context.Background(), newSenderDummyMsg())
 	if !errors.Is(err, errProvider) {
 		t.Fatalf("expected provider error, got %v", err)
 	}

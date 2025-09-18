@@ -35,7 +35,7 @@ func (b *LinkBuilder) PicURL(url string) *LinkBuilder { b.picURL = url; return b
 // Build assembles a *LinkMessage.
 func (b *LinkBuilder) Build() *LinkMessage {
 	return &LinkMessage{
-		BaseMessage: BaseMessage{MsgType: TypeLink},
+		BaseMessage: newBaseMessage(TypeLink),
 		Link: LinkContent{
 			Title:      b.title,
 			Text:       b.text,

@@ -8,12 +8,15 @@ import (
 
 // TextMessage represents a text message for Lark/Feishu.
 type TextMessage struct {
-	*core.DefaultMessage // Embed DefaultMessage
-
-	BaseMessage *BaseMessage
+	BaseMessage
 
 	Content TextContent `json:"content"`
 }
+
+// Compile-time assertion: TextMessage implements Message interface.
+var (
+	_ core.Validatable = (*TextMessage)(nil)
+)
 
 // TextContent represents the content of a text message.
 type TextContent struct {
@@ -37,9 +40,8 @@ func (b *TextBuilder) Content(text string) *TextBuilder {
 // Build assembles a *TextMessage.
 func (b *TextBuilder) Build() *TextMessage {
 	return &TextMessage{
-		DefaultMessage: &core.DefaultMessage{}, // Correctly initialize embedded struct pointer
-		BaseMessage:    &BaseMessage{MsgType: TypeText},
-		Content:        TextContent{Text: b.text},
+		BaseMessage: newBaseMessage(TypeText),
+		Content:     TextContent{Text: b.text},
 	}
 }
 
@@ -51,11 +53,6 @@ func NewTextMessage(text string) *TextMessage {
 // GetMsgType returns the message type.
 func (m *TextMessage) GetMsgType() MessageType {
 	return TypeText
-}
-
-// ProviderType returns the provider type.
-func (m *TextMessage) ProviderType() core.ProviderType {
-	return core.ProviderTypeLark
 }
 
 // Validate validates the text message.

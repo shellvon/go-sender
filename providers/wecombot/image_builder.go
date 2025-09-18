@@ -41,7 +41,7 @@ func (b *ImageBuilder) MD5(hash string) *ImageBuilder {
 // 返回值：*ImageMessage - 基于 ImageBuilder 配置创建的图片消息实例。
 func (b *ImageBuilder) Build() *ImageMessage {
 	return &ImageMessage{
-		BaseMessage: BaseMessage{MsgType: TypeImage},
+		BaseMessage: newBaseMessage(TypeImage),
 		Image: ImageContent{
 			Base64: b.base64,
 			MD5:    b.md5,

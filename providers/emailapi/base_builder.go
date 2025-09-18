@@ -1,6 +1,10 @@
 package emailapi
 
-import "time"
+import (
+	"time"
+
+	"github.com/shellvon/go-sender/core"
+)
 
 // BaseBuilder provides chainable methods for common EmailAPI message fields.
 type BaseBuilder[T any] struct {
@@ -104,22 +108,28 @@ func (b *BaseBuilder[T]) ScheduledAt(scheduledAt *time.Time) T {
 
 // BuildMessage constructs a *Message from the builder fields.
 func (b *BaseBuilder[T]) BuildMessage(subProvider string) *Message {
-	return &Message{
-		SubProvider:  subProvider,
-		To:           b.to,
-		Cc:           b.cc,
-		Bcc:          b.bcc,
-		From:         b.from,
-		ReplyTo:      b.replyTo,
-		Subject:      b.subject,
-		Text:         b.text,
-		HTML:         b.html,
-		Attachments:  b.attachments,
-		Headers:      b.headers,
-		CallbackURL:  b.callbackURL,
-		Extras:       b.extras,
-		TemplateID:   b.templateID,
-		TemplateData: b.templateData,
-		ScheduledAt:  b.scheduledAt,
+	msg := &Message{
+		BaseMessage:     core.NewBaseMessage(core.ProviderTypeEmailAPI),
+		WithExtraFields: core.NewWithExtraFields(),
+		SubProvider:     subProvider,
+		To:              b.to,
+		Cc:              b.cc,
+		Bcc:             b.bcc,
+		From:            b.from,
+		ReplyTo:         b.replyTo,
+		Subject:         b.subject,
+		Text:            b.text,
+		HTML:            b.html,
+		Attachments:     b.attachments,
+		Headers:         b.headers,
+		CallbackURL:     b.callbackURL,
+		TemplateID:      b.templateID,
+		TemplateData:    b.templateData,
+		ScheduledAt:     b.scheduledAt,
 	}
+	// Copy extras from builder to message
+	if b.extras != nil {
+		msg.Extras = b.extras
+	}
+	return msg
 }

@@ -71,7 +71,8 @@ func (t EmailType) String() string {
 //
 // Use GetEmailType() to determine the message content type.
 type Message struct {
-	core.DefaultMessage
+	*core.BaseMessage
+	*core.WithExtraFields // Add extra fields support for provider-specific configurations
 
 	// Sub-provider specification (required for EmailAPI due to multiple platforms)
 	SubProvider string `json:"sub_provider"` // 子提供商类型（emailjs, resend等）
@@ -103,9 +104,6 @@ type Message struct {
 
 	// ScheduledAt is the time to send the message.
 	ScheduledAt *time.Time `json:"scheduled_at,omitempty"` // 统一发送时间 - 各平台内部适配
-
-	// Extensions for platform-specific parameters
-	Extras map[string]interface{} `json:"extras"` // 扩展字段（平台特定参数）
 }
 
 // Attachment represents an email attachment.
@@ -121,13 +119,17 @@ type Attachment struct {
 	Disposition string `json:"disposition,omitempty"` // "attachment" or "inline"
 }
 
+// Compile-time assertions: Message implements core.Message, core.SubProviderAware, and core.Validatable.
 var (
-	_ core.Message = (*Message)(nil)
+	_ core.Message          = (*Message)(nil)
+	_ core.SubProviderAware = (*Message)(nil)
+	_ core.Validatable      = (*Message)(nil)
 )
 
-// ProviderType returns the provider type for this message.
-func (m *Message) ProviderType() core.ProviderType {
-	return core.ProviderTypeEmailAPI
+// GetSubProvider Implements the SubProviderAware interface.
+// Returns the sub-provider type.
+func (m *Message) GetSubProvider() string {
+	return m.SubProvider
 }
 
 // Validate checks if the Message is valid.
@@ -138,12 +140,17 @@ func (m *Message) Validate() error {
 	return nil
 }
 
-func (m *Message) MsgID() string {
-	return m.DefaultMessage.MsgID()
-}
-
 // GetEmailType determines the email type based on content characteristics.
 //
+// NewMessage creates a new EmailAPI message with the specified sub-provider.
+func NewMessage(subProvider string) *Message {
+	return &Message{
+		BaseMessage:     core.NewBaseMessage(core.ProviderTypeEmailAPI),
+		WithExtraFields: core.NewWithExtraFields(),
+		SubProvider:     subProvider,
+	}
+}
+
 // See also: EmailTypeText, EmailTypeHTML, EmailTypeTextAndHTML, EmailTypeTemplate
 func (m *Message) GetEmailType() EmailType {
 	hasText := m.Text != ""

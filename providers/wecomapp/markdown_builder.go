@@ -84,21 +84,23 @@ func (b *MarkdownBuilder) DuplicateCheckInterval(interval int) *MarkdownBuilder 
 
 // Build 组装一个可发送的*MarkdownMessage.
 func (b *MarkdownBuilder) Build() *MarkdownMessage {
-	return &MarkdownMessage{
-		BaseMessage: BaseMessage{
-			CommonFields: CommonFields{
-				ToUser:                 b.toUser,
-				ToParty:                b.toParty,
-				ToTag:                  b.toTag,
-				Safe:                   b.safe,
-				EnableIDTrans:          b.enableIDTrans,
-				EnableDuplicateCheck:   b.enableDuplicateCheck,
-				DuplicateCheckInterval: b.duplicateCheckInterval,
-			},
-			MsgType: TypeMarkdown,
-		},
+	msg := &MarkdownMessage{
+		BaseMessage: newBaseMessage(TypeMarkdown),
 		Markdown: MarkdownMessageContent{
 			Content: b.content,
 		},
 	}
+
+	// 设置CommonFields
+	msg.CommonFields = CommonFields{
+		ToUser:                 b.toUser,
+		ToParty:                b.toParty,
+		ToTag:                  b.toTag,
+		Safe:                   b.safe,
+		EnableIDTrans:          b.enableIDTrans,
+		EnableDuplicateCheck:   b.enableDuplicateCheck,
+		DuplicateCheckInterval: b.duplicateCheckInterval,
+	}
+
+	return msg
 }

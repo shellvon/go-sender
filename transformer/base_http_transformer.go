@@ -68,8 +68,14 @@ func (t *BaseHTTPTransformer[M, C]) CanTransform(msg core.Message) bool {
 	if m.ProviderType() != t.providerType {
 		return false
 	}
-	if t.subProvider != "" && m.GetSubProvider() != t.subProvider {
-		return false
+	if t.subProvider != "" {
+		if aware, ok := any(m).(core.SubProviderAware); ok {
+			if aware.GetSubProvider() != t.subProvider {
+				return false
+			}
+		} else if t.subProvider != "" {
+			return false // 需要子提供商但消息不支持
+		}
 	}
 	return true
 }
@@ -188,7 +194,10 @@ func NewSimpleHTTPTransformer[M core.Message, C core.Selectable](
 ) *BaseHTTPTransformer[M, C] {
 	opts := []Option[M, C]{
 		AddBeforeHook(func(_ context.Context, msg M, _ C) error {
-			return msg.Validate()
+			if validatable, ok := any(msg).(core.Validatable); ok {
+				return validatable.Validate()
+			}
+			return nil
 		}),
 		WithHandler(handler),
 	}

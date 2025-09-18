@@ -3,7 +3,6 @@ package sms
 import (
 	"fmt"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -32,9 +31,13 @@ const (
 // Minimum number of digits required for a valid mobile number (international standard).
 const minMobileDigits = 7
 
+// ChinaMainlandRegionCode is the region code for China mainland.
+const ChinaMainlandRegionCode = 86
+
 // Message represents an SMS message.
 type Message struct {
-	core.DefaultMessage
+	*core.BaseMessage
+	*core.WithExtraFields // Add extra fields support for provider-specific configurations
 
 	// Message type and category
 	Type     MessageType     `json:"type"`     // 消息类型（文本/彩信/语音）
@@ -61,15 +64,24 @@ type Message struct {
 	ScheduledAt *time.Time `json:"scheduled_at,omitempty"` // 统一发送时间 - 各平台内部适配
 	Extend      string     `json:"extend,omitempty"`       // 统一扩展字段 - 各平台内部适配
 	UID         string     `json:"uid,omitempty"`          // 统一用户ID - 各平台内部适配
-
-	// Extensions for platform-specific parameters
-	Extras map[string]interface{} `json:"extras"` // 扩展字段（平台特定参数）
 }
 
-// ProviderType returns the provider type for this message.
-func (m *Message) ProviderType() core.ProviderType {
-	return core.ProviderTypeSMS
+// NewSMSMessage creates a new SMS message with the specified sub-provider
+func NewSMSMessage(subProvider string) *Message {
+	return &Message{
+		BaseMessage:     core.NewBaseMessage(core.ProviderTypeSMS),
+		WithExtraFields: core.NewWithExtraFields(),
+		SubProvider:     subProvider,
+		RegionCode:      ChinaMainlandRegionCode,
+	}
 }
+
+// Compile-time assertion: Message implements Message interface.
+var (
+	_ core.Message          = (*Message)(nil)
+	_ core.Validatable      = (*Message)(nil)
+	_ core.SubProviderAware = (*Message)(nil)
+)
 
 // Validate validates the SMS message.
 func (m *Message) Validate() error {
@@ -164,86 +176,6 @@ func (m *Message) SubProviderType() SubProviderType {
 	return SubProviderType(m.SubProvider)
 }
 
-// GetExtraString returns a string value from extras.
-func (m *Message) GetExtraString(key string) (string, bool) {
-	if m.Extras == nil {
-		return "", false
-	}
-	if value, exists := m.Extras[key]; exists {
-		if str, ok := value.(string); ok {
-			return str, true
-		}
-	}
-	return "", false
-}
-
-// GetExtraStringOrDefault returns a string value from extras, or the default value if not found.
-func (m *Message) GetExtraStringOrDefault(key, defaultValue string) string {
-	if value, exists := m.GetExtraString(key); exists {
-		return value
-	}
-	return defaultValue
-}
-
-// GetExtraStringOrDefaultEmpty returns a string value from extras, or empty string if not found.
-func (m *Message) GetExtraStringOrDefaultEmpty(key string) string {
-	return m.GetExtraStringOrDefault(key, "")
-}
-
-// GetExtraInt returns an int value from extras.
-func (m *Message) GetExtraInt(key string) (int, bool) {
-	if m.Extras == nil {
-		return 0, false
-	}
-	if value, exists := m.Extras[key]; exists {
-		switch v := value.(type) {
-		case int:
-			return v, true
-		case float64:
-			return int(v), true
-		case string:
-			if i, err := strconv.Atoi(v); err == nil {
-				return i, true
-			}
-		}
-	}
-	return 0, false
-}
-
-// GetExtraIntOrDefault returns an int value from extras, or the default value if not found.
-func (m *Message) GetExtraIntOrDefault(key string, defaultValue int) int {
-	if value, exists := m.GetExtraInt(key); exists {
-		return value
-	}
-	return defaultValue
-}
-
-// GetExtraBool returns a bool value from extras.
-func (m *Message) GetExtraBool(key string) (bool, bool) {
-	if m.Extras == nil {
-		return false, false
-	}
-	if value, exists := m.Extras[key]; exists {
-		switch v := value.(type) {
-		case bool:
-			return v, true
-		case string:
-			return strings.ToLower(v) == "true", true
-		case int:
-			return v != 0, true
-		}
-	}
-	return false, false
-}
-
-// GetExtraBoolOrDefault returns a bool value from extras, or the default value if not found.
-func (m *Message) GetExtraBoolOrDefault(key string, defaultValue bool) bool {
-	if value, exists := m.GetExtraBool(key); exists {
-		return value
-	}
-	return defaultValue
-}
-
 // GetSubProvider returns the sub-provider type.
 func (m *Message) GetSubProvider() string {
 	return m.SubProvider
@@ -259,7 +191,7 @@ func (m *Message) GetMsgType() string {
 // - SignName: use message's SignName if present, otherwise extract from content, otherwise use account's default
 // - CallbackURL: use message's callback if present, otherwise use account's default
 // - RegionCode: set to 86 (China) if not set
-// - Extras: initialize if nil.
+// - WithExtraFields: initialize if nil.
 func (m *Message) ApplyCommonDefaults(account *Account) {
 	// Setup SignName: use message's SignName if present, otherwise extract from content, otherwise use account's default
 	if m.SignName == "" {
@@ -282,13 +214,13 @@ func (m *Message) ApplyCommonDefaults(account *Account) {
 		m.CallbackURL = account.Callback
 	}
 
-	// Setup Extras for platform-specific fields
-	if m.Extras == nil {
-		m.Extras = make(map[string]interface{})
+	// Setup Extras for platform-qq fields
+	if m.WithExtraFields == nil {
+		m.WithExtraFields = core.NewWithExtraFields()
 	}
 
 	// Setup default region code
 	if m.RegionCode == 0 {
-		m.RegionCode = 86
+		m.RegionCode = ChinaMainlandRegionCode
 	}
 }

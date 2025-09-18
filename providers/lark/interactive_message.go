@@ -2,6 +2,8 @@ package lark
 
 import (
 	"errors"
+
+	"github.com/shellvon/go-sender/core"
 )
 
 // InteractiveMessage represents a Lark/Feishu card message (schema 2.0).
@@ -14,6 +16,11 @@ type InteractiveMessage struct {
 
 	Card Card `json:"card"`
 }
+
+// Compile-time assertion: InteractiveMessage implements Message interface.
+var (
+	_ core.Validatable = (*InteractiveMessage)(nil)
+)
 
 type Card struct {
 	Schema string `json:"schema"` // should be "2.0"
@@ -324,7 +331,7 @@ func (b *InteractiveBuilder) BodyVerticalAlign(align string) *InteractiveBuilder
 }
 func (b *InteractiveBuilder) Build() *InteractiveMessage {
 	return &InteractiveMessage{
-		BaseMessage: BaseMessage{MsgType: TypeInteractive},
+		BaseMessage: newBaseMessage(TypeInteractive),
 		Card: Card{
 			Schema:   "2.0",
 			Config:   b.config,

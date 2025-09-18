@@ -1,11 +1,22 @@
 package lark
 
+import (
+	"errors"
+
+	"github.com/shellvon/go-sender/core"
+)
+
 // ShareChatMessage represents a share chat message for Lark/Feishu.
 type ShareChatMessage struct {
 	BaseMessage
 
 	Content ShareChatContent `json:"content"`
 }
+
+// Compile-time assertion: ShareChatMessage implements Message interface.
+var (
+	_ core.Validatable = (*ShareChatMessage)(nil)
+)
 
 // NewShareChatMessage creates a new ShareChatMessage.
 // chatID is the id of the chat to share.
@@ -40,7 +51,14 @@ func (b *ShareChatMsgBuilder) ChatID(id string) *ShareChatMsgBuilder {
 // Build assembles a *ShareChatMessage.
 func (b *ShareChatMsgBuilder) Build() *ShareChatMessage {
 	return &ShareChatMessage{
-		BaseMessage: BaseMessage{MsgType: TypeShareChat},
+		BaseMessage: newBaseMessage(TypeShareChat),
 		Content:     ShareChatContent{ChatID: b.chatID},
 	}
+}
+
+func (m *ShareChatMessage) Validate() error {
+	if m.Content.ChatID == "" {
+		return errors.New("chatID is required")
+	}
+	return nil
 }

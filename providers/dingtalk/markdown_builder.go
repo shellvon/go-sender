@@ -50,7 +50,7 @@ func (b *MarkdownBuilder) AtAll() *MarkdownBuilder { b.isAtAll = true; return b 
 // Build assembles a *MarkdownMessage.
 func (b *MarkdownBuilder) Build() *MarkdownMessage {
 	return &MarkdownMessage{
-		BaseMessage: BaseMessage{MsgType: TypeMarkdown},
+		BaseMessage: newBaseMessage(TypeMarkdown),
 		Markdown: MarkdownContent{
 			Title:     b.title,
 			Text:      b.text,

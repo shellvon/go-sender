@@ -55,7 +55,7 @@ func (b *TextBuilder) MentionMobiles(mobiles []string) *TextBuilder {
 // 返回值：*TextMessage - 基于 TextBuilder 配置创建的文本消息实例。
 func (b *TextBuilder) Build() *TextMessage {
 	return &TextMessage{
-		BaseMessage: BaseMessage{MsgType: TypeText},
+		BaseMessage: newBaseMessage(TypeText),
 		Text: TextContent{
 			Content:             b.content,
 			MentionedList:       b.mentionedList,

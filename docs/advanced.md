@@ -54,16 +54,37 @@ import (
 // Step 1: Define provider type constant
 const CustomProviderType core.ProviderType = "custom"
 
-// Step 2: Create your message type using BaseMessage
+// Step 2: Create your message type
+//
+// Understanding go-sender's Message Interface Design:
+//
+// Any message only needs to implement the core.Message interface to work with go-sender:
+//   type Message interface {
+//       ProviderType() ProviderType  // For automatic routing
+//       MsgID() string              // For tracking and deduplication
+//   }
+//
+// You have two approaches:
+//
+// Approach 1: Implement core.Message yourself (Full Control)
+//   - Implement ProviderType() and MsgID() methods manually
+//   - Complete freedom over struct design
+//   - More code but maximum flexibility
+//
+// Approach 2: Embed core.BaseMessage (Recommended)
+//   - Provides default implementations of ProviderType() and MsgID()
+//   - Only requirement: call core.NewBaseMessage(yourProviderType) during construction
+//   - Less code, easier to maintain, follows established patterns
+//
+// We recommend Approach 2 for most cases:
 type CustomMessage struct {
-    core.BaseMessage  // Provides default implementations
+    *core.BaseMessage  // Provides default implementations
+    
+    // Optional: Add extra fields support for provider-specific configurations
+    // *core.WithExtraFields  // Uncomment if you need extra fields like SMS/EmailAPI
+    
     Content   string `json:"content"`
     Recipient string `json:"recipient"`
-}
-
-// Only need to implement ProviderType() - BaseMessage handles the rest
-func (m *CustomMessage) ProviderType() core.ProviderType {
-    return CustomProviderType
 }
 
 // Optional: Add validation logic
@@ -141,7 +162,7 @@ func main() {
     
     // Create message with BaseMessage convenience
     msg := &CustomMessage{
-        BaseMessage: *core.NewBaseMessage(CustomProviderType),
+        BaseMessage: core.NewBaseMessage(CustomProviderType),
         Content:     "Hello World",
         Recipient:   "user123",
     }
@@ -155,6 +176,45 @@ func main() {
     }
 }
 ```
+
+#### Alternative: Implementing core.Message Directly
+
+For comparison, here's how you would implement the same message without embedding `core.BaseMessage`:
+
+```go
+// Full manual implementation
+type ManualCustomMessage struct {
+    // No embedding - implement everything yourself
+    msgID        string `json:"-"`
+    providerType core.ProviderType `json:"-"`
+    
+    Content   string `json:"content"`
+    Recipient string `json:"recipient"`
+}
+
+// Implement core.Message interface manually
+func (m *ManualCustomMessage) ProviderType() core.ProviderType {
+    return m.providerType
+}
+
+func (m *ManualCustomMessage) MsgID() string {
+    if m.msgID == "" {
+        m.msgID = generateUniqueID() // You need to implement this
+    }
+    return m.msgID
+}
+
+// Constructor (required for proper initialization)
+func NewManualCustomMessage(content, recipient string) *ManualCustomMessage {
+    return &ManualCustomMessage{
+        providerType: CustomProviderType,  // Critical: set the provider type
+        Content:      content,
+        Recipient:    recipient,
+    }
+}
+```
+
+**Key Takeaway**: Both approaches work perfectly with go-sender's routing system. The `core.BaseMessage` approach is simpler and follows established patterns, but you have complete freedom to implement `core.Message` however you prefer.
 
 ### Understanding the Architecture
 
@@ -293,6 +353,59 @@ sender.Send(ctx, msg, core.WithSendHTTPClient(client))
 ## Extending Message Types
 
 You can define your own message types for new providers or advanced scenarios.
+
+### Using ExtraFields for Provider-Specific Configuration
+
+For providers that need additional configuration parameters (like SMS regions, API endpoints), you can use the optional `ExtraFields` mechanism:
+
+```go
+import "github.com/shellvon/go-sender/core"
+
+// Message with extra fields support
+type AdvancedMessage struct {
+    *core.BaseMessage
+    *core.WithExtraFields  // Add extra fields capability
+    
+    Content   string `json:"content"`
+    Recipient string `json:"recipient"`
+}
+
+// Usage example
+func example() {
+    msg := &AdvancedMessage{
+        BaseMessage:     core.NewBaseMessage(MyProviderType),
+        WithExtraFields: core.NewWithExtraFields(),
+        Content:         "Hello",
+        Recipient:       "user123",
+    }
+    
+    // Set provider-specific configurations
+    msg.SetExtra("region", "us-west-1")
+    msg.SetExtra("priority", "high")
+    
+    // Access extra fields in transformer
+    if region := msg.GetExtraStringOrDefault("region", "us-east-1"); region != "" {
+        // Use region-specific endpoint
+    }
+}
+```
+
+**When to use ExtraFields:**
+- ✅ **SMS providers**: Region, endpoint, caller ID, voice settings
+- ✅ **Email APIs**: Template variables, personalization data, delivery settings  
+- ❌ **Simple webhooks**: Usually not needed, use regular struct fields instead
+
+**Alternative: Interface checking pattern**
+```go
+// In your transformer
+func (t *myTransformer) Transform(ctx context.Context, msg core.Message, account *Account) {
+    // Check if message supports extra fields
+    if extraAware, ok := msg.(core.ExtraFieldsAware); ok {
+        region := extraAware.GetExtraStringOrDefault("region", "default")
+        // Use region-specific logic
+    }
+}
+```
 
 ---
 

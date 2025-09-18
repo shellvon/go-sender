@@ -48,7 +48,7 @@ func (b *TextBuilder) AtAll() *TextBuilder {
 // Build assembles a *TextMessage ready for sending.
 func (b *TextBuilder) Build() *TextMessage {
 	return &TextMessage{
-		BaseMessage: BaseMessage{MsgType: TypeText},
+		BaseMessage: newBaseMessage(TypeText),
 		Text: TextContent{
 			Content:   b.content,
 			AtMobiles: b.atMobiles,

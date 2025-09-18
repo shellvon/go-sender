@@ -101,7 +101,7 @@ func (b *TemplateCardBuilder) Build() *TemplateCardMessage {
 	}
 
 	return &TemplateCardMessage{
-		BaseMessage:  BaseMessage{MsgType: TypeTemplateCard},
+		BaseMessage:  newBaseMessage(TypeTemplateCard),
 		TemplateCard: tpl,
 	}
 }

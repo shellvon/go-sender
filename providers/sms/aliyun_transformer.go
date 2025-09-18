@@ -294,7 +294,7 @@ func (t *aliyunTransformer) transformVoice(
 //   - 国际/港澳台消息：国际区号+号码，例如 852000012****。
 //   - 接收测试短信的手机号：必须先在控制台绑定测试手机号后才可以发送。
 func (t *aliyunTransformer) formatPhoneNumber(mobile string, regionCode int) string {
-	if regionCode == 0 || regionCode == 86 {
+	if regionCode == 0 || regionCode == ChinaMainlandRegionCode {
 		return mobile
 	}
 	// 国际/港澳台消息：国际区号+号码，例如 852000012****。

@@ -55,7 +55,7 @@ func (b *MarkdownBuilder) Build() *MarkdownMessage {
 		msgType = MessageType("markdown_v2")
 	}
 	return &MarkdownMessage{
-		BaseMessage: BaseMessage{MsgType: msgType},
+		BaseMessage: newBaseMessage(msgType),
 		Markdown: MarkdownContent{
 			Content: b.content,
 			Version: b.version,

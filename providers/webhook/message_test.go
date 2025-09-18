@@ -139,16 +139,6 @@ func TestWebhookBuilder_MultipleQueryParams(t *testing.T) {
 		}
 	}
 }
-
-func TestWebhookBuilder_Validate(t *testing.T) {
-	msg := webhook.Webhook().Body([]byte(`{"test": "data"}`)).Build()
-
-	err := msg.Validate()
-	if err != nil {
-		t.Errorf("Expected no validation error, got %v", err)
-	}
-}
-
 func TestWebhookBuilder_ProviderType(t *testing.T) {
 	msg := webhook.Webhook().Body([]byte(`{"test": "data"}`)).Build()
 

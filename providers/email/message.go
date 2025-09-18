@@ -12,7 +12,7 @@ import (
 // ProviderType method is used for Sender routing
 // Validate method is used for parameter validation.
 type Message struct {
-	core.DefaultMessage
+	*core.BaseMessage
 
 	From        string   // Sender's email address (supports "Name <address>" format)
 	To          []string // List of recipient email addresses (supports "Name <address>" format)
@@ -25,8 +25,10 @@ type Message struct {
 	Attachments []string // List of attachment file paths
 }
 
+// Compile-time assertion: Message implements core.Message and core.Validatable.
 var (
-	_ core.Message = (*Message)(nil)
+	_ core.Message     = (*Message)(nil)
+	_ core.Validatable = (*Message)(nil)
 )
 
 // NewMessage creates a new email message with required fields only.
@@ -35,11 +37,6 @@ func NewMessage(to []string, body string) *Message {
 		To(to...).
 		Body(body).
 		Build()
-}
-
-// ProviderType returns the provider type for this message.
-func (m *Message) ProviderType() core.ProviderType {
-	return core.ProviderTypeEmail
 }
 
 // Validate checks the validity of the Message fields.
@@ -164,6 +161,7 @@ func (b *Builder) AddAttach(files ...string) *Builder {
 // Build creates the Message instance from the builder.
 func (b *Builder) Build() *Message {
 	msg := &Message{
+		BaseMessage: core.NewBaseMessage(core.ProviderTypeEmail),
 		To:          b.recipients,
 		Body:        b.body,
 		Subject:     b.subject,

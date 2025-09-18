@@ -10,7 +10,7 @@ import (
 
 // Message represents a webhook message.
 type Message struct {
-	core.DefaultMessage
+	*core.BaseMessage
 
 	Body        []byte            `json:"body"`                   // Request body
 	Headers     map[string]string `json:"headers,omitempty"`      // Additional headers to send with the request
@@ -18,6 +18,11 @@ type Message struct {
 	PathParams  map[string]string `json:"path_params,omitempty"`  // Path variables to replace in URL
 	QueryParams url.Values        `json:"query_params,omitempty"` // Query parameters to add to URL
 }
+
+// Compile-time assertion: Message implements Message interface.
+var (
+	_ core.Message = (*Message)(nil)
+)
 
 // buildURL constructs the final URL by replacing path variables and adding query parameters.
 func (m *Message) buildURL(baseURL string) (string, error) {
@@ -50,19 +55,6 @@ func (m *Message) buildURL(baseURL string) (string, error) {
 	parsedURL.RawQuery = query.Encode()
 
 	return parsedURL.String(), nil
-}
-
-// Validate validates the webhook message.
-// Method can be empty and may be set by the sender/provider if not specified.
-// If provider config method is empty, it will be set to http.MethodPost.
-// so this method will always return nil.
-func (m *Message) Validate() error {
-	return nil
-}
-
-// ProviderType returns the provider type for webhook messages.
-func (m *Message) ProviderType() core.ProviderType {
-	return core.ProviderTypeWebhook
 }
 
 // Builder provides a chainable API for constructing webhook messages.
@@ -140,6 +132,7 @@ func (b *Builder) Queries(params map[string]string) *Builder {
 // Build creates the webhook Message instance.
 func (b *Builder) Build() *Message {
 	return &Message{
+		BaseMessage: core.NewBaseMessage(core.ProviderTypeWebhook),
 		Body:        b.body,
 		Headers:     b.headers,
 		Method:      b.method,

@@ -29,6 +29,7 @@
 - JSON / HTTP based – no SMTP required.
 - Multiple accounts with load-balancing strategies.
 - Supports text & HTML body, attachments, custom headers, templates.
+- **Built-in ExtraFields support** for provider-specific configurations.
 
 ---
 
@@ -86,6 +87,20 @@ msg := emailapi.Email().
     Body(`<h1>Hello</h1><p>Thanks for joining!</p>`).
     From("no-reply@example.com").
     Build()
+```
+
+### Creating Messages with Constructor
+
+```go
+// Create message using constructor
+msg := emailapi.NewMessage("resend")
+msg.To = []string{"alice@example.com"}
+msg.Subject = "Welcome"
+msg.HTML = `<h1>Hello</h1><p>Thanks for joining!</p>`
+
+// Use extra fields for provider-specific settings
+msg.SetExtra("delivery_time", "2024-01-01T10:00:00Z")
+msg.SetExtra("tags", []string{"newsletter", "welcome"})
 ```
 
 ---

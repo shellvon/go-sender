@@ -133,7 +133,9 @@ For complex authentication, custom protocols, or special requirements:
 ```go
 // 1. Define your message type
 type CustomMessage struct {
-    core.BaseMessage
+    *core.BaseMessage
+    // Optional: Add extra fields support if needed
+    *core.WithExtraFields
     Content string `json:"content"`
 }
 

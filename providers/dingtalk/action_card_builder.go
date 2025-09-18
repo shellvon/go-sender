@@ -74,7 +74,7 @@ func (b *ActionCardBuilder) Buttons(btns []ActionCardButton) *ActionCardBuilder 
 // Build assembles a *ActionCardMessage.
 func (b *ActionCardBuilder) Build() *ActionCardMessage {
 	return &ActionCardMessage{
-		BaseMessage: BaseMessage{MsgType: TypeActionCard},
+		BaseMessage: newBaseMessage(TypeActionCard),
 		ActionCard: ActionCardContent{
 			Title:          b.title,
 			Text:           b.text,

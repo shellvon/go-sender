@@ -1,5 +1,7 @@
 package telegram
 
+import "github.com/shellvon/go-sender/core"
+
 // baseBuilder provides chainable methods common to all Telegram message builders.
 // It follows the same self-type generic pattern used in the SMS module so that each
 // concrete builder can embed *baseBuilder[*ConcreteBuilder] and every chain call
@@ -93,6 +95,7 @@ func (b *baseBuilder[T]) DisableNotification(disable bool) T {
 // toBaseMessage converts builder state into a ready-to-use BaseMessage struct.
 func (b *baseBuilder[T]) toBaseMessage(msgType MessageType) BaseMessage {
 	return BaseMessage{
+		BaseMessage:          core.NewBaseMessage(core.ProviderTypeTelegram),
 		MsgType:              msgType,
 		ChatID:               b.chatID,
 		DisableNotification:  b.disableNotification,

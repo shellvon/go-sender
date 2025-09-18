@@ -253,7 +253,7 @@ func (t *tencentTransformer) transformVoice(
 // formatTencentPhone 格式化手机号，始终+开头，国内强制+86，国际为+regionCode.
 func (t *tencentTransformer) formatTencentPhone(mobile string, regionCode int) string {
 	if regionCode == 0 {
-		regionCode = 86
+		regionCode = ChinaMainlandRegionCode
 	}
 	return fmt.Sprintf("+%d%s", regionCode, mobile)
 }

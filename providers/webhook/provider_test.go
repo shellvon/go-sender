@@ -13,11 +13,13 @@ import (
 
 // invalidMessage is a test message that doesn't implement webhook.Message.
 type invalidMessage struct {
-	core.DefaultMessage
+	*core.BaseMessage
 }
 
-func (m *invalidMessage) ProviderType() core.ProviderType {
-	return "invalid"
+func newInvalidMessage() *invalidMessage {
+	return &invalidMessage{
+		BaseMessage: core.NewBaseMessage("invalid"),
+	}
 }
 
 func (m *invalidMessage) Validate() error {
@@ -338,7 +340,7 @@ func TestProvider_Send_InvalidMessageType(t *testing.T) {
 		t.Fatalf("Failed to create provider: %v", err)
 	}
 
-	msg := &invalidMessage{}
+	msg := newInvalidMessage()
 
 	_, err = provider.Send(context.Background(), msg, nil)
 	if err == nil {

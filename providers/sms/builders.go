@@ -78,6 +78,8 @@ package sms
 
 import (
 	"time"
+
+	"github.com/shellvon/go-sender/core"
 )
 
 // SubProviderType represents the specific SMS service provider.
@@ -117,7 +119,6 @@ type MessageBuilder interface {
 
 // BaseBuilder provides chainable methods for common SMS parameters.
 // It is generic so that each concrete builder can embed a `*BaseBuilder[*ConcreteBuilder]`
-// and all链式 methods将返回具体的 builder 类型，避免 "跳回" 基类的问题。
 type BaseBuilder[T any] struct {
 	subProvider    SubProviderType
 	mobiles        []string
@@ -281,24 +282,26 @@ func (b *BaseBuilder[T]) Template(id string, params map[string]string) T {
 // Build assembles the final *Message with all已设置字段.
 func (b *BaseBuilder[T]) Build() *Message {
 	msg := &Message{
-		Type:           b.msgType,
-		Category:       b.category,
-		SubProvider:    string(b.subProvider),
-		Mobiles:        b.mobiles,
-		Content:        b.content,
-		SignName:       b.signName,
-		TemplateID:     b.templateID,
-		TemplateParams: b.templateParams,
-		ParamsOrder:    b.paramsOrder,
-		RegionCode:     b.regionCode,
-		CallbackURL:    b.callbackURL,
-		ScheduledAt:    b.scheduledAt,
-		Extend:         b.extend,
-		UID:            b.uid,
+		BaseMessage:     core.NewBaseMessage(core.ProviderTypeSMS),
+		WithExtraFields: core.NewWithExtraFields(),
+		Type:            b.msgType,
+		Category:        b.category,
+		SubProvider:     string(b.subProvider),
+		Mobiles:         b.mobiles,
+		Content:         b.content,
+		SignName:        b.signName,
+		TemplateID:      b.templateID,
+		TemplateParams:  b.templateParams,
+		ParamsOrder:     b.paramsOrder,
+		RegionCode:      b.regionCode,
+		CallbackURL:     b.callbackURL,
+		ScheduledAt:     b.scheduledAt,
+		Extend:          b.extend,
+		UID:             b.uid,
 	}
 
-	// Merge extras into Message.Extras
-	if len(b.extras) > 0 {
+	// Copy extras from builder to message
+	if b.extras != nil {
 		msg.Extras = b.extras
 	}
 

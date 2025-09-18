@@ -37,12 +37,8 @@ func (b *ResendMessageBuilder) Tags(tags []ResendTag) *ResendMessageBuilder {
 // Build returns the constructed *Message for Resend, with tags in Extras["tags"] as []ResendTag.
 func (b *ResendMessageBuilder) Build() *Message {
 	msg := b.BuildMessage(string(SubProviderResend))
-	extra := map[string]interface{}{}
 	if b.tags != nil {
-		extra[resendTagsKey] = b.tags
-	}
-	if len(extra) > 0 {
-		msg.Extras = extra
+		msg.Extras[resendTagsKey] = b.tags
 	}
 	return msg
 }

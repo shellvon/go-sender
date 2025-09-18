@@ -93,20 +93,24 @@ func (c *CommonFields) ValidateCommonFields() error {
 
 // BaseMessage 企业微信应用的基础消息结构.
 type BaseMessage struct {
-	core.DefaultMessage
+	*core.BaseMessage
 	CommonFields
 
 	MsgType MessageType `json:"msgtype"`
 }
 
-// GetMsgType 实现Message接口.
-func (m *BaseMessage) GetMsgType() MessageType {
-	return m.MsgType
+// newBaseMessage Creates a new BaseMessage instance and sets the provider type to WecomApp.
+func newBaseMessage(msgType MessageType) BaseMessage {
+	return BaseMessage{
+		BaseMessage: core.NewBaseMessage(core.ProviderTypeWecomApp),
+		MsgType:     msgType,
+	}
 }
 
-// ProviderType 返回企业微信应用的provider类型.
-func (m *BaseMessage) ProviderType() core.ProviderType {
-	return core.ProviderTypeWecomApp
+// GetMsgType Implements the Message interface.
+// Returns the message type.
+func (m *BaseMessage) GetMsgType() MessageType {
+	return m.MsgType
 }
 
 // setAgentID 设置消息的agent ID（仅内部使用）.
@@ -114,7 +118,8 @@ func (m *BaseMessage) setAgentID(agentID string) {
 	m.AgentID = agentID
 }
 
-// Validate 对基础消息执行基本验证.
+// Validate Implements the Validatable interface.
+// Validates the message.
 func (m *BaseMessage) Validate() error {
 	if m.MsgType == "" {
 		return errors.New("message type is required")

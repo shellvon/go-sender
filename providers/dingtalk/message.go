@@ -33,8 +33,7 @@ type Message interface {
 
 // BaseMessage is the base message structure.
 type BaseMessage struct {
-	core.DefaultMessage
-
+	*core.BaseMessage
 	MsgType MessageType `json:"msgtype"`
 }
 
@@ -42,6 +41,15 @@ func (m *BaseMessage) GetMsgType() MessageType {
 	return m.MsgType
 }
 
-func (m *BaseMessage) ProviderType() core.ProviderType {
-	return core.ProviderTypeDingtalk
+// Compile-time assertion: BaseMessage implements Message interface.
+var (
+	_ core.Message = (*BaseMessage)(nil)
+)
+
+// newBaseMessage Creates a new BaseMessage instance and sets the provider type to DingTalk.
+func newBaseMessage(msgType MessageType) BaseMessage {
+	return BaseMessage{
+		BaseMessage: core.NewBaseMessage(core.ProviderTypeDingtalk),
+		MsgType:     msgType,
+	}
 }
