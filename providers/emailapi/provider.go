@@ -1,3 +1,18 @@
+// Package emailapi provides email API notification support for go-sender.
+//
+// This package enables sending emails via various email API services including
+// Brevo, EmailJS, MailerSend, Mailgun, Mailjet, Mailtrap, and Resend.
+// It provides a unified interface for different email service providers with
+// automatic failover and load balancing capabilities.
+//
+// Basic usage:
+//
+//	account := emailapi.NewBrevoAccount("your-api-key", "sender@example.com")
+//	provider, err := emailapi.NewProvider([]*emailapi.Account{account})
+//	msg := emailapi.NewMessage([]string{"recipient@example.com"}, "Subject")
+//	provider.Send(context.Background(), msg, nil)
+//
+// For more examples, see the package README and examples directory.
 package emailapi
 
 import (

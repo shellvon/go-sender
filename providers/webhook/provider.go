@@ -1,3 +1,18 @@
+// Package webhook provides generic webhook notification support for go-sender.
+//
+// This package enables sending HTTP requests to arbitrary webhook endpoints,
+// supporting various HTTP methods, headers, and body formats. It provides
+// flexible configuration for custom integrations and third-party services
+// that accept webhook notifications.
+//
+// Basic usage:
+//
+//	endpoint := webhook.NewEndpoint("https://hooks.example.com/webhook", "POST")
+//	provider, err := webhook.NewProvider([]*webhook.Endpoint{endpoint})
+//	msg := webhook.Webhook().Body([]byte(`{"message": "Hello!"}`)).Build()
+//	provider.Send(context.Background(), msg, nil)
+//
+// For more examples, see the package README and examples directory.
 package webhook
 
 import (

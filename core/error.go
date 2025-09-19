@@ -355,6 +355,8 @@ func NewSenderErrorf(code ErrorCode, format string, args ...interface{}) *Sender
 }
 
 // Error returns the error message.
+// Error returns a formatted string representation of the SenderError.
+// It includes the error code, message, and underlying cause if present.
 func (e *SenderError) Error() string {
 	if e.Cause != nil {
 		return fmt.Sprintf("[%d] %s: %v", e.Code, e.Message, e.Cause)
@@ -362,6 +364,7 @@ func (e *SenderError) Error() string {
 	return fmt.Sprintf("[%d] %s", e.Code, e.Message)
 }
 
+// Unwrap returns the underlying cause of the error for error unwrapping.
 func (e *SenderError) Unwrap() error {
 	return e.Cause
 }

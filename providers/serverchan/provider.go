@@ -1,3 +1,17 @@
+// Package serverchan provides ServerChan notification support for go-sender.
+//
+// This package enables sending notifications via ServerChan (Server酱), a popular
+// WeChat notification service for developers. It supports sending text messages
+// with optional markdown formatting to WeChat through ServerChan's API.
+//
+// Basic usage:
+//
+//	account := serverchan.NewAccount("your-sckey")
+//	provider, err := serverchan.NewProvider([]*serverchan.Account{account})
+//	msg := serverchan.NewMessage("Alert", "Something happened!")
+//	provider.Send(context.Background(), msg, nil)
+//
+// For more examples, see the package README and examples directory.
 package serverchan
 
 import (

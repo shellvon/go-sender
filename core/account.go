@@ -1,4 +1,3 @@
-// Package core provides the core functionality for the go-sender library.
 package core
 
 import "errors"
@@ -98,6 +97,7 @@ func (a *BaseAccount) GetMeta() *AccountMeta { return &a.AccountMeta }
 // GetCredentials returns the embedded credentials.
 func (a *BaseAccount) GetCredentials() *Credentials { return &a.Credentials }
 
+// Validate checks if the account configuration is valid.
 func (a *BaseAccount) Validate() error {
 	if a.AccountMeta.Name == "" {
 		return errors.New("name is required")

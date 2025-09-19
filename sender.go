@@ -28,7 +28,7 @@ type Option func(*Sender)
 // WithLogger sets a custom logger for the Sender.
 //
 //   - logger: a custom logger implementing core.Logger interface.
-//   - If nil, the default logger is retained (NoOpLogger).
+//   - If nil, the default logger is [core.NoOpLogger].
 func WithLogger(logger core.Logger) Option {
 	return func(s *Sender) {
 		if logger != nil {
@@ -39,8 +39,8 @@ func WithLogger(logger core.Logger) Option {
 
 // NewSender creates a new Sender instance with optional configurations.
 //
-//   - opts: optional configuration options (e.g., WithLogger, WithMiddleware, etc.)
-//   - The default logger is NoOpLogger. Use WithLogger to set a custom logger.
+//   - opts: optional configuration options (e.g., [WithLogger], etc.)
+//   - The default logger is [core.NoOpLogger]. Use [WithLogger] to set a custom logger.
 func NewSender(opts ...Option) *Sender {
 	s := &Sender{
 		providers:         make(map[core.ProviderType]*core.ProviderDecorator),
@@ -99,13 +99,13 @@ func (s *Sender) UnregisterProvider(providerType core.ProviderType) error {
 }
 
 // Send sends a message and only returns error information.
-// It is a thin wrapper around Send that discards the detailed SendResult.
+// It is a thin wrapper around [SendWithResult] that discards the detailed [SendResult].
 func (s *Sender) Send(ctx context.Context, message core.Message, opts ...core.SendOption) error {
 	_, err := s.SendWithResult(ctx, message, opts...)
 	return err
 }
 
-// SendWithResult sends a message and returns the detailed SendResult.
+// SendWithResult sends a message and returns the detailed [SendResult].
 func (s *Sender) SendWithResult(
 	ctx context.Context,
 	message core.Message,

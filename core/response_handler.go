@@ -50,7 +50,7 @@ type ResponseHandlerConfig struct {
 
 // ---------------- Core handler -------------------------------------------
 
-// NewSendResultHandler builds a SendResultHandler based on cfg.
+// NewSendResultHandler builds a [SendResultHandler] based on cfg.
 //
 
 func NewSendResultHandler(cfg *ResponseHandlerConfig) SendResultHandler {

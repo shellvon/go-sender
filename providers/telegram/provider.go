@@ -1,3 +1,14 @@
+// Package telegram provides telegram notification support for go-sender.
+//
+// This package implements the go-sender Provider interface for telegram
+// messaging service, enabling seamless integration with the go-sender
+// notification system.
+//
+// Basic usage:
+//
+//	provider, err := telegram.NewProvider([]*telegram.Account{account})
+//	msg := telegram.Text().Content("Hello World").Build()
+//	provider.Send(context.Background(), msg, nil)
 package telegram
 
 import (

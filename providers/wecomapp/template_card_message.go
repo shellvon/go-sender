@@ -189,7 +189,7 @@ func (m *TemplateCardMessage) Validate() error {
 		return err
 	}
 
-	// BaseMessage.Validate() already checks for agentid and target fields
+	// [BaseMessage.Validate] already checks for agentid and target fields
 
 	if err := m.validateCardType(); err != nil {
 		return err

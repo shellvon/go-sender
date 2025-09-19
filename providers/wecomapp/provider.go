@@ -1,3 +1,18 @@
+// Package wecomapp provides WeChat Work Application notification support for go-sender.
+//
+// This package enables sending rich messages through WeChat Work (企业微信) applications
+// to users and groups. It supports various message types including text, markdown,
+// media, news, template cards, miniprogram notices, and more. The package provides
+// comprehensive WeChat Work API integration with automatic token management.
+//
+// Basic usage:
+//
+//	account := wecomapp.NewAccount("corp-id", "agent-id", "secret")
+//	provider, err := wecomapp.NewProvider([]*wecomapp.Account{account})
+//	msg := wecomapp.Text().ToUser("user123").Content("Hello!").Build()
+//	provider.Send(context.Background(), msg, nil)
+//
+// For more examples, see the package README and examples directory.
 package wecomapp
 
 import (

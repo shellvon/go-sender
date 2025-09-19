@@ -1,3 +1,22 @@
+// Package core defines the fundamental interfaces and types for go-sender.
+//
+// This package contains the core abstractions that all providers implement,
+// including Provider, Message, SendOptions, and middleware interfaces.
+// It serves as the foundation for the entire go-sender ecosystem.
+//
+// Key interfaces:
+//   - Provider: The main interface for sending messages
+//   - Message: Interface that all message types must implement
+//   - Queue: Interface for message queuing systems
+//   - RateLimiter: Interface for rate limiting implementations
+//
+// Basic usage:
+//
+//	sender := gosender.NewSender()
+//	sender.RegisterProvider(core.ProviderTypeDingtalk, provider, nil)
+//	sender.Send(context.Background(), message)
+//
+// For more examples, see the package documentation and examples directory.
 package core
 
 import (
@@ -95,7 +114,7 @@ type ProviderSendOptions struct {
 }
 
 // Provider is the interface that all providers must implement.
-// It returns a detailed SendResult along with error (if any).
+// It returns a detailed [SendResult] along with error (if any).
 type Provider interface {
 	Send(ctx context.Context, msg Message, opts *ProviderSendOptions) (*SendResult, error)
 	// Name returns the unique name of the provider.
@@ -129,7 +148,7 @@ type Schedulable interface {
 
 // QueueItem represents an item to be processed within a notification queue.
 type QueueItem struct {
-	ID          string // Unique message id, recommended to use message.MsgID()
+	ID          string // Unique message id, recommended to use [Message.MsgID]
 	Provider    string
 	Message     Message
 	Priority    int
@@ -140,7 +159,7 @@ type QueueItem struct {
 	Callback func(*SendResult, error)
 }
 
-// Compare determines the priority order for QueueItem.
+// Compare determines the priority order for [QueueItem].
 // A smaller Priority value indicates higher priority.
 // If priorities are equal, items created earlier have higher precedence.
 func (q *QueueItem) Compare(other *QueueItem) bool {

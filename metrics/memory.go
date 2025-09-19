@@ -1,4 +1,3 @@
-// Package metrics provides metrics collection functionality for the go-sender library.
 package metrics
 
 import (

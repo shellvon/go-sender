@@ -1,3 +1,18 @@
+// Package lark provides Lark/Feishu notification support for go-sender.
+//
+// This package enables sending rich messages to Lark (Feishu) groups and users
+// via webhook bots, supporting text, post, image, interactive, and share chat messages.
+// It provides comprehensive support for Lark's messaging capabilities with
+// automatic message type routing and formatting.
+//
+// Basic usage:
+//
+//	account := lark.NewAccount("your-webhook-token")
+//	provider, err := lark.NewProvider([]*lark.Account{account})
+//	msg := lark.Text().Content("Hello from go-sender!").Build()
+//	provider.Send(context.Background(), msg, nil)
+//
+// For more examples, see the package README and examples directory.
 package lark
 
 import (

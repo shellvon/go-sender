@@ -26,22 +26,22 @@ type EmailType int
 const (
 	// EmailTypeText indicates email with text content only.
 	//
-	// See also: GetEmailType.
+	// See also: [GetEmailType].
 	EmailTypeText EmailType = iota
 
 	// EmailTypeHTML indicates email with HTML content only.
 	//
-	// See also: GetEmailType.
+	// See also: [GetEmailType].
 	EmailTypeHTML
 
 	// EmailTypeTextAndHTML indicates email with both text and HTML content.
 	//
-	// See also: GetEmailType.
+	// See also: [GetEmailType].
 	EmailTypeTextAndHTML
 
 	// EmailTypeTemplate indicates email using template-based content.
 	//
-	// See also: GetEmailType, TemplateID, TemplateData.
+	// See also: [GetEmailType], [TemplateID], [TemplateData].
 	EmailTypeTemplate
 )
 
@@ -69,7 +69,7 @@ func (t EmailType) String() string {
 // - TextAndHTML: contains both text and HTML content
 // - Template: uses template-based content generation
 //
-// Use GetEmailType() to determine the message content type.
+// Use [GetEmailType] to determine the message content type.
 type Message struct {
 	*core.BaseMessage
 	*core.WithExtraFields // Add extra fields support for provider-specific configurations
@@ -150,7 +150,7 @@ func (m *Message) Validate() error {
 }
 
 // GetEmailType determines the email type based on content characteristics.
-// See also: EmailTypeText, EmailTypeHTML, EmailTypeTextAndHTML, EmailTypeTemplate.
+// See also: [EmailTypeText], [EmailTypeHTML], [EmailTypeTextAndHTML], [EmailTypeTemplate].
 func (m *Message) GetEmailType() EmailType {
 	hasText := m.Text != ""
 	hasHTML := m.HTML != ""

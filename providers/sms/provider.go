@@ -1,3 +1,18 @@
+// Package sms provides SMS notification support for go-sender.
+//
+// This package enables sending SMS messages via multiple Chinese SMS providers
+// including Aliyun, Tencent, Huawei, Juhe, Luosimao, SMSBao, Submail, UCP,
+// VolcEngine, Yunpian, and Yuntongxun. It provides a unified interface with
+// automatic provider selection, template support, and failover capabilities.
+//
+// Basic usage:
+//
+//	account := sms.NewAliyunAccount("access-key", "access-secret", "sign-name")
+//	provider, err := sms.NewProvider([]*sms.Account{account})
+//	msg := sms.NewMessage([]string{"13800138000"}, "Your code: 123456")
+//	provider.Send(context.Background(), msg, nil)
+//
+// For more examples, see the package README and examples directory.
 package sms
 
 import (

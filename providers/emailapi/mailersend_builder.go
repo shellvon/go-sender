@@ -34,7 +34,7 @@ func (b *MailerSendBuilder) Tags(tags []string) *MailerSendBuilder {
 //	    "company": "ACME Corp",
 //	})
 //
-// See also: GetEmailType, EmailTypeTemplate, TemplateData.
+// See also: [GetEmailType], [EmailTypeTemplate], [TemplateData].
 func (b *MailerSendBuilder) Personalize(email string, data map[string]interface{}) *MailerSendBuilder {
 	if b.templateData == nil {
 		b.templateData = make(map[string]interface{})

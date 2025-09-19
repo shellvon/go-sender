@@ -1,3 +1,18 @@
+// Package dingtalk provides DingTalk notification support for go-sender.
+//
+// This package enables sending rich messages to DingTalk groups via custom robots,
+// supporting text, markdown, link cards, action cards, and feed cards with optional
+// security signature verification.
+//
+// Basic usage:
+//
+//	provider, err := dingtalk.NewProvider([]*dingtalk.Account{
+//	    dingtalk.NewAccount("your-access-token"),
+//	})
+//	msg := dingtalk.Text().Content("Hello World").Build()
+//	provider.Send(context.Background(), msg, nil)
+//
+// For more examples, see the package README and examples directory.
 package dingtalk
 
 import (
