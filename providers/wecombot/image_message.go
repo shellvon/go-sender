@@ -34,11 +34,12 @@ type ImageMessage struct {
 // NewImageMessage 创建一个新的 ImageMessage 实例。
 // 基于企业微信机器人 API 的 SendImageParams
 // 参考：https://developer.work.weixin.qq.com/document/path/91770#%E5%9B%BE%E7%89%87%E7%B1%BB%E5%9E%8B
-// 参数：
-//   - base64 string - 图片的 Base64 编码内容（必需）。
-//   - md5 string - 图片的 MD5 哈希值（必需）。
 //
-// 返回值：*ImageMessage - 新创建的图片消息实例。
+// 参数：
+//   - base64 string - 图片的 Base64 编码内容（必需）
+//   - md5 string - 图片的 MD5 哈希值（必需）
+//
+// 返回值：*ImageMessage - 新创建的图片消息实例.
 func NewImageMessage(base64, md5 string) *ImageMessage {
 	return Image().Base64(base64).MD5(md5).Build()
 }

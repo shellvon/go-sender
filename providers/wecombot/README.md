@@ -30,6 +30,7 @@
 ```go
 import (
     "context"
+    "log"
     "github.com/shellvon/go-sender/providers/wecombot"
 )
 
@@ -37,9 +38,17 @@ import (
 account := wecombot.NewAccount("your-webhook-key")
 provider, _ := wecombot.NewProvider([]*wecombot.Account{account})
 
-// 构建并发送消息
-msg := wecombot.Text().Content("Hello from go-sender!").Build()
-provider.Send(context.Background(), msg, nil)
+// 发送文本消息
+textMsg := wecombot.Text().Content("Hello from go-sender!").Build()
+provider.Send(context.Background(), textMsg, nil)
+
+// 🎉 发送图片消息 - 超级简单！
+imageMsg, err := wecombot.ImageFromFile("/path/to/screenshot.png")
+if err != nil {
+    log.Printf("图片消息创建失败: %v", err)
+    return
+}
+provider.Send(context.Background(), imageMsg, nil)
 ```
 
 ---
@@ -71,12 +80,39 @@ msg := wecombot.Markdown().
 ```
 
 ### 图片消息 (`wecombot.Image()`)
+
+**🎉 便捷方式（推荐）**
+```go
+// 方式1：直接从文件路径创建（最简单）
+msg, err := wecombot.ImageFromFile("/path/to/image.jpg")
+if err != nil {
+    log.Printf("创建图片消息失败: %v", err)
+    return
+}
+
+// 方式2：从字节数据创建（自动编码和计算MD5）
+imageData := []byte{...} // 图片的原始字节
+msg, err := wecombot.ImageFromBytes(imageData)
+
+// 方式3：从Base64字符串创建（自动计算MD5，支持data URL前缀）
+base64Str := "data:image/jpeg;base64,/9j/4AAQ..." // 支持带前缀
+msg, err := wecombot.ImageFromBase64(base64Str)
+```
+
+**传统方式（兼容现有代码）**
 ```go
 msg := wecombot.Image().
     Base64(imgBase64).
     MD5(imgMD5).
     Build()
 ```
+
+**✨ 便捷API特性：**
+- 🔄 **自动计算MD5** - 无需手动计算图片哈希值
+- 🧹 **智能前缀处理** - 自动清理 `data:image/jpeg;base64,` 等前缀  
+- 📏 **大小验证** - 自动检查2MB文件大小限制
+- 🔍 **格式检查** - 支持 jpg, jpeg, png, gif, bmp, webp 格式
+- 💬 **详细错误** - 提供明确的错误信息，便于调试
 
 ### 图文消息 (`wecombot.News()`)
 ```go
@@ -149,20 +185,40 @@ provider, err := wecombot.New(config)
 
 ## 🔧 高级功能
 
-### 自动上传媒体文件
+### 自动处理媒体文件
 
-对于文件和语音消息，支持自动上传功能：
+各种消息类型都提供了便捷的文件处理功能：
 
 ```go
+// 图片消息 - 智能处理（推荐）
+msg, err := wecombot.ImageFromFile("/path/to/screenshot.png")
+if err != nil {
+    log.Printf("图片处理失败: %v", err)
+    return
+}
+
 // 文件消息 - 自动上传
 msg := wecombot.File().LocalPath("/path/to/document.pdf").Build()
 
 // 语音消息 - 自动上传  
 msg := wecombot.Voice().LocalPath("/path/to/voice.amr").Build()
+```
 
-// 图片消息 - 手动上传后使用
-mediaID, _ := provider.UploadMedia(ctx, "image.jpg", fileBytes)
-msg := wecombot.Image().MediaID(mediaID).Build()
+**🔥 图片消息的多种使用场景：**
+```go
+// 场景1：监控告警截图
+alertImg, _ := wecombot.ImageFromFile("/tmp/cpu_monitor.png")
+
+// 场景2：处理用户上传的图片数据
+userImageData := getUserUploadedImageBytes()
+userImg, _ := wecombot.ImageFromBytes(userImageData)
+
+// 场景3：处理前端传来的Base64图片
+frontendData := "data:image/jpeg;base64,/9j/4AAQ..." 
+webImg, _ := wecombot.ImageFromBase64(frontendData)
+
+// 场景4：兼容现有代码（传统方式）
+legacyImg := wecombot.Image().Base64(imgB64).MD5(imgMD5).Build()
 ```
 
 ### 与 Sender 集成
@@ -190,6 +246,12 @@ sender.Send(context.Background(), msg)
 - 使用 `@all` 提醒所有人
 - 支持通过用户ID或手机号提醒特定用户
 - 文件和语音消息不支持 @提醒
+
+### 图片API使用建议
+- 🔥 **优先使用便捷API**：`ImageFromFile`、`ImageFromBytes`、`ImageFromBase64`
+- ⚡ **自动处理**：新API自动处理MD5计算、格式验证、大小检查
+- 🛡️ **错误处理**：始终检查返回的error，获取详细的错误信息
+- 🔄 **向后兼容**：传统的链式调用API仍然可用
 
 ### 重要提醒
 关于以下具体限制和配置，请查阅企业微信官方文档：
