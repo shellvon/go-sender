@@ -88,7 +88,18 @@ func (bt *brevoTransformer) transform(
 func (bt *brevoTransformer) buildRequestBody(msg *Message, account *Account) map[string]interface{} {
 	body := make(map[string]interface{})
 
-	// Sender (required) - use account.From as default if msg.From is empty
+	bt.setSender(body, msg, account)
+	bt.setRecipients(body, msg)
+	bt.setContent(body, msg)
+	bt.setTemplate(body, msg)
+	bt.setAttachments(body, msg)
+	bt.setExtras(body, msg)
+
+	return body
+}
+
+// setSender configures the sender information.
+func (bt *brevoTransformer) setSender(body map[string]interface{}, msg *Message, account *Account) {
 	fromAddr := msg.From
 	if fromAddr == "" && account.From != "" {
 		fromAddr = account.From
@@ -107,32 +118,26 @@ func (bt *brevoTransformer) buildRequestBody(msg *Message, account *Account) map
 			body["sender"] = parseEmailAddress(fromAddr)
 		}
 	}
+}
 
-	// To addresses (required)
+// setRecipients configures all recipient addresses.
+func (bt *brevoTransformer) setRecipients(body map[string]interface{}, msg *Message) {
 	if len(msg.To) > 0 {
-		toAddrs := parseEmailAddresses(msg.To)
-		body["to"] = toAddrs
+		body["to"] = parseEmailAddresses(msg.To)
 	}
-
-	// CC addresses
 	if len(msg.Cc) > 0 {
-		ccAddrs := parseEmailAddresses(msg.Cc)
-		body["cc"] = ccAddrs
+		body["cc"] = parseEmailAddresses(msg.Cc)
 	}
-
-	// BCC addresses
 	if len(msg.Bcc) > 0 {
-		bccAddrs := parseEmailAddresses(msg.Bcc)
-		body["bcc"] = bccAddrs
+		body["bcc"] = parseEmailAddresses(msg.Bcc)
 	}
-
-	// Reply-to address (Brevo supports single reply-to)
 	if len(msg.ReplyTo) > 0 {
-		replyToAddr := parseEmailAddress(msg.ReplyTo[0]) // Use first reply-to address
-		body["replyTo"] = replyToAddr
+		body["replyTo"] = parseEmailAddress(msg.ReplyTo[0])
 	}
+}
 
-	// Subject
+// setContent configures the email content.
+func (bt *brevoTransformer) setContent(body map[string]interface{}, msg *Message) {
 	if msg.Subject != "" {
 		body["subject"] = msg.Subject
 	}
@@ -149,8 +154,10 @@ func (bt *brevoTransformer) buildRequestBody(msg *Message, account *Account) map
 	if msg.Text != "" {
 		body["textContent"] = msg.Text
 	}
+}
 
-	// Template support
+// setTemplate configures template-related fields.
+func (bt *brevoTransformer) setTemplate(body map[string]interface{}, msg *Message) {
 	if msg.TemplateID != "" {
 		templateIDInt := 0
 		if id, err := strconv.Atoi(msg.TemplateID); err == nil {
@@ -158,57 +165,50 @@ func (bt *brevoTransformer) buildRequestBody(msg *Message, account *Account) map
 		}
 		body["templateId"] = templateIDInt
 
-		// Template parameters - direct mapping from TemplateData
 		if msg.TemplateData != nil {
 			body["params"] = msg.TemplateData
 		}
 	}
+}
 
-	// Attachments
-	if len(msg.Attachments) > 0 {
-		attachments := make([]BrevoAttachment, len(msg.Attachments))
-		for i, att := range msg.Attachments {
-			attachments[i] = BrevoAttachment{
-				Content: string(att.Content),
-				Name:    att.Filename,
-			}
-			contentOrURL := string(att.Content)
-			// Pass the absolute URL (no local file) or the base64 content of the attachment along with the attachment name.
-			// Mandatory if attachment content is passed.
-			if strings.HasPrefix(contentOrURL, "http://") || strings.HasPrefix(contentOrURL, "https://") {
-				attachments[i].URL = contentOrURL
-				attachments[i].Content = ""
-			}
-		}
-		body["attachment"] = attachments
+// setAttachments configures email attachments.
+func (bt *brevoTransformer) setAttachments(body map[string]interface{}, msg *Message) {
+	if len(msg.Attachments) == 0 {
+		return
 	}
 
-	// Custom headers (use the standard headers from message)
+	attachments := make([]BrevoAttachment, len(msg.Attachments))
+	for i, att := range msg.Attachments {
+		attachments[i] = BrevoAttachment{
+			Content: string(att.Content),
+			Name:    att.Filename,
+		}
+		contentOrURL := string(att.Content)
+		if strings.HasPrefix(contentOrURL, "http://") || strings.HasPrefix(contentOrURL, "https://") {
+			attachments[i].URL = contentOrURL
+			attachments[i].Content = ""
+		}
+	}
+	body["attachment"] = attachments
+}
+
+// setExtras configures additional fields from extras and scheduling.
+func (bt *brevoTransformer) setExtras(body map[string]interface{}, msg *Message) {
 	if len(msg.Headers) > 0 {
 		body["headers"] = msg.Headers
 	}
-
-	// Tags from extras
 	if tags, ok := msg.Extras[brevoTagsKey]; ok {
 		body["tags"] = tags
 	}
-
-	// Scheduled sending
 	if msg.ScheduledAt != nil {
 		body["scheduledAt"] = msg.ScheduledAt.Format(time.RFC3339)
 	}
-
-	// Batch ID for grouping emails
 	if batchID, ok := msg.Extras[brevoBatchIDKey]; ok {
 		body["batchId"] = batchID
 	}
-
-	// Message versions
 	if messageVersions, ok := msg.Extras[brevoMessageVersionsKey]; ok {
 		body["messageVersions"] = messageVersions
 	}
-
-	return body
 }
 
 // validate checks if the message and account are valid for Brevo.

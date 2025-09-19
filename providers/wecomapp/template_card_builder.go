@@ -136,8 +136,9 @@ func (b *TemplateCardBuilder) QuoteAreaWithURL(title, quoteText, url string) *Te
 
 // QuoteAreaWithMiniProgram sets the quote area section with mini-program jump.
 func (b *TemplateCardBuilder) QuoteAreaWithMiniProgram(title, quoteText, appID, pagePath string) *TemplateCardBuilder {
+	const miniProgramType = 2
 	b.message.TemplateCard.QuoteArea = &QuoteArea{
-		Type:      2,
+		Type:      miniProgramType,
 		Title:     title,
 		QuoteText: quoteText,
 		AppID:     appID,
@@ -263,8 +264,9 @@ func (b *TemplateCardBuilder) AddJumpWithURL(title, url string) *TemplateCardBui
 
 // AddJumpWithMiniProgram adds a jump item with mini-program.
 func (b *TemplateCardBuilder) AddJumpWithMiniProgram(title, appID, pagePath string) *TemplateCardBuilder {
+	const miniProgramType = 2
 	b.message.TemplateCard.JumpList = append(b.message.TemplateCard.JumpList, Jump{
-		Type:     2,
+		Type:     miniProgramType,
 		Title:    title,
 		AppID:    appID,
 		PagePath: pagePath,
@@ -283,8 +285,9 @@ func (b *TemplateCardBuilder) JumpURL(url string) *TemplateCardBuilder {
 
 // JumpMiniProgram configures a mini-program jump action for the card.
 func (b *TemplateCardBuilder) JumpMiniProgram(appID, pagePath string) *TemplateCardBuilder {
+	const miniProgramType = 2
 	b.message.TemplateCard.CardAction = CardAction{
-		Type:     2,
+		Type:     miniProgramType,
 		AppID:    appID,
 		PagePath: pagePath,
 	}

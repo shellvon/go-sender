@@ -114,116 +114,130 @@ func (mt *mailerSendTransformer) transform(
 func (mt *mailerSendTransformer) buildRequestBody(msg *Message, account *Account) map[string]interface{} {
 	body := make(map[string]interface{})
 
+	mt.setSender(body, msg, account)
+	mt.setRecipients(body, msg)
+	mt.setContent(body, msg)
+	mt.setAttachments(body, msg)
+	mt.setTemplate(body, msg)
+	mt.setPersonalization(body, msg)
+	mt.setHeaders(body, msg)
+	mt.setExtras(body, msg)
+
+	return body
+}
+
+// setSender configures the sender information.
+func (mt *mailerSendTransformer) setSender(body map[string]interface{}, msg *Message, account *Account) {
 	fromAddr := msg.From
 	if fromAddr == "" && account.From != "" {
 		fromAddr = account.From
 	}
 	if fromAddr != "" {
-		parsedAddr := parseEmailAddress(fromAddr)
-		body["from"] = parsedAddr
+		body["from"] = parseEmailAddress(fromAddr)
 	}
+}
 
-	// To addresses (required)
+// setRecipients configures all recipient addresses.
+func (mt *mailerSendTransformer) setRecipients(body map[string]interface{}, msg *Message) {
 	if len(msg.To) > 0 {
-		toAddrs := parseEmailAddresses(msg.To)
-		body["to"] = toAddrs
+		body["to"] = parseEmailAddresses(msg.To)
 	}
-
-	// CC addresses
 	if len(msg.Cc) > 0 {
-		ccAddrs := parseEmailAddresses(msg.Cc)
-		body["cc"] = ccAddrs
+		body["cc"] = parseEmailAddresses(msg.Cc)
 	}
-
-	// BCC addresses
 	if len(msg.Bcc) > 0 {
-		bccAddrs := parseEmailAddresses(msg.Bcc)
-		body["bcc"] = bccAddrs
+		body["bcc"] = parseEmailAddresses(msg.Bcc)
 	}
-
-	// Reply-to address (MailerSend supports only single reply-to address)
 	if len(msg.ReplyTo) > 0 {
-		// Use only the first reply-to address as MailerSend API supports only one
-		replyToAddr := parseEmailAddress(msg.ReplyTo[0])
-		body["reply_to"] = replyToAddr
+		body["reply_to"] = parseEmailAddress(msg.ReplyTo[0])
 	}
+}
 
-	// Subject
+// setContent configures the email content.
+func (mt *mailerSendTransformer) setContent(body map[string]interface{}, msg *Message) {
 	if msg.Subject != "" {
 		body["subject"] = msg.Subject
 	}
-
-	// Content
 	if msg.Text != "" {
 		body["text"] = msg.Text
 	}
 	if msg.HTML != "" {
 		body["html"] = msg.HTML
 	}
+}
 
-	// Attachments
-	if len(msg.Attachments) > 0 {
-		attachments := make([]MailerSendAttachment, len(msg.Attachments))
-		for i, att := range msg.Attachments {
-			disposition := att.Disposition
-			if disposition == "" {
-				disposition = "attachment" // Default
-			}
-
-			attachments[i] = MailerSendAttachment{
-				Content:     string(att.Content), // Assuming it's already base64 encoded
-				Filename:    att.Filename,
-				Disposition: disposition,
-				ID:          att.ContentID,
-			}
-		}
-		body["attachments"] = attachments
+// setAttachments configures email attachments.
+func (mt *mailerSendTransformer) setAttachments(body map[string]interface{}, msg *Message) {
+	if len(msg.Attachments) == 0 {
+		return
 	}
 
-	// Template support
+	attachments := make([]MailerSendAttachment, len(msg.Attachments))
+	for i, att := range msg.Attachments {
+		disposition := att.Disposition
+		if disposition == "" {
+			disposition = "attachment"
+		}
+
+		attachments[i] = MailerSendAttachment{
+			Content:     string(att.Content),
+			Filename:    att.Filename,
+			Disposition: disposition,
+			ID:          att.ContentID,
+		}
+	}
+	body["attachments"] = attachments
+}
+
+// setTemplate configures template support.
+func (mt *mailerSendTransformer) setTemplate(body map[string]interface{}, msg *Message) {
 	if msg.TemplateID != "" {
 		body["template_id"] = msg.TemplateID
 	}
+}
 
-	// Personalization - process TemplateData for per-recipient customization
-	// According to MailerSend API docs, personalization is independent of template_id
-	// and assumes that TemplateData keys are email addresses with their respective data
-	if len(msg.TemplateData) > 0 {
-		personalization := make([]MailerSendPersonalization, 0, len(msg.TemplateData))
-
-		for email, data := range msg.TemplateData {
-			// Skip if email is not valid.
-			if !strings.Contains(email, "@") {
-				continue
-			}
-			// All keys in TemplateData are treated as email addresses for personalization
-			if dataMap, ok := data.(map[string]interface{}); ok {
-				personalization = append(personalization, MailerSendPersonalization{
-					Email: email,
-					Data:  dataMap,
-				})
-			}
-		}
-
-		// Add personalization if any valid entries found
-		if len(personalization) > 0 {
-			body["personalization"] = personalization
-		}
+// setPersonalization configures per-recipient customization.
+func (mt *mailerSendTransformer) setPersonalization(body map[string]interface{}, msg *Message) {
+	if len(msg.TemplateData) == 0 {
+		return
 	}
 
-	// Custom headers - MailerSend expects array of name/value objects
-	if len(msg.Headers) > 0 {
-		headers := make([]MailerSendHeader, 0, len(msg.Headers))
-		for name, value := range msg.Headers {
-			headers = append(headers, MailerSendHeader{
-				Name:  name,
-				Value: value,
+	personalization := make([]MailerSendPersonalization, 0, len(msg.TemplateData))
+	for email, data := range msg.TemplateData {
+		if !strings.Contains(email, "@") {
+			continue
+		}
+		if dataMap, ok := data.(map[string]interface{}); ok {
+			personalization = append(personalization, MailerSendPersonalization{
+				Email: email,
+				Data:  dataMap,
 			})
 		}
-		body["headers"] = headers
 	}
 
-	// Scheduled sending
+	if len(personalization) > 0 {
+		body["personalization"] = personalization
+	}
+}
+
+// setHeaders configures custom headers.
+func (mt *mailerSendTransformer) setHeaders(body map[string]interface{}, msg *Message) {
+	if len(msg.Headers) == 0 {
+		return
+	}
+
+	headers := make([]MailerSendHeader, 0, len(msg.Headers))
+	for name, value := range msg.Headers {
+		headers = append(headers, MailerSendHeader{
+			Name:  name,
+			Value: value,
+		})
+	}
+	body["headers"] = headers
+}
+
+// setExtras configures additional fields from extras and scheduling.
+func (mt *mailerSendTransformer) setExtras(body map[string]interface{}, msg *Message) {
 	if msg.ScheduledAt != nil {
 		body["send_at"] = msg.ScheduledAt.Unix()
 	}
@@ -247,8 +261,6 @@ func (mt *mailerSendTransformer) buildRequestBody(msg *Message, account *Account
 	if listUnsubscribe, ok := msg.Extras[mailerSendListUnsubscribeKey]; ok {
 		body["list_unsubscribe"] = listUnsubscribe
 	}
-
-	return body
 }
 
 // validate checks if the message and account are valid for MailerSend.

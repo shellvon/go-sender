@@ -237,8 +237,8 @@ func (t *wecomTransformer) fetchAccessToken(
 	}
 
 	// 创建带过期时间的访问令牌，提前5分钟过期避免临界条件
-	buffer := 5 * time.Minute
-	expiresAt := time.Now().Add(time.Duration(tokenResp.ExpiresIn)*time.Second - buffer)
+	const tokenExpiryBuffer = 5 * time.Minute
+	expiresAt := time.Now().Add(time.Duration(tokenResp.ExpiresIn)*time.Second - tokenExpiryBuffer)
 	return &AccessToken{
 		Token:     tokenResp.AccessToken,
 		ExpiresAt: expiresAt,

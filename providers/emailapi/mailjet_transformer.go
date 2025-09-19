@@ -25,12 +25,6 @@ const (
 	mailjetMaxRecipients = 50
 )
 
-// MailjetEmail represents an email in Mailjet format.
-type MailjetEmail struct {
-	Email string `json:"Email"`
-	Name  string `json:"Name,omitempty"`
-}
-
 // MailjetAttachment represents an attachment in Mailjet format.
 type MailjetAttachment struct {
 	ContentType   string `json:"ContentType"`
@@ -40,10 +34,10 @@ type MailjetAttachment struct {
 
 // MailjetMessage represents a message in Mailjet format.
 type MailjetMessage struct {
-	From                   MailjetEmail           `json:"From"`
-	To                     []MailjetEmail         `json:"To"`
-	Cc                     []MailjetEmail         `json:"Cc,omitempty"`
-	Bcc                    []MailjetEmail         `json:"Bcc,omitempty"`
+	From                   EmailAddress           `json:"From"`
+	To                     []EmailAddress         `json:"To"`
+	Cc                     []EmailAddress         `json:"Cc,omitempty"`
+	Bcc                    []EmailAddress         `json:"Bcc,omitempty"`
 	Subject                string                 `json:"Subject"`
 	TextPart               string                 `json:"TextPart,omitempty"`
 	HTMLPart               string                 `json:"HTMLPart,omitempty"`
@@ -58,7 +52,7 @@ type MailjetMessage struct {
 	CustomCampaign         string                 `json:"CustomCampaign,omitempty"`
 	DeduplicateCampaign    bool                   `json:"DeduplicateCampaign,omitempty"`
 	URLTags                string                 `json:"URLTags,omitempty"`
-	TemplateErrorReporting MailjetEmail           `json:"TemplateErrorReporting,omitempty"`
+	TemplateErrorReporting EmailAddress           `json:"TemplateErrorReporting,omitempty"`
 	TemplateErrorDeliver   bool                   `json:"TemplateErrorDeliver,omitempty"`
 }
 
@@ -122,149 +116,140 @@ func (mt *mailjetTransformer) transform(
 func (mt *mailjetTransformer) buildRequestBody(msg *Message, account *Account) MailjetRequest {
 	message := MailjetMessage{}
 
-	// From (required)
+	mt.setSender(&message, msg, account)
+	mt.setRecipients(&message, msg)
+	mt.setContent(&message, msg)
+	mt.setTemplate(&message, msg)
+	mt.setAttachments(&message, msg)
+	mt.setHeaders(&message, msg)
+	mt.setExtras(&message, msg)
+
+	sandboxMode := mt.getSandboxMode(msg)
+	return MailjetRequest{
+		Messages:    []MailjetMessage{message},
+		SandBoxMode: sandboxMode,
+	}
+}
+
+// setSender configures the sender information.
+func (mt *mailjetTransformer) setSender(message *MailjetMessage, msg *Message, account *Account) {
 	fromAddr := msg.From
 	if fromAddr == "" && account.From != "" {
 		fromAddr = account.From
 	}
 	if fromAddr != "" {
-		parsedFrom := parseEmailAddress(fromAddr)
-		message.From = MailjetEmail{
-			Email: parsedFrom.Email,
-			Name:  parsedFrom.Name,
-		}
+		message.From = parseEmailAddress(fromAddr)
 	}
+}
 
-	// To (required)
+// setRecipients configures all recipient addresses.
+func (mt *mailjetTransformer) setRecipients(message *MailjetMessage, msg *Message) {
 	if len(msg.To) > 0 {
-		toEmails := make([]MailjetEmail, len(msg.To))
-		for i, addr := range msg.To {
-			parsed := parseEmailAddress(addr)
-			toEmails[i] = MailjetEmail{
-				Email: parsed.Email,
-				Name:  parsed.Name,
-			}
-		}
-		message.To = toEmails
+		message.To = parseEmailAddresses(msg.To)
 	}
-
-	// CC
 	if len(msg.Cc) > 0 {
-		ccEmails := make([]MailjetEmail, len(msg.Cc))
-		for i, addr := range msg.Cc {
-			parsed := parseEmailAddress(addr)
-			ccEmails[i] = MailjetEmail{
-				Email: parsed.Email,
-				Name:  parsed.Name,
-			}
-		}
-		message.Cc = ccEmails
+		message.Cc = parseEmailAddresses(msg.Cc)
 	}
-
-	// BCC
 	if len(msg.Bcc) > 0 {
-		bccEmails := make([]MailjetEmail, len(msg.Bcc))
-		for i, addr := range msg.Bcc {
-			parsed := parseEmailAddress(addr)
-			bccEmails[i] = MailjetEmail{
-				Email: parsed.Email,
-				Name:  parsed.Name,
-			}
-		}
-		message.Bcc = bccEmails
+		message.Bcc = parseEmailAddresses(msg.Bcc)
 	}
+}
 
-	// Subject
+// setContent configures the email content.
+func (mt *mailjetTransformer) setContent(message *MailjetMessage, msg *Message) {
 	if msg.Subject != "" {
 		message.Subject = msg.Subject
 	}
-
-	// Content
 	if msg.Text != "" {
 		message.TextPart = msg.Text
 	}
 	if msg.HTML != "" {
 		message.HTMLPart = msg.HTML
 	}
+}
 
-	// Template support
-	if msg.TemplateID != "" {
-		if templateID, err := strconv.Atoi(msg.TemplateID); err == nil {
-			message.TemplateID = templateID
-			message.TemplateLanguage = true
+// setTemplate configures template support.
+func (mt *mailjetTransformer) setTemplate(message *MailjetMessage, msg *Message) {
+	if msg.TemplateID == "" {
+		return
+	}
 
-			// Template variables
-			if msg.TemplateData != nil {
-				message.Variables = msg.TemplateData
-			}
+	if templateID, err := strconv.Atoi(msg.TemplateID); err == nil {
+		message.TemplateID = templateID
+		message.TemplateLanguage = true
+		if msg.TemplateData != nil {
+			message.Variables = msg.TemplateData
+		}
+	}
+}
+
+// setAttachments configures email attachments.
+func (mt *mailjetTransformer) setAttachments(message *MailjetMessage, msg *Message) {
+	if len(msg.Attachments) == 0 {
+		return
+	}
+
+	attachments := make([]MailjetAttachment, 0)
+	inlinedAttachments := make([]MailjetAttachment, 0)
+
+	for _, att := range msg.Attachments {
+		attachment := MailjetAttachment{
+			ContentType:   att.ContentType,
+			Filename:      att.Filename,
+			Base64Content: base64.StdEncoding.EncodeToString(att.Content),
+		}
+
+		if att.Disposition == "inline" {
+			inlinedAttachments = append(inlinedAttachments, attachment)
+		} else {
+			attachments = append(attachments, attachment)
 		}
 	}
 
-	// Attachments
-	if len(msg.Attachments) > 0 {
-		attachments := make([]MailjetAttachment, 0)
-		inlinedAttachments := make([]MailjetAttachment, 0)
-
-		for _, att := range msg.Attachments {
-			attachment := MailjetAttachment{
-				ContentType:   att.ContentType,
-				Filename:      att.Filename,
-				Base64Content: base64.StdEncoding.EncodeToString(att.Content),
-			}
-
-			if att.Disposition == "inline" {
-				inlinedAttachments = append(inlinedAttachments, attachment)
-			} else {
-				attachments = append(attachments, attachment)
-			}
-		}
-
-		if len(attachments) > 0 {
-			message.Attachments = attachments
-		}
-		if len(inlinedAttachments) > 0 {
-			message.InlinedAttachments = inlinedAttachments
-		}
+	if len(attachments) > 0 {
+		message.Attachments = attachments
 	}
+	if len(inlinedAttachments) > 0 {
+		message.InlinedAttachments = inlinedAttachments
+	}
+}
 
-	// Custom headers
+// setHeaders configures custom headers.
+func (mt *mailjetTransformer) setHeaders(message *MailjetMessage, msg *Message) {
 	if len(msg.Headers) > 0 {
 		message.Headers = msg.Headers
 	}
+}
 
-	// Custom ID from extras
+// setExtras configures additional fields from extras.
+func (mt *mailjetTransformer) setExtras(message *MailjetMessage, msg *Message) {
 	if customID, ok := msg.Extras["custom_id"]; ok {
 		if id, idOk := customID.(string); idOk {
 			message.CustomID = id
 		}
 	}
 
-	// Campaign tracking
 	if campaign, ok := msg.Extras["campaign"]; ok {
 		if c, campaignOk := campaign.(string); campaignOk {
 			message.CustomCampaign = c
 		}
 	}
 
-	// URL Tags
 	if urlTags, ok := msg.Extras["url_tags"]; ok {
 		if tags, tagsOk := urlTags.(string); tagsOk {
 			message.URLTags = tags
 		}
 	}
+}
 
-	// Sandbox mode
-	sandboxMode := false
+// getSandboxMode extracts sandbox mode from extras.
+func (mt *mailjetTransformer) getSandboxMode(msg *Message) bool {
 	if sandbox, ok := msg.Extras["sandbox"]; ok {
 		if sb, sbOk := sandbox.(bool); sbOk {
-			sandboxMode = sb
+			return sb
 		}
 	}
-
-	return MailjetRequest{
-		Messages:    []MailjetMessage{message},
-		SandBoxMode: sandboxMode,
-	}
+	return false
 }
 
 // validate checks if the message and account are valid for Mailjet.

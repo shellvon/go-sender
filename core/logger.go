@@ -88,6 +88,7 @@ func (s *StdLogger) Log(level Level, keyvals ...any) error {
 		}
 	}
 
+	//nolint:noctx // no context needed
 	s.logger.Info(msg.String())
 	return nil
 }
