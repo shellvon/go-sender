@@ -111,14 +111,14 @@ _ = sender.Send(context.Background(), msg)           // middleware chain applied
 | Gmail (Google)       | smtp.gmail.com           | 587 / 465    | Gmail address           | App password / XOAUTH2 | https://support.google.com/mail/answer/7126229                                                                  |
 | Outlook / Office 365 | smtp.office365.com       | 587          | Email address           | Password / XOAUTH2     | https://learn.microsoft.com/exchange/clients-and-mobile-in-exchange-online/authenticated-client-smtp-submission |
 | QQ Mail              | smtp.qq.com              | 465 / 587    | QQ email                | Auth code              | https://service.mail.qq.com/detail/0/428                                                                        |
-| 163 Mail             | smtp.163.com             | 465 / 994    | 163 email               | Auth code              | https://help.mail.163.com/faq.do?m=OTUw&id=MjQ5Nw==                                                             |
+| 163 Mail             | smtp.163.com             | 465 / 994    | 163 email               | Auth code              | https://help.mail.163.com/faqDetail.do?code=d7a5dc8471cd0c0e8b4b8f4f8e49998b374173cfe9171305fa1ce630d7f67ac25ef2e192b234ae4d                                                             |
 | SendGrid             | smtp.sendgrid.net        | 587 / 465    | Literal string "apikey" | API Key                | https://docs.sendgrid.com/for-developers/sending-email/getting-started-smtp                                     |
 | Mailgun              | smtp.mailgun.org         | 587 / 465    | postmaster@<domain>     | SMTP password          | https://help.mailgun.com/hc/en-us/articles/203380100                                                            |
 | Mailtrap             | sandbox.smtp.mailtrap.io | 2525/465/587 | Mailtrap username       | Mailtrap password      | https://help.mailtrap.io/article/122-mailtrap-email-sending-smtp-integration                                    |
 | Zoho Mail            | smtp.zoho.com            | 465 / 587    | Zoho email              | App password           | https://www.zoho.com/mail/help/zoho-smtp.html                                                                   |
 | Yandex               | smtp.yandex.com          | 465 / 587    | Yandex email            | Password               | https://yandex.com/support/mail/mail-clients/others.html                                                        |
 | Alibaba Cloud        | smtp.mxhichina.com       | 465 / 25     | Email address           | Password               | https://help.aliyun.com/document_detail/36576.html                                                              |
-| Tencent Exmail       | smtp.exmail.qq.com       | 465 / 587    | Email address           | Password               | https://cloud.tencent.com/document/product/1084/44458                                                           |
+| Tencent Exmail       | smtp.exmail.qq.com       | 465 / 587    | Email address           | Password               | https://open.work.weixin.qq.com/help2/pc/1988744458                                                           |
 
 > Tip: for any other SMTP provider, consult its official documentation for host, port and authentication details.
 
